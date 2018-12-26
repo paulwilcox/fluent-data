@@ -1,0 +1,34 @@
+<body>
+
+    <div id="lishResult"></div>
+
+    <script type="module">
+
+        import { scores, customers, sampleIdb } from "./data.js";
+        import { lish } from "../lish/lish.js";
+
+        export var LishResultJs = 
+
+            new lish()
+            .from({
+                sc: scores,
+                st: lish.idbSource('students', sampleIdb) 
+            })
+            .filter(sc => [sc.score != 0]) // not working
+            .join( 
+                (sc,st) => sc.student == st.id
+            )
+            .orderBy(sc => [sc.score])
+            .groupBy(st => st.name)
+            .map('tm', (sc,st) => ({
+                scoreId: sc.id, 
+                studentId: sc.student, 
+                student: st.name, 
+                score: sc.score
+            }))
+            .print(tm => tm, "#lishResult", "Lish Result Js");
+
+    </script>
+
+</body>
+
