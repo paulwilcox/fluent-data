@@ -482,12 +482,14 @@ lish.idbSourceManager = class {
         this.dbPromise = dbPromise;
     }
     
-    getStorePromise = () => 
+    getStorePromise () { 
 
-        this.dbPromise
+        return this.dbPromise
         .then (db => {
             let tx = db.transaction(this.storeName);
             return new unresolvedIdb(this.storeName, tx);
         });
+    
+    }
 
 }

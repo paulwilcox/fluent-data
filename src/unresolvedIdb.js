@@ -28,10 +28,11 @@ export let unresolvedIdb = class {
         return this.getReturnType();
     }
 
-    getReturnType = () =>
-        this.explicitSelector != null 
-        ? this.resolve() 
-        : this;
+    getReturnType () {
+        return this.explicitSelector != null 
+            ? this.resolve() 
+            : this;
+    }
     
     resolve() {
 

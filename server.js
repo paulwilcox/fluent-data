@@ -8,7 +8,7 @@ let requestHandler = (request, response) => {
   
     let fileName = 
         request.url == '/' 
-        ? 'sample/index.html' 
+        ? 'example/index.html' 
         : request.url.replace(/\//, '');
 
     let mime = 

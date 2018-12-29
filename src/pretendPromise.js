@@ -6,7 +6,7 @@ export let pretendPromise = class {
         this.funcs = [];
     }
 
-    then = func => {
+    then (func) {
         this.funcs.push(func);
         return this;
     }

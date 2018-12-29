@@ -86,7 +86,7 @@ export class storesBin {
 
     }
 
-    reKey = (oldPartialKey, newKey) => {
+    reKey (oldPartialKey, newKey) {
 
         let oldKey = this.getFullKey(oldPartialKey);
 
@@ -100,7 +100,7 @@ export class storesBin {
 
     }
 
-    getFullKey = partialKey => {
+    getFullKey (partialKey) {
 
         if (general.isString(partialKey))
             partialKey = new Set(partialKey);
@@ -110,16 +110,18 @@ export class storesBin {
             .find(fullKey => this.isSubsetOf(partialKey, fullKey));
     }
 
-    isSubsetOf = (sub, sup) => 
-        this.setEquals (
+    isSubsetOf (sub, sup) { 
+        return this.setEquals (
             new Set([...sub].filter(x => [...sup].indexOf(x) >= 0)), // intersection
             sub
         );
+    }
 
     // Max Leizerovich: stackoverflow.com/questions/
     //   31128855/comparing-ecma6-sets-for-equality
-    setEquals = (a, b) =>
-        a.size === b.size 
-        && [...a].every(value => b.has(value));
+    setEquals (a, b) {
+        return a.size === b.size 
+            && [...a].every(value => b.has(value));
+    }
 
 }
