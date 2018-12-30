@@ -1,7 +1,7 @@
 // DON'T USE THIS SERVER IN PRODUCTION.  It is just a 
 // bare bones serer to test out lish.
 
-let http = require('http')
+let http = require('http') 
 let fs = require('fs');
 
 let requestHandler = (request, response) => {
@@ -15,6 +15,12 @@ let requestHandler = (request, response) => {
         fileName.endsWith('.js') ? 'text/javascript'
         : fileName.endsWith('.html') ? 'html'
         : 'text';
+
+    if (fileName == 'favicon.ico') {
+        response.writeHead(204);
+        response.end("");
+        return;
+    }
 
     let contents;
 
@@ -45,6 +51,6 @@ http
         return;
     }
 
-    console.log(`server is listening on ${port}`);
+    console.log('Server running at:', port);
 
 });

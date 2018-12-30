@@ -1,4 +1,4 @@
-import "../vendor/idb.js";
+import "../node_modules/idb/lib/idb.js";
     
 //window.indexedDB.deleteDatabase('sample');
 
