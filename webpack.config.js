@@ -2,8 +2,7 @@ let path = require('path');
 
 module.exports = {
     entry: { 
-        lish: './src/lish.js',
-        example: './example/server.js'
+        lish: './src/lish.js'
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -12,6 +11,6 @@ module.exports = {
     watch: true,
     mode: 'production',
     node: {
-        fs: 'empty' // fixes a bug
+        fs: 'empty' // fixes a bug during webpack build
     }
 }

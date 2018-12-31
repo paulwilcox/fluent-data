@@ -1,3 +1,9 @@
+// Now using webpack-dev-server, but keeping this in
+// case it's useful at some future time.  index.html
+// existed inside 'example' directory at the time 
+// this file was active.
+
+
 // DON'T USE THIS SERVER IN PRODUCTION.  It is just a 
 // bare bones serer to test out lish.
 
