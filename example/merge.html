@@ -8,36 +8,34 @@
         import { scores, customers, sampleIdb } from "./data.js";
         import { lish } from "../src/lish.js";
 
-        // n becomes undefined after merge('foods')
-        export var MergeResult = 
-            new lish(sampleIdb, 'idb')
-            .from({
-                n: [
-                    { id: 1, name: 'taquitos' },
-                    { id: 4, name: 'alfredo' },
-                    { id: 5, name: 'pizza' }
-                ],
-                o: [
-                    { id: 7, name: 'sandwich' },
-                    { id: 8, name: 'egg roll' }
-                ]
-            })
-            .print('foods', '#beforeMerge', 'Before: foods')
-            .print(n => n, '#beforeMerge', 'Before: n')
-            .print(o => o, '#beforeMerge', 'Before: o')
-            .merge(
-                'n', 
-                o => o,
-                o => o.id 
-            )
-            .merge(
-                'foods',
-                n => n,
-                n => n.id  
-            )
-            .print(n => n, '#afterMerge', 'After: n')
-            .print('foods', '#afterMerge', 'After: foods')
-            .print(o => o, '#afterMerge', 'After: o');
+        new lish(sampleIdb, 'idb')
+        .from({
+            n: [
+                { id: 1, name: 'taquitos' },
+                { id: 4, name: 'alfredo' },
+                { id: 5, name: 'pizza' }
+            ],
+            o: [
+                { id: 7, name: 'sandwich' },
+                { id: 8, name: 'egg roll' }
+            ]
+        })
+        .print('foods', '#beforeMerge', 'Before: foods')
+        .print(n => n, '#beforeMerge', 'Before: n')
+        .print(o => o, '#beforeMerge', 'Before: o')
+        .merge(
+            'n', 
+            o => o,
+            o => o.id 
+        )
+        .merge(
+            'foods',
+            n => n,
+            n => n.id  
+        )
+        .print(n => n, '#afterMerge', 'After: n')
+        .print('foods', '#afterMerge', 'After: foods')
+        .print(o => o, '#afterMerge', 'After: o');
 
     </script>
 </body>
