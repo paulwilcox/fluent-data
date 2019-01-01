@@ -194,12 +194,9 @@ export function lish () {
 
     }
 
-/*
-    map(func)
-    map('newalias', func)
-    map('*')
-*/
-
+    // map(func)
+    // map('newalias', func)
+    // map('*')
     this.map = (...args) => {
 
         let mappingFunction = args.length > 1 ? args[1] : args[0];
@@ -215,7 +212,7 @@ export function lish () {
             );
 
         if (newAlias == null)
-            return storeVal;
+            return this.safeExecute(storeVal);
 
         this.storesBin.set(
             oldAliases,
@@ -272,7 +269,7 @@ export function lish () {
         let resultStore = 
             pretendPromise.all([fromStore,joinStore])
             .then(stores => 
-
+                
                 general.applyToNestedArray(
                     stores[0], 
                     array => 
@@ -344,6 +341,9 @@ export function lish () {
 
     this.print = (mappingFunction, target, caption) => {
 
+        // if mappingFunction is just a store name, then 
+        // the user wants to print an idb object, not a
+        // lish object.
         if (general.isString(mappingFunction)) {
             
             let storeName = mappingFunction;
@@ -362,21 +362,36 @@ export function lish () {
 
         }
 
-        let oldAliases = new Set(new general.parser(mappingFunction).parameters);
+        let aliases = new Set(new general.parser(mappingFunction).parameters);
 
-        let mc = mapCore(null, mappingFunction, oldAliases, this);
+        let mc = mapCore(null, mappingFunction, aliases, this);
 
-        if (mc instanceof pretendPromise)
-            pretendPromise.all([
-                this.getStore(oldAliases),
+        // fixme: When just pretend promises, then the lish instance seems
+        // to loose all it's built up 'then' functions and starts over.  I
+        // believe the issue is the construction of pretendPromise.all, which
+        // passes the working objects but not the functions.
+        if (mc instanceof pretendPromise) 
+            /* pretendPromise.all([
+                this.getStore(aliases),
                 mc
             ])
             .then(obj => {
                 print(target, obj[1], caption);
                 return obj[0];
-            })
-            .execute();
-            
+            }) */
+            //.execute();
+
+            {
+                
+                let ppa = pretendPromise.all([
+                    this.getStore(aliases),
+                    mc
+                ]);
+
+                console.log({ppa, mc})
+
+            }
+
         else 
 
             mc
@@ -461,6 +476,15 @@ export function lish () {
             : functionToProcess;
     
     }    
+
+    // This is a 'safe' execute function.  So if the object is
+    // a full promise, it does nothing (but also does not fail),
+    // and if it's a pretendPromise, it executes it to return
+    // its value.
+    this.safeExecute = maybePromise => {
+        if (maybePromise instanceof pretendPromise) 
+            return maybePromise.execute();
+    }
 
 }
 

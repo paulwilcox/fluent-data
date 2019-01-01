@@ -23,11 +23,6 @@ export let pretendPromise = class {
                 ? this.workingObject.then(func)
                 : func(this.workingObject);
 
-            console.log({
-                woAfterFunc: this.workingObject,
-                func
-            })
-
         }
 
         return this.workingObject;
@@ -43,6 +38,10 @@ pretendPromise.resolve = arrayOrPretendPromise =>
 
 // Note that if there is a real Promise in the input, then
 // a real Promise is returned, not a PretendPromise.
+// fixme: calling pretendPromise.all might be passing the
+// working objects without passing the functions.  Maybe
+// I need to execute the working objects before pushing
+// them to 'unBoxeds'?
 pretendPromise.all = arrayOfMaybePretendPromises => {
 
     let unBoxeds = [];
