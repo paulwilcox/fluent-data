@@ -3,7 +3,7 @@ import {unresolvedIdb} from "./unresolvedIdb.js";
 import * as general from "./general.js";
 
 
-export let mapCore = (newAlias, mappingFunction, oldAliases, lishObj) => {
+export let mapCore = (mappingFunction, aliases, lishObj) => {
 
     let allSelector = 
         mappingFunction == '*m' ? 'meta'
@@ -11,11 +11,11 @@ export let mapCore = (newAlias, mappingFunction, oldAliases, lishObj) => {
         : mappingFunction == '*' ? 'both'
         : null;
 
-    if (allSelector)
+    if (allSelector) 
         return showStoreInfo(allSelector, lishObj);
 
     mappingFunction = 
-        oldAliases.size > 1
+        aliases.size > 1
         ? general.inputLiteralizer(mappingFunction)
         : mappingFunction;
 
@@ -34,7 +34,7 @@ export let mapCore = (newAlias, mappingFunction, oldAliases, lishObj) => {
 
     }
 
-    return lishObj.getStore(oldAliases) 
+    return lishObj.getStore(aliases) 
         .then(store => 
             store instanceof unresolvedIdb 
             ? store.setSelector(mappingFunction)

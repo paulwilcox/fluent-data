@@ -7,26 +7,27 @@
         import { scores, customers, students, sampleIdb } from "./data.js"; 
         import { lish } from "../src/lish.js";
 
-        let x = new lish()
-        .from({
-            sc: scores,
-            //st: lish.idbSource('students', sampleIdb)
-            st: students // fixme: does not output correctly if javascript, fine if indexedDb (it's due to the print function)
-        })
-        .filter(sc => [sc.score != 0]) // fixme: not working
-        .join( 
-            (sc,st) => sc.student == st.id
-        )
-        .orderBy(sc => [sc.score])
-        .groupBy(st => st.name)
-        .map('tm', (sc,st) => ({
-            scoreId: sc.id, 
-            studentId: sc.student, 
-            student: st.name, 
-            score: sc.score
-        }))
-        .print(tm => tm, "#lishResult", "Lish Result Js")
-        .map(tm => tm);
+        let x = 
+            new lish()
+            .from({
+                sc: scores,
+                //st: lish.idbSource('students', sampleIdb)
+                st: students // fixme: does not output correctly if javascript, fine if indexedDb (it's due to the print function)
+            })
+            .filter(sc => [sc.score != 0]) // fixme: not working
+            .join( 
+                (sc,st) => sc.student == st.id
+            )
+            .orderBy(sc => [sc.score])
+            .groupBy(st => st.name)
+            .map('tm', (sc,st) => ({
+                scoreId: sc.id, 
+                studentId: sc.student, 
+                student: st.name, 
+                score: sc.score
+            }))
+            .print(tm => tm, "#lishResult", "Lish Result Js")
+            .map(tm => tm);
 
         console.log(x)
 

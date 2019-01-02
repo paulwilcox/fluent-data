@@ -48,6 +48,11 @@ export let inputLiteralizer = functionToProcess => {
 
 export let stringifyObject = obj => {
 
+    // todo: find out if this is bad.  But for now it's
+    // fixing something.
+    if (obj === undefined) 
+        return '';
+
     let isObject = variable => 
            variable 
         && typeof variable === 'object' 

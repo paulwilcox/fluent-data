@@ -15,7 +15,6 @@ export function print(target, obj, caption) {
     }
         
     document.querySelector(target).innerHTML +=
-        //(document.querySelector(target).innerHTML.trim() == "" ? "" : "<br/>") +
         makeHtml(obj, caption);
 
     let maybeTables = 

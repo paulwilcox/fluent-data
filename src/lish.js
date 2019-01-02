@@ -205,14 +205,13 @@ export function lish () {
 
         let storeVal = 
             mapCore(
-                newAlias, 
                 mappingFunction,
                 oldAliases,
                 this
             );
 
         if (newAlias == null)
-            return this.safeExecute(storeVal);
+            return safeExecuteStore(storeVal);
 
         this.storesBin.set(
             oldAliases,
@@ -327,7 +326,8 @@ export function lish () {
             : groupKeySelector;
             
         let store = this.getStore(key);
-        store = store.then(store =>     
+
+        store = store.then(store => 
             new hashBuckets(groupKeySelector)
             .addItems(store)
             .getBuckets()
@@ -341,66 +341,67 @@ export function lish () {
 
     this.print = (mappingFunction, target, caption) => {
 
-        // if mappingFunction is just a store name, then 
-        // the user wants to print an idb object, not a
-        // lish object.
+        this.executeAll();
+
+        // Just print the idbStore as a whole.
         if (general.isString(mappingFunction)) {
-            
-            let storeName = mappingFunction;
-
-            this.idbPromise
-            .then(db => {
-                let tx = db.transaction(storeName);
-                let store = tx.objectStore(storeName);
-                return store.getAll();
-            })
-            .then(storeVals => {
-                print(target, storeVals, caption);
-            });
-
+            printIdbStore(mappingFunction, target, caption);
             return this;
-
         }
 
         let aliases = new Set(new general.parser(mappingFunction).parameters);
 
-        let mc = mapCore(null, mappingFunction, aliases, this);
+        let store = this.getStore(aliases);
+        store = store.then(store => {
+            print(target, mappingFunction(store), caption);
+            return store;
+        });
 
-        // fixme: When just pretend promises, then the lish instance seems
-        // to loose all it's built up 'then' functions and starts over.  I
-        // believe the issue is the construction of pretendPromise.all, which
-        // passes the working objects but not the functions.
-        if (mc instanceof pretendPromise) 
-            /* pretendPromise.all([
-                this.getStore(aliases),
-                mc
-            ])
-            .then(obj => {
-                print(target, obj[1], caption);
-                return obj[0];
-            }) */
-            //.execute();
+        return this;
 
-            {
-                
-                let ppa = pretendPromise.all([
-                    this.getStore(aliases),
-                    mc
-                ]);
+    }
 
-                console.log({ppa, mc})
+    // This version of print messes with the output.  Not good.
+    // So it is made obsolete.  Keeping it for a bit just in case
+    /*this.print = (mappingFunction, target, caption) => {
 
-            }
+        // Just print the idbStore as a whole.
+        if (general.isString(mappingFunction)) {
+            printIdbStore(mappingFunction, target, caption);
+            return this;
+        }
+
+        let aliases = new Set(new general.parser(mappingFunction).parameters);
+
+        let mc = mapCore(mappingFunction, aliases, this);
+
+        if (mc instanceof pretendPromise) { 
+            console.log({before: mc});
+            mc = mc.execute();
+            print(target, mc, caption);
+            console.log({after: mc})
+        }
 
         else 
 
             mc
             .then(mapped => print(target, mapped, caption))
 
-
         return this;
 
-    }
+    }*/
+
+    let printIdbStore = (storeName, target, caption) => 
+
+        this.idbPromise
+        .then(db => {
+            let tx = db.transaction(storeName);
+            let store = tx.objectStore(storeName);
+            return store.getAll();
+        })
+        .then(storeVals => {
+            print(target, storeVals, caption);
+        });
 
     this.merge = (
         target, // if string for an idbStore, updates the idbObjectStore, otherwise, updates the lishStore 
@@ -419,7 +420,7 @@ export function lish () {
             ? true
             : false;     
 
-        let mc = mapCore(null, literalizedSource, srcAliases, this);
+        let mc = mapCore(literalizedSource, srcAliases, this);
 
         if (targetInStoresBin) {
 
@@ -460,6 +461,18 @@ export function lish () {
 
     }
 
+    // Ensures all stores have executed.  Relevant for pretend
+    // promises.  Standard promises will execute on their own
+    // in time.
+    this.executeAll = () => {
+        for (let storeInfo of this.storesBin.storeInfos) {
+            let store = storeInfo.store;
+            if (store instanceof pretendPromise)
+                storeInfo.store = new pretendPromise(store.execute())
+        }
+        return this;
+    }
+
     this.literalizeIfNecessary = functionToProcess => {
 
         let storeKey =
@@ -481,7 +494,7 @@ export function lish () {
     // a full promise, it does nothing (but also does not fail),
     // and if it's a pretendPromise, it executes it to return
     // its value.
-    this.safeExecute = maybePromise => {
+    let safeExecuteStore = maybePromise => {
         if (maybePromise instanceof pretendPromise) 
             return maybePromise.execute();
     }

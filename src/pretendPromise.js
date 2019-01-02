@@ -41,7 +41,7 @@ pretendPromise.resolve = arrayOrPretendPromise =>
 // fixme: calling pretendPromise.all might be passing the
 // working objects without passing the functions.  Maybe
 // I need to execute the working objects before pushing
-// them to 'unBoxeds'?
+// them to 'unBoxeds'?  
 pretendPromise.all = arrayOfMaybePretendPromises => {
 
     let unBoxeds = [];
