@@ -1,11 +1,7 @@
 let pjVersion = require('./package.json').version;
 let fs = require('fs');
 
-process.argv.forEach(
-    (val, index, array) => {
-        console.log(index + ': ' + val);
-    }
-);
+console.log(process.argv);
 
 let x = {
 
