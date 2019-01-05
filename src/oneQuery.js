@@ -10,12 +10,9 @@ import { mapCore } from "./map.js";
 import { print } from "./visualizer/printer.js";
 import { mergeIntoIdb, mergeIntoStore } from "./merge.js";
 
-module.exports = { 
-    oneQuery, 
-    $$: oneQuery 
-};
+export let $$ = oneQuery;
 
-function oneQuery () { 
+export function oneQuery () { 
 
     // careful, the collection or any element might be 
     // in either a promised or resolved state
