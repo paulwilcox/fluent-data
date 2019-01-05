@@ -1,13 +1,13 @@
 <body>
 
-    <div id='lishResult'></div>   
+    <div id='oneQueryResult'></div>   
 
     <script type='module'> 
 
         import { customers, sampleIdb } from "./data.js";
-        import { lish } from "../src/lish.js";
+        import { oneQuery } from "../src/oneQuery.js";
 
-        new lish(sampleIdb, 'idb')
+        new oneQuery(sampleIdb, 'idb')
         .from({
             o: 'orders',
             p: 'products',
@@ -21,20 +21,20 @@
         .orderBy((o,p) => o.product)
         .groupBy(o => o.product)
         .fold('f', {
-            product:        lish.key(o => o.product),
-            revenue:        lish.sum(p => p.price), 
-            transactions:   lish.count(p => p.price),
-            avgRating:      lish.avg(o => o.rating),
-            stdRating:      lish.std(o => 
+            product:        oneQuery.key(o => o.product),
+            revenue:        oneQuery.sum(p => p.price), 
+            transactions:   oneQuery.count(p => p.price),
+            avgRating:      oneQuery.avg(o => o.rating),
+            stdRating:      oneQuery.std(o => 
                                 o.rating,
                                 x => Math.round(x * 100) / 100
                             ),
-            corSR:          lish.cor(
+            corSR:          oneQuery.cor(
                                 o => [o.speed, o.rating], 
                                 x => Math.round(x * 100) / 100
                             )
         })
-        .print(f => f, '#lishResult', 'Lish Result');
+        .print(f => f, '#oneQueryResult', 'oneQuery Result');
 
     </script>
 

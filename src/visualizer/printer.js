@@ -19,7 +19,7 @@ export function print(target, obj, caption) {
 
     let maybeTables = 
         document.querySelector(target)
-        .querySelectorAll('.lishTable');
+        .querySelectorAll('.oneQueryTable');
 
     if (maybeTables.length > 0)
         addPagerToTables(maybeTables);
@@ -35,8 +35,8 @@ function makeHtml(obj, caption) {
     return printType == 'arrayOfObjects' ? arrayOfObjectsToTable(obj, caption)
         : printType == 'array' ? arrayToTable(obj, caption)
         : printType == 'string' ? stringToHtml(obj)
-        : printType == 'number' ? `<span class='lishNumber'>${obj}</span>`
-        : printType == 'nullish' ? `<span class='lishNullish'>${obj}</span>`
+        : printType == 'number' ? `<span class='oneQueryNumber'>${obj}</span>`
+        : printType == 'nuloneQuery' ? `<span class='oneQueryNuloneQuery'>${obj}</span>`
         : printType == 'function' ? functionToHtml(obj)
         : printType == 'object' ? objectToTable(obj)
         : `${obj}`;
@@ -59,7 +59,7 @@ function getPrintType (obj) {
 
     return isArrayOfObjects ? 'arrayOfObjects'
         : isArray ? 'array'
-        : (obj == null || typeof obj == 'undefined') ? 'nullish'
+        : (obj == null || typeof obj == 'undefined') ? 'nuloneQuery'
         : typeof obj;
 
 }
@@ -82,7 +82,7 @@ function getArrayKeys (array) {
 
 function stringToHtml (str) {
     return `
-        <span class='lishString'>
+        <span class='oneQueryString'>
             ${ htmlEncode(str) }
         </span>
     `;
@@ -90,7 +90,7 @@ function stringToHtml (str) {
 
 function functionToHtml (func) {
     return `
-        <span class='lishFunc'>
+        <span class='oneQueryFunc'>
             ${ htmlEncode(func.toString()) }
         </span>
     `;
@@ -108,7 +108,7 @@ function objectToTable (obj) {
         </tr>
         `;
 
-    return `<table class='lishTable'>${html}</table>`;
+    return `<table class='oneQueryTable'>${html}</table>`;
 
 }
 
@@ -120,7 +120,7 @@ function arrayToTable (items, caption) {
         html += `<tr><td>${makeHtml(item)}</td></tr>`;
 
     return `
-        <table class='lishTable'>
+        <table class='oneQueryTable'>
             ${caption != null ? `<caption>${caption}</caption>` : ''}
             ${html}
         </table>`;
@@ -150,7 +150,7 @@ function arrayOfObjectsToTable (objects, caption) {
     }
 
     return `
-        <table class='lishTable'>
+        <table class='oneQueryTable'>
             ${caption != null ? `<caption>${caption}</caption>` : ''}
             <tHead>${header}</tHead>
             <tBody>${body}</tBody>

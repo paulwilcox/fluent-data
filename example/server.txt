@@ -5,7 +5,7 @@
 
 
 // DON'T USE THIS SERVER IN PRODUCTION.  It is just a 
-// bare bones serer to test out lish.
+// bare bones serer to test out oneQuery.
 
 let http = require('http') 
 let fs = require('fs');

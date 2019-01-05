@@ -52,18 +52,18 @@ export function addPagerToTable(
     .insertRow()
     .innerHTML = `
         <td colspan=${colCount}>
-            <div class="lishPageDiv"></div>
+            <div class="oneQueryPageDiv"></div>
         </td>
     `;
 
-    let pageDiv = table.querySelector('.lishPageDiv');
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
     insertPageLinks(pageDiv, numPages);
     insertPageInput(pageDiv, numPages, pageInputThreshold);
     addPageInputListeners(table);
 
     changeToPage(table, 1, rowsPerPage, numPages, aTagMax);
 
-    for (let pageA of table.querySelectorAll('.lishPageDiv a'))
+    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a'))
         pageA.addEventListener(
             'click', 
             e => {
@@ -123,26 +123,26 @@ function insertPageInput(pageDiv, numPages, pageInputThreshold) {
         'beforeend',
         `
             <br/>
-            <div class='lishPageInputDiv' style='display:none;'>
-                <div contenteditable='true' class='lishPageInput'>1</div>
-                <button class='lishPageInputSubmit'></button>
+            <div class='oneQueryPageInputDiv' style='display:none;'>
+                <div contenteditable='true' class='oneQueryPageInput'>1</div>
+                <button class='oneQueryPageInputSubmit'></button>
             </div>
-            <label class='lishPageRatio'>${numPages} pages</label>
+            <label class='oneQueryPageRatio'>${numPages} pages</label>
         `
     );
 
 }
 
 function showInputDiv (tbl, show) {
-    if (!tbl.tFoot.querySelector('.lishPageInputDiv'))
+    if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
         return;
-    tbl.tFoot.querySelector('.lishPageInputDiv').style.display = show ? 'inline-block' : 'none';
-    tbl.tFoot.querySelector('.lishPageRatio').style.display = show ? 'none' : 'inline-block';
+    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = show ? 'inline-block' : 'none';
+    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = show ? 'none' : 'inline-block';
 }
 
 function addPageInputListeners (table) {
 
-    if (!table.tFoot.querySelector('.lishPageInputDiv'))
+    if (!table.tFoot.querySelector('.oneQueryPageInputDiv'))
         return;
 
     let listen = (selector, event, callback) => 
@@ -154,34 +154,34 @@ function addPageInputListeners (table) {
         'mouseleave',
         e => {
             showInputDiv(e.target, false);
-            table.querySelector('.lishPageInput').innerHTML = "";
+            table.querySelector('.oneQueryPageInput').innerHTML = "";
         }
     );
 
     listen(
-        '.lishPageRatio',
+        '.oneQueryPageRatio',
         'mouseenter',
         e => showInputDiv(table, true)
     );
 
     listen(
-        '.lishPageRatio', 
+        '.oneQueryPageRatio', 
         'click',
         e => showInputDiv(table, true)
     );
 
     listen(
-        '.lishPageInput',
+        '.oneQueryPageInput',
         'mouseenter',
-        e => table.querySelector('.lishPageInput').innerHTML = ""
+        e => table.querySelector('.oneQueryPageInput').innerHTML = ""
     );
 
     listen(
-        '.lishPageInputSubmit',
+        '.oneQueryPageInputSubmit',
         'click',
         e => {
 
-            let pInput = table.querySelector('.lishPageInput');
+            let pInput = table.querySelector('.oneQueryPageInput');
             let desiredPage = parseInt(pInput.innerHTML);
 
             if (isNaN(desiredPage)) {
@@ -213,7 +213,7 @@ function changeToPage(
 
     let startItem = (page - 1) * rowsPerPage;
     let endItem = startItem + rowsPerPage;
-    let pageAs = table.querySelectorAll('.lishPageDiv a');
+    let pageAs = table.querySelectorAll('.oneQueryPageDiv a');
     let tBodyRows = [...table.tBodies].reduce((a,b) => a.concat(b)).rows;
 
     for (let pix = 0; pix < pageAs.length; pix++) {
@@ -248,6 +248,6 @@ function changeToPage(
 
 function currentPage (table) {
     return parseInt(
-        table.querySelector('.lishPageDiv a.active').innerHTML
+        table.querySelector('.oneQueryPageDiv a.active').innerHTML
     );
 }

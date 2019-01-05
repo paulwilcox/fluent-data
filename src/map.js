@@ -3,7 +3,7 @@ import {unresolvedIdb} from "./unresolvedIdb.js";
 import * as general from "./general.js";
 
 
-export let mapCore = (mappingFunction, aliases, lishObj) => {
+export let mapCore = (mappingFunction, aliases, oneQueryObj) => {
 
     let allSelector = 
         mappingFunction == '*m' ? 'meta'
@@ -12,7 +12,7 @@ export let mapCore = (mappingFunction, aliases, lishObj) => {
         : null;
 
     if (allSelector) 
-        return showStoreInfo(allSelector, lishObj);
+        return showStoreInfo(allSelector, oneQueryObj);
 
     mappingFunction = 
         aliases.size > 1
@@ -34,7 +34,7 @@ export let mapCore = (mappingFunction, aliases, lishObj) => {
 
     }
 
-    return lishObj.getStore(aliases) 
+    return oneQueryObj.getStore(aliases) 
         .then(store => 
             store instanceof unresolvedIdb 
             ? store.setSelector(mappingFunction)
@@ -43,18 +43,18 @@ export let mapCore = (mappingFunction, aliases, lishObj) => {
 
 }
 
-export let showStoreInfo = (display, lishObj) => { // display = 'meta', 'data', 'both'
+export let showStoreInfo = (display, oneQueryObj) => { // display = 'meta', 'data', 'both'
 
     let keyStrings = [];
     let stores = [];
     let datas = [];
     let isPromiseResults = [];
 
-    for(let storeInfo of lishObj.storesBin.storeInfos) {
+    for(let storeInfo of oneQueryObj.storesBin.storeInfos) {
         let keyString = [...storeInfo.key].join(',');
         keyStrings.push(keyString);
         stores.push(storeInfo.store);
-        datas.push(lishObj.getStore(keyString));
+        datas.push(oneQueryObj.getStore(keyString));
         isPromiseResults.push(
             Promise.resolve(storeInfo.store) == storeInfo.store
         );

@@ -1,16 +1,20 @@
 {
-  "name": "lish",
+  "name": "oneQuery",
   "version": "0.0.6",
-  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  Future work on lish will seek to use the same API to work with a server database from node.  This code is NOT ready for production.  Inspired by c# linq method syntax, but quite different: it's linq-ish, or 'lish'.",
-  "main": ".dist/lish.bundle.js",
+  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  Future work on oneQuery will seek to use the same API to work with a server database from node.  This code is NOT ready for production.  Inspired by c# linq method syntax, but quite different: it's linq-ish, or 'oneQuery'.",
+  "main": ".dist/oneQuery.next.js",
   "directories": {
     "example": "example"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "example\\start.cmd",
-    "version": "node node_scripts\\versionBump.js"
+    "version": "node node_scripts\\versionBump.js",
+    "example": "node_scripts\\gitPuboneQuery.cmd"
   },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/paulwilcox/oneQuery"
+  },  
   "keywords": [
     "linq",
     "join",

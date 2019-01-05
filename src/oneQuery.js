@@ -10,7 +10,12 @@ import { mapCore } from "./map.js";
 import { print } from "./visualizer/printer.js";
 import { mergeIntoIdb, mergeIntoStore } from "./merge.js";
 
-export function lish () { 
+module.exports = { 
+    oneQuery, 
+    $$: oneQuery 
+};
+
+function oneQuery () { 
 
     // careful, the collection or any element might be 
     // in either a promised or resolved state
@@ -64,10 +69,10 @@ export function lish () {
                 continue;
 
             if (general.isString(storeInfo.store) && this.idbPromise)
-                storeInfo.store = lish.idbSource(storeInfo.store, this.idbPromise);
+                storeInfo.store = oneQuery.idbSource(storeInfo.store, this.idbPromise);
 
             storeInfo.store = 
-                storeInfo.store instanceof lish.idbSourceManager 
+                storeInfo.store instanceof oneQuery.idbSourceManager 
                 ? storeInfo.store = storeInfo.store.getStorePromise()
                 : new pretendPromise(storeInfo.store);
 
@@ -382,10 +387,10 @@ export function lish () {
         });
 
     this.merge = (
-        target, // if string for an idbStore, updates the idbObjectStore, otherwise, updates the lishStore 
+        target, // if string for an idbStore, updates the idbObjectStore, otherwise, updates the oneQueryStore 
         source, // mapper function or maybe even direct array of objects  
         identityKey,
-        action = () => lish.mergeAction.upsert // function returning a lish.mergeAction (or the direct string)
+        action = () => oneQuery.mergeAction.upsert // function returning a oneQuery.mergeAction (or the direct string)
     ) => {
 
         let srcAliases = new Set(new general.parser(source).parameters);
@@ -479,18 +484,18 @@ export function lish () {
 
 }
 
-addStaticFolds(lish);
+addStaticFolds(oneQuery);
 
-lish.mergeAction = Object.freeze({
+oneQuery.mergeAction = Object.freeze({
     nothing: null,
     upsert: 'upsert',
     remove: 'remove'
 })
 
-lish.idbSource = (storeName, dbPromise) => 
-    new lish.idbSourceManager(storeName, dbPromise);
+oneQuery.idbSource = (storeName, dbPromise) => 
+    new oneQuery.idbSourceManager(storeName, dbPromise);
 
-lish.idbSourceManager = class {
+oneQuery.idbSourceManager = class {
     
     constructor(storeName, dbPromise) {
         this.storeName = storeName;

@@ -3,7 +3,7 @@
 //   524696/how-to-create-a-style-tag-with-javascript
 export function addDefaultCss () {
 
-    if (hasLishCssRule())
+    if (hasoneQueryCssRule())
         return;
 
     let style = document.createElement('style');
@@ -14,11 +14,11 @@ export function addDefaultCss () {
 
 }
 
-let hasLishCssRule = () => {
+let hasoneQueryCssRule = () => {
 
     for(let sheet of document.styleSheets)
     for(let rule of sheet.rules)
-    if(rule.selectorText.substring(0,5) == ".lish")
+    if(rule.selectorText.substring(0,5) == ".oneQuery")
         return true;
 
     return false; 
@@ -27,31 +27,31 @@ let hasLishCssRule = () => {
 
 let defaultCss = `
 
-    .lishString {
+    .oneQueryString {
         color: #FF9900;
     }
 
-    .lishNumber {
+    .oneQueryNumber {
         color: #0088cc;
     }
 
-    .lishNullish {
+    .oneQueryNuloneQuery {
         color: gainsboro;
         font-style: italic;
     }
 
-    .lishFunc {
+    .oneQueryFunc {
         color: BB5500;
         font-family: monospace;
     }
 
-    .lishTable {
+    .oneQueryTable {
         border: 2px solid #0088CC;
         border-collapse: collapse;
         margin:5px;
     }
 
-    .lishTable caption {
+    .oneQueryTable caption {
         border: 1px solid #0088CC;
         background-color: #0088CC;
         color: white;
@@ -59,45 +59,45 @@ let defaultCss = `
         padding: 3px;
     }
 
-    .lishTable th {
+    .oneQueryTable th {
         background-color: gainsboro;
         border: 1px solid #C8C8C8;
         padding: 3px;
     }
 
-    .lishTable td {
+    .oneQueryTable td {
         border: 1px solid #C8C8C8;
         text-align: center;
         vertical-align: middle;
         padding: 3px;
     }
 
-    .lishTable tFoot {
+    .oneQueryTable tFoot {
         background-color: whitesmoke;
         font-style: italic;
         color: teal;
     }
 
-    .lishTable tFoot a {
+    .oneQueryTable tFoot a {
         text-decoration: none;
         color: teal;
     }
 
-    .lishTable tFoot a.active {
+    .oneQueryTable tFoot a.active {
         text-decoration: underline;
     }
 
-    .lishPageDiv {
+    .oneQueryPageDiv {
         text-align: left;
         vertical-align: middle;
         font-size: smaller;
     }
 
-    .lishPageInputDiv * {
+    .oneQueryPageInputDiv * {
         display: inline-block;
     }
 
-    .lishPageInput {
+    .oneQueryPageInput {
         padding: 1px 3px;
         background-color: white;
         border: solid 1px blue;
@@ -106,7 +106,7 @@ let defaultCss = `
         min-width: 15px;
     }
 
-    .lishPageInputSubmit {
+    .oneQueryPageInputSubmit {
         height: 10px;
         width: 10px;
         margin: 0;

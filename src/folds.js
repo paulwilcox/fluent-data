@@ -1,16 +1,16 @@
 import * as general from "./general.js";
 
-export let addStaticFolds = lishObj => {
+export let addStaticFolds = oneQueryObj => {
 
-    let lishKeysStart = new Set(Object.keys(lishObj));
+    let oneQueryKeysStart = new Set(Object.keys(oneQueryObj));
 
-    lishObj.key = (dataset, selector, errorOut = false, callback = null) => {
+    oneQueryObj.key = (dataset, selector, errorOut = false, callback = null) => {
 
         let distinct = [...new Set(dataset.map(selector))];
         
         if (distinct.size > 1) {
             if (errorOut)
-                throw "lish.key found more than one distinct value.";
+                throw "oneQuery.key found more than one distinct value.";
             return null;
         }
 
@@ -18,7 +18,7 @@ export let addStaticFolds = lishObj => {
 
     }
 
-    lishObj.sum = (dataset, selector, callback) => {
+    oneQueryObj.sum = (dataset, selector, callback) => {
         let val =  
             dataset.map(selector)
             .map(f => parseFloat(f || 0))
@@ -26,7 +26,7 @@ export let addStaticFolds = lishObj => {
         return callback ? callback(val) : val;
     }
 
-    lishObj.count = (dataset, selector, callback) => {
+    oneQueryObj.count = (dataset, selector, callback) => {
         let counter = 0;
         for (let element of dataset.map(selector))
             if (!isNaN(parseFloat(element))) 
@@ -34,14 +34,14 @@ export let addStaticFolds = lishObj => {
         return callback ? callback(counter) : counter;
     }
 
-    lishObj.avg = (dataset, selector, callback) => {
-        let val = lishObj.sum(dataset, selector) / lishObj.count(dataset, selector);
+    oneQueryObj.avg = (dataset, selector, callback) => {
+        let val = oneQueryObj.sum(dataset, selector) / oneQueryObj.count(dataset, selector);
         return callback ? callback(val) : val;
     }
 
-    lishObj.std = (dataset, selector, callback) => {
+    oneQueryObj.std = (dataset, selector, callback) => {
 
-        let avg = lishObj.avg(dataset, selector);
+        let avg = oneQueryObj.avg(dataset, selector);
 
         let squaredDeviations = 
             dataset.map(selector)
@@ -49,8 +49,8 @@ export let addStaticFolds = lishObj => {
 
         let val = 
             (
-                lishObj.sum(squaredDeviations, x => x) 
-                / lishObj.count(dataset, selector)
+                oneQueryObj.sum(squaredDeviations, x => x) 
+                / oneQueryObj.count(dataset, selector)
             ) 
             ** (1/2);
 
@@ -60,7 +60,7 @@ export let addStaticFolds = lishObj => {
 
     // "selector" must return an array with two elements
     // http://www.socscistatistics.com/tests/pearson/
-    lishObj.cor = (dataset, selector, callback) => {
+    oneQueryObj.cor = (dataset, selector, callback) => {
 
         let pairs = 
             dataset.map(selector)
@@ -70,8 +70,8 @@ export let addStaticFolds = lishObj => {
             }))
             .filter(pair => !isNaN(pair.x) && !isNaN(pair.y));
 
-        let xAvg = lishObj.avg(pairs, pair => pair.x);
-        let yAvg = lishObj.avg(pairs, pair => pair.y);
+        let xAvg = oneQueryObj.avg(pairs, pair => pair.x);
+        let yAvg = oneQueryObj.avg(pairs, pair => pair.y);
         let n = pairs.length;
 
         let numerator = 0;
@@ -111,10 +111,10 @@ export let addStaticFolds = lishObj => {
 
     }
 
-    let lishKeysEnd = new Set(Object.keys(lishObj));
-    let lishKeysNew = [...lishKeysEnd].filter(x => !lishKeysStart.has(x));
+    let oneQueryKeysEnd = new Set(Object.keys(oneQueryObj));
+    let oneQueryKeysNew = [...oneQueryKeysEnd].filter(x => !oneQueryKeysStart.has(x));
 
-    for (let newLishKey of lishKeysNew) 
-        lishObj[newLishKey] = partializable(lishObj[newLishKey]);
+    for (let newoneQueryKey of oneQueryKeysNew) 
+        oneQueryObj[newoneQueryKey] = partializable(oneQueryObj[newoneQueryKey]);
     
 }
