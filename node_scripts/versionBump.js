@@ -1,4 +1,4 @@
-let pjVersion = require('./package.json').version;
+let pjVersion = require('../package.json').version;
 let fs = require('fs');
 
 fs.copyFile(
