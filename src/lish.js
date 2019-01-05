@@ -200,8 +200,16 @@ export function lish () {
     this.map = (...args) => {
 
         let mappingFunction = args.length > 1 ? args[1] : args[0];
+
+        let isAllSelector = 
+               general.isString(mappingFunction) 
+            && mappingFunction.substring(0,1) == '*';
+
         let newAlias = args.length > 1 ? args[0] : null;
-        let oldAliases = new Set(new general.parser(mappingFunction).parameters);
+
+        let oldAliases = 
+              isAllSelector ? null 
+            : new Set(new general.parser(mappingFunction).parameters);
 
         let storeVal = 
             mapCore(
@@ -360,36 +368,6 @@ export function lish () {
         return this;
 
     }
-
-    // This version of print messes with the output.  Not good.
-    // So it is made obsolete.  Keeping it for a bit just in case
-    /*this.print = (mappingFunction, target, caption) => {
-
-        // Just print the idbStore as a whole.
-        if (general.isString(mappingFunction)) {
-            printIdbStore(mappingFunction, target, caption);
-            return this;
-        }
-
-        let aliases = new Set(new general.parser(mappingFunction).parameters);
-
-        let mc = mapCore(mappingFunction, aliases, this);
-
-        if (mc instanceof pretendPromise) { 
-            console.log({before: mc});
-            mc = mc.execute();
-            print(target, mc, caption);
-            console.log({after: mc})
-        }
-
-        else 
-
-            mc
-            .then(mapped => print(target, mapped, caption))
-
-        return this;
-
-    }*/
 
     let printIdbStore = (storeName, target, caption) => 
 

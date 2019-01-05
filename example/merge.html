@@ -37,7 +37,8 @@
             .print(n => n, '#afterMerge', 'After: n')
             .print('foods', '#afterMerge', 'After: foods')
             .print(o => o, '#afterMerge', 'After: o')
-            .executeAll();
+            .executeAll()
+            .map('*d');
             
         console.log(x);
 
