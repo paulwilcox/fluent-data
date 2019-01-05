@@ -1,9 +1,15 @@
 let pjVersion = require('./package.json').version;
 let fs = require('fs');
 
-module.exports = {
+process.argv.forEach(
+    (val, index, array) => {
+        console.log(index + ': ' + val);
+    }
+);
 
-    version:
+let x = {
+
+    version: 
 
         fs.copyFile(
             './dist/lish.next.js', 

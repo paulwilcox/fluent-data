@@ -1,6 +1,6 @@
 {
   "name": "lish",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  Future work on lish will seek to use the same API to work with a server database from node.  This code is NOT ready for production.  Inspired by c# linq method syntax, but quite different: it's linq-ish, or 'lish'.",
   "main": ".dist/lish.bundle.js",
   "directories": {
@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "example\\start.cmd",
-    "version": "console.log('here')"
+    "version": "echo here"
   },
   "keywords": [
     "linq",
