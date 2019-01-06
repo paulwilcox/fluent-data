@@ -5,10 +5,10 @@
 
     <script type='module'>
 
-        import { scores, customers, sampleIdb } from "./data.js";
+        import { sampleIdb } from "./data.js";
         import { oneQuery } from "../src/oneQuery.js";
 
-        let x = 
+        let result = 
             new oneQuery(sampleIdb, 'idb')
             .from({
                 n: [
@@ -40,7 +40,7 @@
             .executeAll()
             .map('*d');
             
-        console.log(x);
+        console.log(result);
 
     </script>
 </body>

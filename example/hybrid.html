@@ -1,17 +1,17 @@
 <body>
 
-    <div id='oneQueryResult'></div>   
+    <div id='result'></div>   
 
     <script type='module'> 
 
-        import { customers, sampleIdb } from "./data.js";
+        import { sampleDataSets, sampleIdb } from "./data.js";
         import { oneQuery } from "../src/oneQuery.js";
 
         new oneQuery(sampleIdb, 'idb')
         .from({
             o: 'orders',
             p: 'products',
-            c: customers
+            c: sampleDataSets.customers
         })
         .filter(o => o.product != 123456) 
         .join( 
@@ -34,7 +34,7 @@
                                 x => Math.round(x * 100) / 100
                             )
         })
-        .print(f => f, '#oneQueryResult', 'oneQuery Result');
+        .print(f => f, '#result', 'oneQuery Result');
 
     </script>
 

@@ -10,7 +10,7 @@ import { mapCore } from "./map.js";
 import { print } from "./visualizer/printer.js";
 import { mergeIntoIdb, mergeIntoStore } from "./merge.js";
 
-export let $$ = oneQuery;
+export let $$ = (...args) => new oneQuery(...args);
 
 export function oneQuery () { 
 

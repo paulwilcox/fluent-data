@@ -1,35 +1,31 @@
 <body>
 
-    <div id="oneQueryResult"></div>
+    <div id='result'></div>
 
-    <script type="module">
+    <script type='module'>
 
-        import { scores, customers, students, sampleIdb } from "./data.js"; 
-        import { oneQuery } from "../src/oneQuery.js";
+        import { sampleDataSets, sampleIdb } from "./data.js"; 
+        import { $$ } from "../src/oneQuery.js";
 
-        let x = 
-            new oneQuery()
-            .from({
-                sc: scores,
-                //st: oneQuery.idbSource('students', sampleIdb)
-                st: students // fixme: does not output correctly if javascript, fine if indexedDb (it's due to the print function)
-            })
-            .filter(sc => [sc.score != 0]) // fixme: not working
-            .join( 
-                (sc,st) => sc.student == st.id
-            )
-            .orderBy(sc => [sc.score])
-            .groupBy(st => st.name)
-            .map('tm', (sc,st) => ({
-                scoreId: sc.id, 
-                studentId: sc.student, 
-                student: st.name, 
-                score: sc.score
-            }))
-            .print(tm => tm, "#oneQueryResult", "oneQuery Result Js")
-            .map(tm => tm);
-
-        console.log(x)
+        $$()
+        .from({
+            sc: sampleDataSets.scores,
+            st: sampleDataSets.students 
+        })
+        .filter(sc => sc.score != 0) // fixme: not working
+        .join( 
+            (sc,st) => sc.student == st.id
+        )
+        .orderBy(sc => [sc.score])
+        .groupBy(st => st.name)
+        .map('tm', (sc,st) => ({
+            scoreId: sc.id, 
+            studentId: sc.student, 
+            student: st.name, 
+            score: sc.score
+        }))
+        .print(tm => tm, '#result', 'oneQuery Result Js')
+        .map(tm => tm);
 
     </script>
 
