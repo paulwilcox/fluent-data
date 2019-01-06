@@ -1,10 +1,10 @@
 # OneQuery
 
-Work with data structures in regular javascript and indexedDb using the same API.  Intermingling Javascript and indexedDb is possible.
+Work with datasets in regular javascript and indexedDb using the same API.  Intermingling Javascript and indexedDb is possible.  Extending API to server-side persistence is a future goal. 
 
 ## Datasets
 
-A dataset is an array of objects with named properties, such as:
+A **dataset** is an array of objects with named properties, such as:
 
     let students = [
         { id: "a", name: "Andrea" },
