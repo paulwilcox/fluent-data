@@ -8,7 +8,6 @@
   },
   "scripts": {
     "start": "example\\start.cmd",
-    "preversion": "node_scripts\\preVersionBump.cmd",
     "version": "node_scripts\\versionBump.js",
     "publish": "node_scripts\\gitPublish.cmd"
   },
