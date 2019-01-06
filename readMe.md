@@ -50,7 +50,7 @@ You will immediately want to load your class with the datasets you want to work 
 
 The oneQuery instance will now load the datasets for *students* and *scores* into *st* and *sc*, respectively.  All future operations within oneQuery will make reference to these new aliases, unless an operation modifies or deletes a store alias. 
 
-# IndexedDB Instantiation 
+### IndexedDB Instantiation 
 
 If you want to load from an objectStore in IndexedDb, then you have two options:
 
@@ -87,13 +87,13 @@ Operations on OneQuery datasets typically involve arrow functions inside chained
 
 ![Results](./example/javascript.png)
 
-# Chaining and the "End Of The Line"
+### Chaining and the "End Of The Line"
 
 If use of a method indicates that more operations are expected, then the oneQuery class itself is returned in fluent fashion.  This allows chaining of further methods to add more commands to the process.  This is what is happending with the first use of **map** above, as well as all the other method uses.
 
 If use of a method indicates that no further operations are desired by the user, then the result of the method is returned, which is a transformed dataset.  This is what is happening with the final use of **map** above (it is not being mapped into any store, so it must be that the user now wants the output).
 
-# Returning Promises or Plain Javascript
+### Returning Promises or Plain Javascript
 
 When an end-of-the line value is returned, it can either be a promise, or a plain javascript dataset.  It returns a promise if at any point in processing the data involves a promise (such as with joining with or sourcing from an IndexedDb object store).  Otherwise, a plain javascript dataset is returned.
 
