@@ -123,6 +123,8 @@ The following operations are available on oneQuery:
 
 **merge**: Merge values from one dataset into another.  Inspired by slowly-changing-dimension approach.  More documentation to come on this.
 
+**executeAll**: Hopefully this won't be necessary in the future.  But in some cases, the end-of-the line is not reached, yet processing of all non-promise datasets is required.  This method has no parameters.  It will still return the oneQuery object.
+
 ## Example
 
 Web pages for a sample server are included in the 'example' folder.  Use webpack-dev-server or other means to see the results.  Otherwise, just skim the html files to get a sense of the usage.   
