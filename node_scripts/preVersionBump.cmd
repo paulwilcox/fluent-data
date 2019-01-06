@@ -1,3 +1,3 @@
 set /p commitMessage="Commit Message (before version bumping): "
+git add .
 git commit -m "%commitMessage%"
-node npm_scripts versionBump.js
