@@ -29,7 +29,7 @@ For consistency with example/data.js, we will create a single "database" object 
 
     let datasets = { students, scores }.
 
-## Instantiation and Dataset Loading
+## Instantiation
 
 The oneQuery class can be instantiated in the following ways:
 
@@ -39,6 +39,8 @@ The oneQuery class can be instantiated in the following ways:
     $$('persistenceDatabaseName', 'persistenceType').
 
 *Presently, only 'idb' is supported as a persistence type.*
+
+## Loading Datasets
 
 You will immediately want to load your class with the datasets you want to work with:
 
@@ -50,7 +52,7 @@ You will immediately want to load your class with the datasets you want to work 
 
 The oneQuery instance will now load the datasets for *students* and *scores* into *st* and *sc*, respectively.  All future operations within oneQuery will make reference to these new aliases, unless an operation modifies or deletes a store alias. 
 
-### IndexedDB Instantiation 
+### IndexedDB 
 
 If you want to load from an objectStore in IndexedDb, then you have two options:
 
@@ -83,9 +85,11 @@ Operations on OneQuery datasets typically involve arrow functions inside chained
     .print(tm => tm, "#someHtmlDivId", "oneQuery Result Js") 
     .map(tm => tm);
 
-*sc* and *sc* in the **join** method reference the respective datasets loaded in the **from** method.  What results is a single dataset, though it's properties are still tracked to their original aliases.  In the first use of **map**, the joined store is renamed to *tm*.  So further references to data must point instead to *tm*, as they do in **print** and the second use of **map**.  
+Which, due to **print**, will display:
 
-![Results](./example/javascript.png)
+![Results](./example/javascript.png).
+
+*sc* and *sc* in the **join** method reference the respective datasets loaded in the **from** method.  What results is a single dataset, though it's properties are still tracked to their original aliases.  In the first use of **map**, the joined store is renamed to *tm*.  So further references to data must point instead to *tm*, as they do in **print** and the second use of **map**.  
 
 ### Chaining and the "End Of The Line"
 
