@@ -8,8 +8,7 @@
   },
   "scripts": {
     "start": "example\\start.cmd",
-    "version": "node_scripts\\versionBump.js",
-    "publish": "node_scripts\\gitPublish.cmd"
+    "git-publish": "node_scripts\\gitPublish.cmd"
   },
   "repository": {
     "type": "git",
