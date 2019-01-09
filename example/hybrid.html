@@ -5,9 +5,9 @@
     <script type='module'> 
 
         import { sampleDataSets, sampleIdb } from "./data.js";
-        import { oneQuery } from "../src/oneQuery.js";
+        import { $$ } from "../src/oneQuery.js";
 
-        new oneQuery(sampleIdb, 'idb')
+        $$(sampleIdb, 'idb')
         .from({
             o: 'orders',
             p: 'products',
@@ -21,15 +21,15 @@
         .orderBy((o,p) => o.product)
         .groupBy(o => o.product)
         .fold('f', {
-            product:        oneQuery.key(o => o.product),
-            revenue:        oneQuery.sum(p => p.price), 
-            transactions:   oneQuery.count(p => p.price),
-            avgRating:      oneQuery.avg(o => o.rating),
-            stdRating:      oneQuery.std(o => 
+            product:        $$.key(o => o.product),
+            revenue:        $$.sum(p => p.price), 
+            transactions:   $$.count(p => p.price),
+            avgRating:      $$.avg(o => o.rating),
+            stdRating:      $$.std(o => 
                                 o.rating,
                                 x => Math.round(x * 100) / 100
                             ),
-            corSR:          oneQuery.cor(
+            corSR:          $$.cor(
                                 o => [o.speed, o.rating], 
                                 x => Math.round(x * 100) / 100
                             )

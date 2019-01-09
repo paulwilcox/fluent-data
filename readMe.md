@@ -70,7 +70,7 @@ Operations on OneQuery datasets typically involve arrow functions inside chained
         sc: sampleDataSets.scores,
         st: sampleDataSets.students 
     })
-    .filter(sc => sc.score != 0) // fixme: one reason this is not yet a stable release
+    .filter(sc => sc.score != 0) 
     .join( 
         (sc,st) => sc.student == st.id
     )

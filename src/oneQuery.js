@@ -94,7 +94,7 @@ export function oneQuery () {
             for(let record of array) 
                 if (condition(record)) 
                     filteredResults.push(record);
-            
+
             return filteredResults;
 
         };
@@ -482,6 +482,7 @@ export function oneQuery () {
 }
 
 addStaticFolds(oneQuery);
+addStaticFolds($$);
 
 oneQuery.mergeAction = Object.freeze({
     nothing: null,

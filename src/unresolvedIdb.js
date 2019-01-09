@@ -48,7 +48,8 @@ export let unresolvedIdb = class {
             let val = cursor.value;
 
             let passesFilter =
-                  this.explicitFilter == null ? true
+                this.explicitFilter == null 
+                ? true
                 : this.explicitFilter(val);
 
             if(passesFilter) 

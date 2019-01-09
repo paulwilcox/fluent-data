@@ -12,7 +12,7 @@
             sc: sampleDataSets.scores,
             st: sampleDataSets.students 
         })
-        .filter(sc => sc.score != 0) // fixme: not working
+        .filter(sc => sc.score != 0) 
         .join( 
             (sc,st) => sc.student == st.id
         )
