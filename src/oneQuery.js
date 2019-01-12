@@ -54,48 +54,25 @@ export function oneQuery () {
 
     this.from = userStores => {
 
-        this.storesBin.set(userStores);
-
-        let getIdbStore = storeName => 
+        let makeUnresolvedIdb = storeName => 
             this.idbPromise
             .then (db => {
                 let tx = db.transaction(storeName);
                 return new unresolvedIdb(storeName, tx);
             });
 
-        for (let existingStore of this.storesBin.storeInfos) 
+        for (let key of Object.keys(userStores)) 
         
-            existingStore.store = 
-                general.isString(existingStore.store) && this.idbPromise 
-                ? getIdbStore(existingStore.store)
-                : new pretendPromise(existingStore.store);
-
-        return this;
-
-    }
-
-
-/*
-    this.from = userStores => {
+            userStores[key] = 
+                general.isString(userStores[key]) && this.idbPromise 
+                ? makeUnresolvedIdb(userStores[key])
+                : new pretendPromise(userStores[key]);
 
         this.storesBin.set(userStores);
 
-        for (let existingStore of this.storesBin.storeInfos) {
-
-            if (general.isString(existingStore.store) && this.idbPromise)
-                existingStore.store = oneQuery.idbSource(existingStore.store, this.idbPromise);
-
-            existingStore.store = 
-                existingStore.store instanceof oneQuery.idbSourceManager 
-                ? existingStore.store = existingStore.store.getStorePromise()
-                : new pretendPromise(existingStore.store);
-
-        }
-
         return this;
 
     }
-*/
 
     this.filter = condition => {
 
