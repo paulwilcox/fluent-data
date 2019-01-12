@@ -52,8 +52,30 @@ export function oneQuery () {
 
     }
 
-    // MinusFour and kofifus stackoverflow.com/questions/32539354/how 
-    //   -to-get-the-first-element-of-set-in-es6-ecmascript-2015
+    this.from = userStores => {
+
+        this.storesBin.set(userStores);
+
+        let getIdbStore = storeName => 
+            this.idbPromise
+            .then (db => {
+                let tx = db.transaction(storeName);
+                return new unresolvedIdb(storeName, tx);
+            });
+
+        for (let existingStore of this.storesBin.storeInfos) 
+        
+            existingStore.store = 
+                general.isString(existingStore.store) && this.idbPromise 
+                ? getIdbStore(existingStore.store)
+                : new pretendPromise(existingStore.store);
+
+        return this;
+
+    }
+
+
+/*
     this.from = userStores => {
 
         this.storesBin.set(userStores);
@@ -73,6 +95,7 @@ export function oneQuery () {
         return this;
 
     }
+*/
 
     this.filter = condition => {
 
@@ -508,24 +531,4 @@ oneQuery.mergeAction = Object.freeze({
     remove: 'remove'
 })
 
-oneQuery.idbSource = (storeName, dbPromise) => 
-    new oneQuery.idbSourceManager(storeName, dbPromise);
 
-oneQuery.idbSourceManager = class {
-    
-    constructor(storeName, dbPromise) {
-        this.storeName = storeName;
-        this.dbPromise = dbPromise;
-    }
-    
-    getStorePromise () { 
-
-        return this.dbPromise
-        .then (db => {
-            let tx = db.transaction(this.storeName);
-            return new unresolvedIdb(this.storeName, tx);
-        });
-    
-    }
-
-}
