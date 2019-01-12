@@ -4,11 +4,11 @@ import { joiner } from "./join.js";
 import { quicksort } from "./sorts.js";
 import { unresolvedIdb } from "./unresolvedIdb.js";
 import { pretendPromise } from "./pretendPromise.js";
-import { storesBin } from "./storesBin.js";
+import { database } from "./database.js";
 import { addStaticFolds } from "./folds.js";
 import { mapCore } from "./map.js";
 import { print } from "./visualizer/printer.js";
-import { mergeIntoIdb, mergeIntoStore } from "./merge.js";
+import { mergeIntoIdb, mergeIntoDataset } from "./merge.js";
 
 export let $$ = (...args) => new oneQuery(...args);
 
@@ -16,7 +16,7 @@ export function oneQuery () {
 
     // careful, the collection or any element might be 
     // in either a promised or resolved state
-    this.storesBin = new storesBin();
+    this.database = new database();
 
     if (arguments[1] == 'idb') 
         this.idbPromise = arguments[0];
@@ -24,51 +24,51 @@ export function oneQuery () {
     // If it's a first filter, leave it unresolved, otherwise 
     // resolve it.
     // 
-    // This all assumes this.stores.get() works by reference, which I think it does.
-    this.getStore = (aliases, callingFunctionIsAFilter = false) => { 
+    // This all assumes this.datasets.get() works by reference, which I think it does.
+    this.getDataset = (aliases, callingFunctionIsAFilter = false) => { 
 
-        let storeVal = this.storesBin.get(aliases);
+        let dataset = this.database.get(aliases);
 
-        if (!storeVal) {
+        if (!dataset) {
             console.trace();
             throw `could not find key: ${Array.from(aliases)}`;
         }
 
-        storeVal =
-            storeVal
-            .then(store => {  
+        dataset =
+            dataset
+            .then(dataset => {  
 
-                let storeAlreadyResolved = !(store instanceof unresolvedIdb);
-                let filterExplicitlySet = store.explicitFilter != null;
-                let storeReadyToResolve = filterExplicitlySet || !callingFunctionIsAFilter;
+                let datasetAlreadyResolved = !(dataset instanceof unresolvedIdb);
+                let filterExplicitlySet = dataset.explicitFilter != null;
+                let datasetReadyToResolve = filterExplicitlySet || !callingFunctionIsAFilter;
 
-                return storeAlreadyResolved ? store 
-                    : storeReadyToResolve ? store.resolve() 
-                    : store;
+                return datasetAlreadyResolved ? dataset 
+                    : datasetReadyToResolve ? dataset.resolve() 
+                    : dataset;
 
             });
 
-        return storeVal;
+        return dataset;
 
     }
 
-    this.from = userStores => {
+    this.from = datasets => {
 
-        let makeUnresolvedIdb = storeName => 
+        let makeUnresolvedIdb = datasetName => 
             this.idbPromise
             .then (db => {
-                let tx = db.transaction(storeName);
-                return new unresolvedIdb(storeName, tx);
+                let tx = db.transaction(datasetName);
+                return new unresolvedIdb(datasetName, tx);
             });
 
-        for (let key of Object.keys(userStores)) 
+        for (let key of Object.keys(datasets)) 
         
-            userStores[key] = 
-                general.isString(userStores[key]) && this.idbPromise 
-                ? makeUnresolvedIdb(userStores[key])
-                : new pretendPromise(userStores[key]);
+            datasets[key] = 
+                general.isString(datasets[key]) && this.idbPromise 
+                ? makeUnresolvedIdb(datasets[key])
+                : new pretendPromise(datasets[key]);
 
-        this.storesBin.set(userStores);
+        this.database.addDatasets(datasets);
 
         return this;
 
@@ -77,7 +77,7 @@ export function oneQuery () {
     this.filter = condition => {
 
         let aliases = new Set(new general.parser(condition).parameters);
-        let storeVal = this.getStore(aliases, true);
+        let datasetVal = this.getDataset(aliases, true);
         
         if (aliases.size > 1)
             condition = general.inputLiteralizer(condition);
@@ -94,13 +94,13 @@ export function oneQuery () {
 
         };
 
-        storeVal = 
-            storeVal 
-            .then(store => 
+        datasetVal = 
+            datasetVal 
+            .then(dataset => 
 
-                store instanceof unresolvedIdb
-                ? store.setFilter(condition)
-                : general.applyToNestedArray(store, filterIt)
+                dataset instanceof unresolvedIdb
+                ? dataset.setFilter(condition)
+                : general.applyToNestedArray(dataset, filterIt)
 
             );
 
@@ -115,20 +115,22 @@ export function oneQuery () {
             let newAlias = args.length > 1 ? args[0] : null;
             let funcsObject = args.length > 1 ? args[1] : args[0];
 
-        // Get the relevant store
+console.log({funcsObject, args})
 
-            let storeKey = new Set(); 
+        // Get the relevant dataset
+
+            let datasetKey = new Set(); 
 
             for (let func of Object.values(funcsObject)) { 
                 let firstStoredArgument = func.storedArguments[0];
-                storeKey.add(
+                datasetKey.add(
                     ...new general.parser(firstStoredArgument).parameters
                 );
             }
                 
-            storeKey = this.storesBin.getFullKey(storeKey);
+            datasetKey = this.database.getFullKey(datasetKey);
 
-            let storeVal = this.getStore(storeKey);
+            let datasetVal = this.getDataset(datasetKey);
 
         // Loop args and literalize any functions if necessary
 
@@ -141,9 +143,9 @@ export function oneQuery () {
                     continue;
                 
                 let argParams = new general.parser(arg).parameters;
-                let argReferencesStore = argParams.some(param => storeKey.has(param));
+                let argReferencesDataset = argParams.some(param => datasetKey.has(param));
 
-                if (argReferencesStore && storeKey.size > 1) 
+                if (argReferencesDataset && datasetKey.size > 1) 
                     funcsObject[funcKey].storedArguments[argIx] = general.inputLiteralizer(arg);
 
             }
@@ -165,13 +167,13 @@ export function oneQuery () {
 
             };
 
-        // Execute that function on the store
+        // Execute that function on the dataset
 
-            storeVal = 
-                storeVal
-                .then(store => 
+            datasetVal = 
+                datasetVal
+                .then(dataset => 
                     general.applyToNestedArray(
-                        store,
+                        dataset,
                         applyFunctions
                     )
                 );
@@ -179,11 +181,11 @@ export function oneQuery () {
         // Terminations
 
             if (newAlias == null)
-                return storeVal;
+                return datasetVal;
 
-            this.storesBin.set(
-                storeKey, 
-                storeVal,
+            this.database.addDatasets(
+                datasetKey, 
+                datasetVal,
                 newAlias
             );
 
@@ -208,7 +210,7 @@ export function oneQuery () {
               isAllSelector ? null 
             : new Set(new general.parser(mappingFunction).parameters);
 
-        let storeVal = 
+        let datasetVal = 
             mapCore(
                 mappingFunction,
                 oldAliases,
@@ -216,11 +218,11 @@ export function oneQuery () {
             );
 
         if (newAlias == null)
-            return safeExecuteStore(storeVal);
+            return safeExecutedataset(datasetVal);
 
-        this.storesBin.set(
+        this.database.addDatasets(
             oldAliases,
-            storeVal,
+            datasetVal,
             newAlias
         );
 
@@ -271,26 +273,26 @@ export function oneQuery () {
         let fromAliases = Array.from(aliases);
         let joinAlias = fromAliases.pop();
 
-        let fromFullKey = this.storesBin.getFullKey(new Set(fromAliases));
+        let fromFullKey = this.database.getFullKey(new Set(fromAliases));
 
         let resultKey = new Set(fromFullKey);
         resultKey.add(joinAlias);
 
-        let fromStore = this.getStore(fromFullKey);
-        let joinStore = this.getStore(new Set([joinAlias]));
+        let fromdataset = this.getDataset(fromFullKey);
+        let joindataset = this.getDataset(new Set([joinAlias]));
 
-        let resultStore = 
-            pretendPromise.all([fromStore,joinStore])
-            .then(stores => 
+        let resultdataset = 
+            pretendPromise.all([fromdataset,joindataset])
+            .then(datasets => 
                 
                 general.applyToNestedArray(
-                    stores[0], 
+                    datasets[0], 
                     array => 
                         new joiner (
                             fromFullKey,
                             joinAlias,
                             array, 
-                            stores[1], 
+                            datasets[1], 
                             joinType
                         )
                         .executeJoin(matchingLogic)
@@ -298,9 +300,9 @@ export function oneQuery () {
             
             );
 
-        this.storesBin.set(resultKey, resultStore);
-        this.storesBin.remove(fromFullKey);
-        this.storesBin.remove(new Set([joinAlias]));
+        this.database.addDatasets(resultKey, resultdataset);
+        this.database.remove(fromFullKey);
+        this.database.remove(new Set([joinAlias]));
 
         return this;
 
@@ -309,22 +311,22 @@ export function oneQuery () {
     this.orderBy = orderedValuesSelector => {
 
         let key = new general.parser(orderedValuesSelector).parameters;
-        key = this.storesBin.getFullKey(new Set(key));
+        key = this.database.getFullKey(new Set(key));
 
         orderedValuesSelector = 
               key.size > 1
             ? general.inputLiteralizer(orderedValuesSelector)
             : orderedValuesSelector;
 
-        let store = this.getStore(key);
-        store = store.then(store => 
+        let dataset = this.getDataset(key);
+        dataset = dataset.then(dataset => 
             general.applyToNestedArray(
-                store,
+                dataset,
                 array => quicksort(array, orderedValuesSelector)
             )
         );
 
-        this.storesBin.set(key, store);
+        this.database.addDatasets(key, dataset);
         return this;
 
     } 
@@ -332,22 +334,22 @@ export function oneQuery () {
     this.groupBy = groupKeySelector => {
     
         let key = new general.parser(groupKeySelector).parameters;
-        key = this.storesBin.getFullKey(new Set(key));
+        key = this.database.getFullKey(new Set(key));
     
         groupKeySelector = 
               key.size > 1
             ? general.inputLiteralizer(groupKeySelector)
             : groupKeySelector;
             
-        let store = this.getStore(key);
+        let dataset = this.getDataset(key);
 
-        store = store.then(store => 
+        dataset = dataset.then(dataset => 
             new hashBuckets(groupKeySelector)
-            .addItems(store)
+            .addItems(dataset)
             .getBuckets()
         );
 
-        this.storesBin.set(key, store);
+        this.database.addDatasets(key, dataset);
 
         return this;
 
@@ -357,7 +359,7 @@ export function oneQuery () {
 
         this.executeAll();
 
-        // Just print the idbStore as a whole.
+        // Just print the idbdataset as a whole.
         if (general.isString(mappingFunction)) {
             printIdbStore(mappingFunction, target, caption);
             return this;
@@ -365,10 +367,10 @@ export function oneQuery () {
 
         let aliases = new Set(new general.parser(mappingFunction).parameters);
 
-        let store = this.getStore(aliases);
-        store = store.then(store => {
-            print(target, mappingFunction(store), caption);
-            return store;
+        let dataset = this.getDataset(aliases);
+        dataset = dataset.then(dataset => {
+            print(target, mappingFunction(dataset), caption);
+            return dataset;
         });
 
         return this;
@@ -383,12 +385,12 @@ export function oneQuery () {
             let store = tx.objectStore(storeName);
             return store.getAll();
         })
-        .then(storeVals => {
-            print(target, storeVals, caption);
+        .then(store => {
+            print(target, store, caption);
         });
 
     this.merge = (
-        target, // if string for an idbStore, updates the idbObjectStore, otherwise, updates the oneQueryStore 
+        target, // if string for an idbdataset, updates the idbObjectdataset, otherwise, updates the oneQuerydataset 
         source, // mapper function or maybe even direct array of objects  
         identityKey,
         action = () => oneQuery.mergeAction.upsert // function returning a oneQuery.mergeAction (or the direct string)
@@ -399,28 +401,28 @@ export function oneQuery () {
         let literalizedSource = 
             this.literalizeIfNecessary(source);
 
-        let targetInStoresBin =
-            this.storesBin.getFullKey(target)
+        let targetIndatabase =
+            this.database.getFullKey(target)
             ? true
             : false;     
 
         let mc = mapCore(literalizedSource, srcAliases, this);
 
-        if (targetInStoresBin) {
+        if (targetIndatabase) {
 
-            let targetStoreMerged = 
-                pretendPromise.all([mc, this.getStore(target)])
+            let targetDatasetMerged = 
+                pretendPromise.all([mc, this.getDataset(target)])
                 .then(obj => { 
                     let mapped = obj[0];
-                    let targetStore = obj[1];
-                    let mergedTarget = mergeIntoStore(targetStore, mapped, identityKey, action);
+                    let targetDataset = obj[1];
+                    let mergedTarget = mergeIntoDataset(targetDataset, mapped, identityKey, action);
                     return mergedTarget;
                 })
                 .execute();
 
-            this.storesBin.set(
+            this.database.addDatasets(
                 target, 
-                new pretendPromise(targetStoreMerged)
+                new pretendPromise(targetDatasetMerged)
             );
 
         }
@@ -429,7 +431,7 @@ export function oneQuery () {
 
             // Why did I (psw) have to wrap in pretend promise to work?
             // Before I did that, I of course didn't need execute, but
-            // the source store would be whatever the output of .then was.
+            // the source dataset would be whatever the output of .then was.
             // Originally undefined, but if I returned 'hello', it would 
             // be 'hello'.  
             pretendPromise.all([mc]) 
@@ -445,30 +447,29 @@ export function oneQuery () {
 
     }
 
-    // Ensures all stores have executed.  Relevant for pretend
+    // Ensures all datasets have executed.  Relevant for pretend
     // promises.  Standard promises will execute on their own
     // in time.
     this.executeAll = () => {
-        for (let storeInfo of this.storesBin.storeInfos) {
-            let store = storeInfo.store;
-            if (store instanceof pretendPromise)
-                storeInfo.store = new pretendPromise(store.execute())
+        for (let dataset of this.database) {
+            if (dataset.data instanceof pretendPromise)
+                dataset.data = new pretendPromise(dataset.data.execute())
         }
         return this;
     }
 
     this.literalizeIfNecessary = functionToProcess => {
 
-        let storeKey =
-            this.storesBin.getFullKey(
+        let datasetKey =
+            this.database.getFullKey(
                 new Set (
                     new general.parser(functionToProcess).parameters
                 )
             );
     
-        // functionToProcess might not even be referring to a store;
+        // functionToProcess might not even be referring to a dataset;
         // That is the reason for the truthy check on it's existence.
-        return storeKey && storeKey.size > 1 
+        return datasetKey && datasetKey.size > 1 
             ? general.inputLiteralizer(functionToProcess)
             : functionToProcess;
     
@@ -478,7 +479,7 @@ export function oneQuery () {
     // a full promise, it does nothing (but also does not fail),
     // and if it's a pretendPromise, it executes it to return
     // its value.
-    let safeExecuteStore = maybePromise => {
+    let safeExecutedataset = maybePromise => {
         if (maybePromise instanceof pretendPromise) 
             return maybePromise.execute();
     }

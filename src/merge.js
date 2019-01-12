@@ -1,6 +1,6 @@
 import { hashBuckets } from "./hashBuckets.js";
 
-export function mergeIntoStore (
+export function mergeIntoDataset (
     target,
     source,
     identityKey,

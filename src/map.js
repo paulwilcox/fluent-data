@@ -12,7 +12,7 @@ export let mapCore = (mappingFunction, aliases, oneQueryObj) => {
         : null;
 
     if (allSelector) 
-        return showStoreInfo(allSelector, oneQueryObj);
+        return showDatabase(allSelector, oneQueryObj);
 
     mappingFunction = 
         aliases.size > 1
@@ -34,50 +34,50 @@ export let mapCore = (mappingFunction, aliases, oneQueryObj) => {
 
     }
 
-    return oneQueryObj.getStore(aliases) 
-        .then(store => 
-            store instanceof unresolvedIdb 
-            ? store.setSelector(mappingFunction)
-            : general.applyToNestedArray(store, array => mapIt(array))
+    return oneQueryObj.getDataset(aliases) 
+        .then(dataset => 
+            dataset instanceof unresolvedIdb 
+            ? dataset.setSelector(mappingFunction)
+            : general.applyToNestedArray(dataset, array => mapIt(array))
         );
 
 }
 
-export let showStoreInfo = (display, oneQueryObj) => { // display = 'meta', 'data', 'both'
+export let showDatabase = (display, oneQueryObj) => { // display = 'meta', 'data', 'both'
 
     let keyStrings = [];
-    let stores = [];
+    let datasets = [];
     let datas = [];
     let isPromiseResults = [];
 
-    for(let storeInfo of oneQueryObj.storesBin.storeInfos) {
-        let keyString = [...storeInfo.key].join(',');
+    for(let dataset of oneQueryObj.database) {
+        let keyString = [...dataset.key].join(',');
         keyStrings.push(keyString);
-        stores.push(storeInfo.store);
-        datas.push(oneQueryObj.getStore(keyString));
+        datasets.push(dataset.data);
+        datas.push(oneQueryObj.getDataset(keyString));
         isPromiseResults.push(
-            Promise.resolve(storeInfo.store) == storeInfo.store
+            Promise.resolve(dataset.data) == dataset.data
         );
     }
 
     return pretendPromise.all([ 
-        pretendPromise.all(stores),
+        pretendPromise.all(datasets),
         pretendPromise.all(datas)
     ])
     .then(sd => {
 
-        let stores = sd[0];
+        let datasets = sd[0];
         let datas = sd[1];
 
-        let newStores = {};
+        let newdatasets = {};
 
-        for(let s in stores) {           
+        for(let s in datasets) {           
             
             let info = {}
 
             if (display == 'meta' || display == 'both') {
                 info['isPromise'] = isPromiseResults[s];
-                info['isUnresolvedIdb'] = stores[s] instanceof unresolvedIdb;
+                info['isUnresolvedIdb'] = datasets[s] instanceof unresolvedIdb;
             }
 
             if (display == 'data')
@@ -86,14 +86,14 @@ export let showStoreInfo = (display, oneQueryObj) => { // display = 'meta', 'dat
             if (display == 'both')
                 info['data'] = datas[s];
 
-            newStores = Object.assign(
-                newStores, 
+            newdatasets = Object.assign(
+                newdatasets, 
                 {[keyStrings[s]]: info}
             );
 
         }
 
-        return newStores;
+        return newdatasets;
 
     });
 

@@ -19,6 +19,21 @@ export let objectKeyValuesAreEqual = (left, right) => {
 
 }
 
+export let isSubsetOf = (sub, sup) =>  
+    setEquals (
+        new Set(
+            [...sub]
+            .filter(x => [...sup].indexOf(x) >= 0) // intersection
+        ), 
+        sub
+    );
+
+// Max Leizerovich: stackoverflow.com/questions/
+//   31128855/comparing-ecma6-sets-for-equality
+export let setEquals = (a, b) =>
+    a.size === b.size 
+    && [...a].every(value => b.has(value));
+
 // Takes function inputs and makes it so that those serve as references
 // to the properties of an object.
 export let inputLiteralizer = functionToProcess => {
