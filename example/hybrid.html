@@ -15,8 +15,8 @@
         })
         .filter(o => o.product != 123456) 
         .join( 
-            { inner: (o,p) => o.product == p.id },
-            { left: (o,c) => o.customer == c.id }
+            $$.inner( (o,p) => o.product == p.id ),
+            $$.left( (o,c) => o.customer == c.id )
         )
         .orderBy((o,p) => o.product)
         .groupBy(o => o.product)

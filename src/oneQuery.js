@@ -233,24 +233,33 @@ export function oneQuery () {
 
     }
 
-    this.join = (...matchingLogicObjects) => {
+    joiner.forEachJoinType(joinType => { 
 
-        for (let mlObj of matchingLogicObjects) {
+        // for the sake of: 
+        //   ...leftJoin(arrowFunc)
+        this[joinType + 'Join'] = 
+            (matchingLogic, algorithm = 'default') => {
+                this.join({joinType, matchingLogic, algorithm});
+                return this;
+            };
+
+    })    
+
+    this.join = (...commands) => {
+
+        for (let command of commands) {
                 
-            if(typeof mlObj == "function")
-                mlObj = { inner: mlObj };
+            if(typeof command == 'function')
+                command = { 
+                    joinType: 'inner', 
+                    matchingLogic: command,
+                    algorithm: 'default'
+                };
 
-            let mlProp = 
-                Object.entries(mlObj)
-                .find(kv => 
-                    ['inner', 'left','right','full']
-                    .includes(kv[0].toLowerCase())
-                );
-
-            let joinType = mlProp[0];
-            let matchingLogic = mlProp[1]; 
-
-            joinRecords(matchingLogic, joinType);
+            joinRecords(
+                command.matchingLogic, 
+                command.joinType
+            );
 
         }
 
@@ -483,6 +492,20 @@ export function oneQuery () {
 
 addStaticFolds(oneQuery);
 addStaticFolds($$);
+
+// for the sake of: 
+//   ...join($$.left(arrowFunc), $$.inner(arrowFunc))  
+joiner.forEachJoinType(joinType => {
+
+    oneQuery[joinType] = (matchingLogic, algorithm = 'default') => ({
+        joinType: joinType,
+        matchingLogic,
+        algorithm
+    });     
+
+    $$[joinType] = oneQuery[joinType];
+
+})
 
 oneQuery.mergeAction = Object.freeze({
     nothing: null,

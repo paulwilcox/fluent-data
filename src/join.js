@@ -34,7 +34,7 @@ export class joiner {
     
     }
             
-    executeJoin(matchingLogic) {
+    executeJoin(matchingLogic, algorithm = 'default') {
 
         if (typeof arguments[0] == null)
             throw "First argument passed to 'executeJoin' cannot be null";
@@ -49,7 +49,11 @@ export class joiner {
                 parsedFuncs.rightFunc
             );
 
-        return this.executeLoopJoin(matchingLogic);
+        // todo: have the default try a hash and do a loop on catch, or
+        // detect which is possible, or otherwise be more flexible.
+        return  algorithm = 'default' ? this.executeHashJoin(matchingLogic)
+                : algorithm = 'hash' ? this.executeHashJoin(matchingLogic)
+                : this.executeLoopJoin(matchingLogic);
 
     }
 
@@ -164,5 +168,6 @@ export class joiner {
 
 }
 
-
-
+joiner.forEachJoinType = operation => 
+    ['inner', 'left', 'right', 'full']
+    .forEach(operation);
