@@ -54,24 +54,19 @@ export function oneQuery () {
 
     // MinusFour and kofifus stackoverflow.com/questions/32539354/how 
     //   -to-get-the-first-element-of-set-in-es6-ecmascript-2015
-    this.from = stores => {
+    this.from = userStores => {
 
-        this.storesBin.set(stores);
+        this.storesBin.set(userStores);
 
-        for (let storeInfo of this.storesBin.storeInfos) {
+        for (let existingStore of this.storesBin.storeInfos) {
 
-            let storeInInput = this.storesBin.isSubsetOf(storeInfo.key, Object.keys(stores));
+            if (general.isString(existingStore.store) && this.idbPromise)
+                existingStore.store = oneQuery.idbSource(existingStore.store, this.idbPromise);
 
-            if (!storeInInput)
-                continue;
-
-            if (general.isString(storeInfo.store) && this.idbPromise)
-                storeInfo.store = oneQuery.idbSource(storeInfo.store, this.idbPromise);
-
-            storeInfo.store = 
-                storeInfo.store instanceof oneQuery.idbSourceManager 
-                ? storeInfo.store = storeInfo.store.getStorePromise()
-                : new pretendPromise(storeInfo.store);
+            existingStore.store = 
+                existingStore.store instanceof oneQuery.idbSourceManager 
+                ? existingStore.store = existingStore.store.getStorePromise()
+                : new pretendPromise(existingStore.store);
 
         }
 
