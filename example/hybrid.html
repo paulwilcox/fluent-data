@@ -7,10 +7,11 @@
         import { sampleDataSets, sampleIdb } from "./data.js";
         import { $$ } from "../src/oneQuery.js";
 
-        $$(sampleIdb, 'idb')
+        $$()
         .from({
-            o: 'orders',
-            p: 'products',
+            sam: $$.db(sampleIdb, 'idb'),
+            o: sam => 'orders',
+            p: sam => 'products',
             c: sampleDataSets.customers
         })
         .filter(o => o.product != 123456) 

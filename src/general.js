@@ -114,6 +114,9 @@ export let isString = input =>
     typeof input === 'string' 
     || input instanceof String;
 
+export let isFunction = input => 
+    typeof input === 'function';
+
 export class parser {
 
     // Parse function into argument names and body

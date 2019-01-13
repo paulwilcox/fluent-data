@@ -12,14 +12,18 @@ import { mergeIntoIdb, mergeIntoDataset } from "./merge.js";
 
 export let $$ = (...args) => new oneQuery(...args);
 
-export function oneQuery () { 
+export function oneQuery (...args) { 
 
     // careful, the collection or any element might be 
     // in either a promised or resolved state
     this.database = new database();
-
-    if (arguments[1] == 'idb') 
-        this.idbPromise = arguments[0];
+    
+    // example: 
+    //   { 
+    //       dbA: { dbType: 'idb', dataBase: unresolvedIdb },
+    //       dbB: { dbType: 'idb', dataBase: dbPromise }
+    //   }
+    this.externalDbs = {};   
         
     // If it's a first filter, leave it unresolved, otherwise 
     // resolve it.
@@ -52,23 +56,44 @@ export function oneQuery () {
 
     }
 
-    this.from = datasets => {
+    this.from = obj => {
 
-        let makeUnresolvedIdb = datasetName => 
-            this.idbPromise
+        let makeUnresolvedIdb = (datasetName, database) => 
+            database
             .then (db => {
                 let tx = db.transaction(datasetName);
                 return new unresolvedIdb(datasetName, tx);
             });
 
-        for (let key of Object.keys(datasets)) 
-        
-            datasets[key] = 
-                general.isString(datasets[key]) && this.idbPromise 
-                ? makeUnresolvedIdb(datasets[key])
-                : new pretendPromise(datasets[key]);
+        // for all database keys
+        for (let key of Object.keys(obj)) 
+            if (obj[key].dbType) 
+                this.externalDbs[key] = obj[key]
 
-        this.database.addDatasets(datasets);
+        // for all dataset keys
+        for (let key of Object.keys(obj)) 
+            if (!obj[key].dbType) {
+
+                // if value is a function, the parameter represents the database
+                // the body represents the dataset name as a string
+                if (general.isFunction(obj[key])) {
+                    
+                    let dbName = new general.parser(obj[key]).parameters[0];
+                    let dsName = obj[key]();
+                    let externalDb = this.externalDbs[dbName];
+console.log({externalDb})
+                    if (externalDb.dbType == 'idb')
+                        obj[key] = makeUnresolvedIdb(dsName, externalDb.database);
+
+                }
+
+                // if not a function, it is the dataset directly
+                else 
+                    obj[key] = new pretendPromise(obj[key]);
+
+                this.database.addDataset(key, obj[key]);
+
+            }
 
         return this;
 
@@ -114,8 +139,6 @@ export function oneQuery () {
 
             let newAlias = args.length > 1 ? args[0] : null;
             let funcsObject = args.length > 1 ? args[1] : args[0];
-
-console.log({funcsObject, args})
 
         // Get the relevant dataset
 
@@ -183,7 +206,7 @@ console.log({funcsObject, args})
             if (newAlias == null)
                 return datasetVal;
 
-            this.database.addDatasets(
+            this.database.addDataset(
                 datasetKey, 
                 datasetVal,
                 newAlias
@@ -220,7 +243,7 @@ console.log({funcsObject, args})
         if (newAlias == null)
             return safeExecutedataset(datasetVal);
 
-        this.database.addDatasets(
+        this.database.addDataset(
             oldAliases,
             datasetVal,
             newAlias
@@ -300,7 +323,7 @@ console.log({funcsObject, args})
             
             );
 
-        this.database.addDatasets(resultKey, resultdataset);
+        this.database.addDataset(resultKey, resultdataset);
         this.database.remove(fromFullKey);
         this.database.remove(new Set([joinAlias]));
 
@@ -326,7 +349,7 @@ console.log({funcsObject, args})
             )
         );
 
-        this.database.addDatasets(key, dataset);
+        this.database.addDataset(key, dataset);
         return this;
 
     } 
@@ -349,7 +372,7 @@ console.log({funcsObject, args})
             .getBuckets()
         );
 
-        this.database.addDatasets(key, dataset);
+        this.database.addDataset(key, dataset);
 
         return this;
 
@@ -359,13 +382,20 @@ console.log({funcsObject, args})
 
         this.executeAll();
 
-        // Just print the idbdataset as a whole.
-        if (general.isString(mappingFunction)) {
-            printIdbStore(mappingFunction, target, caption);
-            return this;
-        }
+        let aliases = new general.parser(mappingFunction).parameters;
 
-        let aliases = new Set(new general.parser(mappingFunction).parameters);
+        // Just print the idbdataset as a whole.
+        if (Object.keys(this.externalDbs).includes(aliases[0])) {
+            
+            let externalDb = this.externalDbs[aliases[0]];
+            let datasetName = mappingFunction();
+
+            if (externalDb.dbType == 'idb')
+                printIdbStore(datasetName, externalDb.database, target, caption);
+
+            return this;
+
+        }
 
         let dataset = this.getDataset(aliases);
         dataset = dataset.then(dataset => {
@@ -377,9 +407,9 @@ console.log({funcsObject, args})
 
     }
 
-    let printIdbStore = (storeName, target, caption) => 
+    let printIdbStore = (storeName, database, target, caption) => 
 
-        this.idbPromise
+        database
         .then(db => {
             let tx = db.transaction(storeName);
             let store = tx.objectStore(storeName);
@@ -396,19 +426,14 @@ console.log({funcsObject, args})
         action = () => oneQuery.mergeAction.upsert // function returning a oneQuery.mergeAction (or the direct string)
     ) => {
 
-        let srcAliases = new Set(new general.parser(source).parameters);
+        let srcAliases = new general.parser(source).parameters;
 
         let literalizedSource = 
             this.literalizeIfNecessary(source);
 
-        let targetIndatabase =
-            this.database.getFullKey(target)
-            ? true
-            : false;     
+        let mc = mapCore(literalizedSource, new Set(srcAliases), this);
 
-        let mc = mapCore(literalizedSource, srcAliases, this);
-
-        if (targetIndatabase) {
+        if (!general.isFunction(target)) {
 
             let targetDatasetMerged = 
                 pretendPromise.all([mc, this.getDataset(target)])
@@ -429,17 +454,16 @@ console.log({funcsObject, args})
 
         else {
 
-            // Why did I (psw) have to wrap in pretend promise to work?
-            // Before I did that, I of course didn't need execute, but
-            // the source dataset would be whatever the output of .then was.
-            // Originally undefined, but if I returned 'hello', it would 
-            // be 'hello'.  
-            pretendPromise.all([mc]) 
-            .then(obj => {
-                let mapped = obj[0];
-                mergeIntoIdb(this.idbPromise, target, mapped, identityKey, action);
-            })
-            .execute();
+            let externalDb = this.externalDbs[new general.parser(target).parameters[0]];
+
+            if (externalDb.dbType == 'idb') 
+                
+                // Why did I (psw) have to wrap in pretend promise to work?
+                pretendPromise.all([mc]) 
+                .then(obj => {
+                    let mapped = obj[0];
+                    mergeIntoIdb(externalDb.database, target(), mapped, identityKey, action);
+                });
 
         }
 
@@ -509,4 +533,9 @@ oneQuery.mergeAction = Object.freeze({
     remove: 'remove'
 })
 
+oneQuery.db = (database, dbType) => ({
+    dbType, 
+    database
+});
 
+$$.db = oneQuery.db;

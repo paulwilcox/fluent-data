@@ -34,6 +34,9 @@ export class database extends Array {
     // newKey is optional
 	addDataset(key, data, newKey) {
 
+        if (general.isString(key))
+            key = [key];
+
 	    let incoming = {
             key: new Set(key),
             data: data

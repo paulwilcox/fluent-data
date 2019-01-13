@@ -6,11 +6,12 @@
     <script type='module'>
 
         import { sampleIdb } from "./data.js";
-        import { oneQuery } from "../src/oneQuery.js";
+        import { $$ } from "../src/oneQuery.js";
 
         let result = 
-            new oneQuery(sampleIdb, 'idb')
+            $$()
             .from({
+                sam: $$.db(sampleIdb, 'idb'),
                 n: [
                     { id: 1, name: 'taquitos' },
                     { id: 4, name: 'alfredo' },
@@ -21,7 +22,7 @@
                     { id: 8, name: 'egg roll' }
                 ]
             })
-            .print('foods', '#beforeMerge', 'Before: foods')
+            .print(sam => 'foods', '#beforeMerge', 'Before: foods')
             .print(n => n, '#beforeMerge', 'Before: n')
             .print(o => o, '#beforeMerge', 'Before: o')
             .merge(
@@ -30,12 +31,12 @@
                 o => o.id 
             )
             .merge(
-                'foods',
+                sam => 'foods',
                 n => n,
                 n => n.id  
             )
             .print(n => n, '#afterMerge', 'After: n')
-            .print('foods', '#afterMerge', 'After: foods')
+            .print(sam => 'foods', '#afterMerge', 'After: foods')
             .print(o => o, '#afterMerge', 'After: o')
             .executeAll()
             .map('*d');
