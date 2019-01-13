@@ -9,8 +9,7 @@
         import { $$ } from "../src/oneQuery.js";
 
         let result = 
-            $$()
-            .from({
+            $$({
                 sam: $$.db(sampleIdb, 'idb'),
                 n: [
                     { id: 1, name: 'taquitos' },

@@ -7,8 +7,7 @@
         import { sampleDataSets, sampleIdb } from "./data.js";
         import { $$ } from "../src/oneQuery.js";
 
-        $$()
-        .from({
+        $$({
             sam: $$.db(sampleIdb, 'idb'),
             o: sam => 'orders',
             p: sam => 'products',

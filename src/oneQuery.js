@@ -10,9 +10,13 @@ import { mapCore } from "./map.js";
 import { print } from "./visualizer/printer.js";
 import { mergeIntoIdb, mergeIntoDataset } from "./merge.js";
 
-export let $$ = (...args) => new oneQuery(...args);
+export let $$ = (obj) => new oneQuery(obj);
 
-export function oneQuery (...args) { 
+export function oneQuery (obj) { 
+
+    // run at the bottom
+    let constructor = obj => 
+        this.addSources(obj);
 
     // careful, the collection or any element might be 
     // in either a promised or resolved state
@@ -56,7 +60,7 @@ export function oneQuery (...args) {
 
     }
 
-    this.from = obj => {
+    this.addSources = obj => {
 
         let makeUnresolvedIdb = (datasetName, database) => 
             database
@@ -81,7 +85,7 @@ export function oneQuery (...args) {
                     let dbName = new general.parser(obj[key]).parameters[0];
                     let dsName = obj[key]();
                     let externalDb = this.externalDbs[dbName];
-console.log({externalDb})
+
                     if (externalDb.dbType == 'idb')
                         obj[key] = makeUnresolvedIdb(dsName, externalDb.database);
 
@@ -507,6 +511,8 @@ console.log({externalDb})
         if (maybePromise instanceof pretendPromise) 
             return maybePromise.execute();
     }
+
+    constructor(obj);
 
 }
 
