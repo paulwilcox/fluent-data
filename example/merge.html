@@ -4,7 +4,7 @@
     <div id="afterMerge" style="display:flex; flex-direction:row"></div><br/>
 
     <script type='module'>
-
+        
         import { sampleIdb } from "./data.js";
         import { $$ } from "../src/oneQuery.js";
 
@@ -23,7 +23,7 @@
             })
             .print(sam => 'foods', '#beforeMerge', 'Before: foods')
             .print(n => n, '#beforeMerge', 'Before: n')
-            .print(o => o, '#beforeMerge', 'Before: o')
+            .print(o => o, '#beforeMerge', 'Before: o') // fixme: "Before: o" is being printed twice
             .merge(
                 'n', 
                 o => o,

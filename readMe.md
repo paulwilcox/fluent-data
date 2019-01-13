@@ -33,40 +33,36 @@ For consistency with example/data.js, we will create a single "database" object 
 
 The oneQuery class can be instantiated in the following ways:
 
-    new oneQuery()
-    new oneQuery('persistenceDatabaseName', 'persistenceType')  
-    $$() 
-    $$('persistenceDatabaseName', 'persistenceType').
+    new oneQuery(objectOfSources)
+    $$(objectOfSources)
 
-*Presently, only 'idb' is supported as a persistence type.*
+For instance, 
 
-## Loading Datasets
-
-You will immediately want to load your class with the datasets you want to work with:
-
-    $$()
-    .from({
+    $$({
         st: datasets.students,
         sc: datasets.scores
-    }).
+    })
 
 The oneQuery instance will now load the datasets for *students* and *scores* into *st* and *sc*, respectively.  All future operations within oneQuery will make reference to these new aliases, unless an operation modifies or deletes a store alias. 
 
-### IndexedDB 
+### Persisted Databases 
 
-If you want to load from an objectStore in IndexedDb, then you have two options:
+*> Presently, only 'idb' is supported as a persistence type.*
 
-    $$('idbDatabaseName', 'idb').from({x: 'datasetName'}),
-    $$().from({x: oneQuery.idbSource('storeName', idbPromise)}).
+If you want to load from an objectStore in IndexedDb:
 
-The former is more convenient for loading multiple datasets from the same IndexedDB source.  The latter is there if you need to load from multiple IndexedDB sources.
+    $$({
+        db: someSampleDatabase,  // e.g., an IdbPromise 
+        ds: db => 'someDatasetName' // e.g., the name of an objectStore in the IdbPromsie   
+    })
+
+Note that 'ds' has an arrow function with parameter 'db'.  This matches the 'db' property defined above it.  The name of the parameter is how oneQuery knows which database the dataset in 'ds' comes from.
 
 ## Syntax
 
 Operations on OneQuery datasets typically involve arrow functions inside chained method calls.  The parameters of the arrow functions are taken to refer to the object aliases of the loaded datasets.  Consider, for instance:
 
-    $$()
-    .from({
+    $$({
         sc: sampleDataSets.scores,
         st: sampleDataSets.students 
     })
@@ -119,15 +115,30 @@ The following operations are available on oneQuery:
 
 **print**: Show a dataset as an html table.  The first parameter is an arrow function that maps what is to be output.  Can be a little quirky, be sure to only print from a single source (joined datasets count as a single source).  The second parameter is the div to put the html table into.  The third parameter is a caption for the table.  The table is quite versatile.  It can accomoadate different object types, has paging, and so on.  Inspired by LinqPad visualizations, but of course quite different.
 
-**fold**: Aggregate or otherwise condense a dataset.  More documentation to come on this.
+**fold**: Aggregate or otherwise condense a dataset.  More documentation to come on this.  In the meantime, refer to example\hybrid.html.
 
-**merge**: Merge values from one dataset into another.  Inspired by slowly-changing-dimension approach.  More documentation to come on this.
+**merge**: Merge values from one dataset into another.  Inspired by slowly-changing-dimension approach.  More documentation to come on this.  In the meantime, refer to example\merge.html.
 
 **executeAll**: Hopefully this won't be necessary in the future.  But in some cases, the end-of-the line is not reached, yet processing of all non-promise datasets is required.  This method has no parameters.  It will still return the oneQuery object.
 
 ## Example
 
 Web pages for a sample server are included in the 'example' folder.  Use webpack-dev-server or other means to see the results.  Otherwise, just skim the html files to get a sense of the usage.   
+
+## The future
+
+The following are desired features for OneQuery:
+
+  - Allow static fold functions to be dynamically added, such as in a plugin fashion
+  - Create an API/interface/contract to integrate code that allows OneQuery to work with an external database such as Postgre, Sql Server, MongoDb, etc.  Make sure IndexedDb follows this api.
+  - Create one server-side persistance integration that utilizes this API
+  - Map option while printing a dataset from an external database (which is not yet loaded in).
+
+The following are significant code refactorings that are on the horizon:
+
+  - OneQuery.databases is a little clunky.  Datasets are too isolated.  As a result, it's hard to work with print and merge. 
+  - Relatedly, 'PretendPromise' should perhaps be better structured.
+  - Maybe I shouldn't shy away from 'executeAll'.  If I don't put in a mapping capacity.  Basically, make it work like 'map' except differentiate them in the sense that 'map' is not the end of the line, and 'execute' is.
 
 ## Newbie Disclaimers
 
