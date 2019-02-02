@@ -1,0 +1,426 @@
+import * as g from "./general.js";
+import { parser } from './parser.js';
+//import { hashBuckets } from "./hashBuckets.js";
+//import { joiner } from "./join.js";
+//import { quicksort } from "./sorts.js";
+import { database } from "./database";
+//import { addStaticFolds } from "./folds.js";
+import { mapCore } from "./map.js";
+//import { print } from "./visualizer/printer.js";
+import { dsGetter } from "./dsGetter.js";
+//import { mergeIntoIdb, mergeIntoDataset } from "./merge.js";
+import { dbConnector } from './dbConnector.js';
+import { dbConnectorIdb } from "./dbConnectorIdb.js";
+import { deferable } from "./deferable.js";
+
+export let $$ = obj => new oneQuery(obj);
+
+export class oneQuery extends deferable { 
+
+    constructor (obj) { 
+        super(new database());
+        this.dbConnectors = {}; 
+        this.addSources(obj);
+    }
+
+
+
+    promisifyDb () {
+        return this.then(() => 
+            this.database = Promise.resolve(this.database)
+        );
+    }
+
+
+/*
+    this.fold = (...args) => {
+
+        // Initializations
+
+            let newAlias = args.length > 1 ? args[0] : null;
+            let funcsObject = args.length > 1 ? args[1] : args[0];
+
+        // Get the relevant dataset
+
+            let datasetKey = new Set(); 
+
+            for (let func of Object.values(funcsObject)) { 
+                let firstStoredArgument = func.storedArguments[0];
+                datasetKey.add(
+                    ...new g.parser(firstStoredArgument).parameters
+                );
+            }
+                
+            datasetKey = this.database.getFullKey(datasetKey);
+
+            let datasetVal = this.getDataset(datasetKey);
+
+        // Loop args and literalize any functions if necessary
+
+            for (let funcKey of Object.keys(funcsObject)) 
+            for (let argIx in funcsObject[funcKey].storedArguments) {
+
+                let arg = funcsObject[funcKey].storedArguments[argIx];
+
+                if (typeof arg != 'function')
+                    continue;
+                
+                let argParams = new g.parser(arg).parameters;
+                let argReferencesDataset = argParams.some(param => datasetKey.has(param));
+
+                if (argReferencesDataset && datasetKey.size > 1) 
+                    funcsObject[funcKey].storedArguments[argIx] = g.inputLiteralizer(arg);
+
+            }
+
+        // Create funciton that processes all partialized functions in object 
+
+            let applyFunctions = array => {
+
+                let output = {};
+
+                for (let funcKey of Object.keys(funcsObject)) {
+                    let func = funcsObject[funcKey].func;
+                    let args = funcsObject[funcKey].storedArguments.slice(0);
+                    args.unshift(array);
+                    output[funcKey] = func.apply(null, args);
+                }
+
+                return output;
+
+            };
+
+        // Execute that function on the dataset
+
+            datasetVal = 
+                datasetVal
+                .then(dataset => 
+                    g.applyToNestedArray(
+                        dataset,
+                        applyFunctions
+                    )
+                );
+
+        // Terminations
+
+            if (newAlias == null)
+                return datasetVal;
+
+            this.database.addDataset(
+                datasetKey, 
+                datasetVal,
+                newAlias
+            );
+
+            return this;
+
+    }
+*/
+
+
+    // map(func)
+    // map('newalias', func)
+    // map('*')
+    mapOld (...args) { 
+
+        return this.then(() => {
+
+            let mappingFunction = args.length > 1 ? args[1] : args[0];
+
+            let isAllSelector = 
+                g.isString(mappingFunction) 
+                && mappingFunction.substring(0,1) == '*';
+
+            let newAlias = args.length > 1 ? args[0] : null;
+
+            let oldAliases = 
+                isAllSelector ? null 
+                : new Set(new parser(mappingFunction).parameters);
+
+            let datasetVal = 
+                mapCore(
+                    mappingFunction,
+                    oldAliases,
+                    this
+                );
+
+            if (newAlias == null)
+                return safeExecutedataset(datasetVal);
+
+            this.database.addDataset(
+                oldAliases,
+                datasetVal,
+                newAlias
+            );
+
+        });
+
+    }
+
+/*
+
+    joiner.forEachJoinType(joinType => { 
+
+        // for the sake of: 
+        //   ...leftJoin(arrowFunc)
+        this[joinType + 'Join'] = 
+            (matchingLogic, algorithm = 'default') => {
+                this.join({joinType, matchingLogic, algorithm});
+                return this;
+            };
+
+    })    
+
+    this.join = (...commands) => {
+
+        for (let command of commands) {
+                
+            if(typeof command == 'function')
+                command = { 
+                    joinType: 'inner', 
+                    matchingLogic: command,
+                    algorithm: 'default'
+                };
+
+            joinRecords(
+                command.matchingLogic, 
+                command.joinType
+            );
+
+        }
+
+        return this;
+
+    }
+
+    let joinRecords = (
+        matchingLogic, // (f,j) => [f.col1 == j.col1, f.col2 < j.col2],
+        joinType // "inner", "left", "right", "full"
+    ) => {
+
+        let aliases = new g.parser(matchingLogic).parameters;
+        let fromAliases = Array.from(aliases);
+        let joinAlias = fromAliases.pop();
+
+        let fromFullKey = this.database.getFullKey(new Set(fromAliases));
+
+        let resultKey = new Set(fromFullKey);
+        resultKey.add(joinAlias);
+
+        let fromdataset = this.getDataset(fromFullKey);
+        let joindataset = this.getDataset(new Set([joinAlias]));
+
+        let resultdataset = 
+            pretendPromise.all([fromdataset,joindataset])
+            .then(datasets => 
+                
+                g.applyToNestedArray(
+                    datasets[0], 
+                    array => 
+                        new joiner (
+                            fromFullKey,
+                            joinAlias,
+                            array, 
+                            datasets[1], 
+                            joinType
+                        )
+                        .executeJoin(matchingLogic)
+                )
+            
+            );
+
+        this.database.addDataset(resultKey, resultdataset);
+        this.database.remove(fromFullKey);
+        this.database.remove(new Set([joinAlias]));
+
+        return this;
+
+    }
+   
+    this.orderBy = orderedValuesSelector => {
+
+        let key = new g.parser(orderedValuesSelector).parameters;
+        key = this.database.getFullKey(new Set(key));
+
+        orderedValuesSelector = 
+              key.size > 1
+            ? g.inputLiteralizer(orderedValuesSelector)
+            : orderedValuesSelector;
+
+        let dataset = this.getDataset(key);
+        dataset = dataset.then(dataset => 
+            g.applyToNestedArray(
+                dataset,
+                array => quicksort(array, orderedValuesSelector)
+            )
+        );
+
+        this.database.addDataset(key, dataset);
+        return this;
+
+    } 
+
+    this.groupBy = groupKeySelector => {
+    
+        let key = new g.parser(groupKeySelector).parameters;
+        key = this.database.getFullKey(new Set(key));
+    
+        groupKeySelector = 
+              key.size > 1
+            ? g.inputLiteralizer(groupKeySelector)
+            : groupKeySelector;
+            
+        let dataset = this.getDataset(key);
+
+        dataset = dataset.then(dataset => 
+            new hashBuckets(groupKeySelector)
+            .addItems(dataset)
+            .getBuckets()
+        );
+
+        this.database.addDataset(key, dataset);
+
+        return this;
+
+    }
+
+    this.print = (mappingFunction, target, caption) => {
+
+        this.executeAll();
+
+        let aliases = new g.parser(mappingFunction).parameters;
+
+        // Just print the idbdataset as a whole.
+        if (Object.keys(this.externalDbs).includes(aliases[0])) {
+            
+            let externalDb = this.externalDbs[aliases[0]];
+            let datasetName = mappingFunction();
+
+            if (externalDb.dbType == 'idb')
+                printIdbStore(datasetName, externalDb.database, target, caption);
+
+            return this;
+
+        }
+
+        let dataset = this.getDataset(aliases);
+        dataset = dataset.then(dataset => {
+            print(target, mappingFunction(dataset), caption);
+            return dataset;
+        });
+
+        return this;
+
+    }
+
+    let printIdbStore = (storeName, database, target, caption) => 
+
+        database
+        .then(db => {
+            let tx = db.transaction(storeName);
+            let store = tx.objectStore(storeName);
+            return store.getAll();
+        })
+        .then(store => {
+            print(target, store, caption);
+        });
+
+    this.merge = (
+        target, // if string for an idbdataset, updates the idbObjectdataset, otherwise, updates the oneQuerydataset 
+        source, // mapper function or maybe even direct array of objects  
+        identityKey,
+        action = () => oneQuery.mergeAction.upsert // function returning a oneQuery.mergeAction (or the direct string)
+    ) => {
+
+        let srcAliases = new g.parser(source).parameters;
+
+        let literalizedSource = 
+            this.literalizeIfNecessary(source);
+
+        let mc = mapCore(literalizedSource, new Set(srcAliases), this);
+
+        if (!g.isFunction(target)) {
+
+            let targetDatasetMerged = 
+                pretendPromise.all([mc, this.getDataset(target)])
+                .then(obj => { 
+                    let mapped = obj[0];
+                    let targetDataset = obj[1];
+                    let mergedTarget = mergeIntoDataset(targetDataset, mapped, identityKey, action);
+                    return mergedTarget;
+                })
+                .execute();
+
+            this.database.addDatasets(
+                target, 
+                new pretendPromise(targetDatasetMerged)
+            );
+
+        }
+
+        else {
+
+            let externalDb = this.externalDbs[new g.parser(target).parameters[0]];
+
+            if (externalDb.dbType == 'idb') 
+                
+                // Why did I (psw) have to wrap in pretend promise to work?
+                pretendPromise.all([mc]) 
+                .then(obj => {
+                    let mapped = obj[0];
+                    mergeIntoIdb(externalDb.database, target(), mapped, identityKey, action);
+                });
+
+        }
+
+        return this;
+
+    }
+
+
+    this.literalizeIfNecessary = functionToProcess => {
+
+        let datasetKey =
+            this.database.getFullKey(
+                new Set (
+                    new g.parser(functionToProcess).parameters
+                )
+            );
+    
+        // functionToProcess might not even be referring to a dataset;
+        // That is the reason for the truthy check on it's existence.
+        return datasetKey && datasetKey.size > 1 
+            ? g.inputLiteralizer(functionToProcess)
+            : functionToProcess;
+    
+    }    
+*/
+}
+
+/*
+addStaticFolds(oneQuery);
+addStaticFolds($$);
+
+// for the sake of: 
+//   ...join($$.left(arrowFunc), $$.inner(arrowFunc))  
+joiner.forEachJoinType(joinType => {
+
+    oneQuery[joinType] = (matchingLogic, algorithm = 'default') => ({
+        joinType: joinType,
+        matchingLogic,
+        algorithm
+    });     
+
+    $$[joinType] = oneQuery[joinType];
+
+})
+
+oneQuery.mergeAction = Object.freeze({
+    nothing: null,
+    upsert: 'upsert',
+    remove: 'remove'
+})
+*/
+
+oneQuery.idb = dbName => new dbConnectorIdb(dbName);
+$$.idb = oneQuery.idb;

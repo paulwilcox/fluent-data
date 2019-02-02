@@ -8,13 +8,14 @@
         import { $$ } from "../src/oneQuery.js";
 
         $$({
-            sam: $$.db(sampleIdb, 'idb'),
-            o: sam => 'orders',
-            p: sam => 'products',
+            idb: $$.idb('sampleIdb'),
+            o: idb => 'orders',
+            p: idb => 'products',
             c: sampleDataSets.customers
         })
-        .filter(o => o.product != 123456) 
-        .join( 
+        .filter(o => o.product != 123456)
+        .execute(o => o);
+        /*.join( 
             $$.inner( (o,p) => o.product == p.id ),
             $$.left( (o,c) => o.customer == c.id )
         )
@@ -35,6 +36,7 @@
                             )
         })
         .print(f => f, '#result', 'oneQuery Result');
+        */
 
     </script>
 

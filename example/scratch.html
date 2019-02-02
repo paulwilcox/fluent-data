@@ -1,8 +1,26 @@
-<script type="module">
+<script type='module'>
 
-    import { result } from '../src/scratch.js';
+    import { sampleIdb, sampleDataSets } from './data.js';
+    import { $$ } from '../src/oneQuery.js';
+    import { database } from '../src/database.js';
 
-    result 
-    .then(r => console.log(r));
+    let db = 
+        $$({
+            sam: $$.idb('sampleIdb'),
+            c: sam => 'customers',
+            o: sampleDataSets.orders
+        })
+        .filter(c => c.id != null)
+        .then(db => { 
+            console.log(db.getDs('c').data);
+            return db;
+        })        
+        .map(c => c)
+        //.filter(o => o.rating >= 10)
+        //.map(o => ({ id: o.id, speed: o.speed, rating: o.rating, o }))
+        //.then(db => {console.log({db}); return db;})
+        .execute();
+
+    console.log({db})
 
 </script>

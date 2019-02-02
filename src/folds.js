@@ -1,4 +1,4 @@
-import * as general from "./general.js";
+import { parser } from './parser.js';
 
 export let addStaticFolds = oneQueryObj => {
 
@@ -96,7 +96,7 @@ export let addStaticFolds = oneQueryObj => {
     // call a function with partial arguments.    
     let partializable = func => {
 
-        let expectedArgs = new general.parser(func).parameters;
+        let expectedArgs = new parser(func).parameters;
 
         return (...args) => {
 

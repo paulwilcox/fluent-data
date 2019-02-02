@@ -1,112 +1,105 @@
-import * as general from "./general.js";
+/*
 
-// Works like Map, except that it uses Sets as keys.
-export class database extends Array {
+    phi.report (φ.report)
+    phi.ninja (φ.ninja)
+    philos.us
+    philososaur.us
 
-    addDatasets(...args) {
+*/
 
-        if (args.length == 1)
-            this.addDatasetsByObject(args[0]);
-        else if (args.length == 2) 
-            this.addDataset(args[0], args[1]);
-        else if (args.length == 3) 
-            this.addDataset(args[0], args[1], args[2]);
-        else 
-            throw "'addDatasets' expects 1 to 3 parameters."
+import * as g from './general.js';
+import { dataset } from './dataset.js';
+import { parser } from './parser.js';
+import { dbConnector } from './dbConnector.js';
+
+export class database {
+
+    constructor() {
+        this.datasets = []; 
+        this.dbConnectors = {};
+    }
+
+    getDs(key) {
+        if (g.isFunction(key)) 
+            key = new parser.parameters(key);
+        return this.datasets.find(ds => ds.keyMatch(key));
+    }
+
+    addSource (key, data) { 
+        this.datasets.push(new dataset(key, data));
+        return this;
+    }    
+
+    addSources (obj) { 
+
+        let items = Object.keys(obj).map(k => ({ key: k, val: obj[k]}));
+        let dbCons = items.filter(i => i.val instanceof dbConnector);
+        let dsFuncs = items.filter(i => g.isFunction(i.val));
+        let datasets = items.filter(i => !(i.val instanceof dbConnector) && !g.isFunction(i.val));
+
+        for (let con of dbCons)
+            this.dbConnectors[con.key] = con.val;
+
+        for (let ds of datasets) 
+            this.addSource(ds.key, ds.val);
+
+        // A function in addSources should only ever have the form:
+        //    dbConnectorAlias => 'datasetName';            
+        for (let func of dsFuncs) {
+
+            let conAlias = parser.parameters(func.val)[0];
+            let dsName = func.val();
+
+            if (!g.isString(dsName))
+                throw `
+                    ${ds.key} did not return a string.  It should 
+                    return the name of a dataset in ${conAlias}.
+                `;
+                     
+            let getter = 
+                this.dbConnectors[conAlias]
+                .dsGetter(dsName);
+
+            this.addSource(func.key, getter);
+
+        }
 
         return this;
 
     }
-    
-    addDatasetsByObject(obj) {
 
-        let keys = Object.keys(obj);
-        let datas = Object.values(obj);
-
-        for(let i in keys) {
-            let key = keys[i];
-            let data = datas[i];
-            this.addDataset([key], data);
-        }
-
+    filter (func) { 
+        let ds = this.getDs(func)
+        ds.apply('filter', func);
+        return this;
     }
 
-    // newKey is optional
-	addDataset(key, data, newKey) {
-
-        if (general.isString(key))
-            key = [key];
-
-	    let incoming = {
-            key: new Set(key),
-            data: data
-        }
-
-        let keyFound = false;
-
-        for(let dataset of this) 
-            if (general.setEquals(dataset.key, incoming.key)) {
-                dataset.data = incoming.data;
-                keyFound = true;
-            }
-            
-	    if (!keyFound)
-		    this.push(incoming);
-
-        if (newKey)
-            this.reKey(key, newKey);
-
-    } 
-
-    get(key) {
-
-        key = new Set(key);
-
-	    for (let dataset of this) 
-            if (general.isSubsetOf(key, dataset.key)) 
-                return dataset.data;
-            
-	    return undefined;
-
-	}
-
-    remove(key) {
-
-        key = new Set(key);
-
-        let ix = 
-            this
-            .findIndex(dataset => general.setEquals(dataset.key, key));
+    map (func) { 
         
-        if (ix != -1)
-            this.splice(ix, 1);
+        let ds = this.getDs(func);
+        ds.apply('map', func);
+        
+               
+        //But I don't want to do this for every function
 
-        return this;
+        if (g.isPromise(ds.data))
 
-    }
+            return Promise.all([this, ds.key, ds.data])
+                .then(duo => {
+                    let db = duo[0];
+                    let key = duo[1];
+                    let data = duo[2];
+                    db.getDs(key).data = data;
+                    return db;
+                });
 
-    reKey (oldPartialKey, newKey) {
+        
 
-        let oldKey = this.getFullKey(oldPartialKey);
+       return this;
 
-        let dataset = 
-            this
-            .filter(dataset => general.setEquals(dataset.key, oldKey))
-            [0];
-
-        dataset.key = new Set()
-        dataset.key.add(newKey);
-
-    }
-
-    getFullKey (partialKey) {
-
-        if (general.isString(partialKey))
-            partialKey = new Set(partialKey);
-
-        return this
-            .map(dataset => dataset.key)
-            .find(fullKey => general.isSubsetOf(partialKey, fullKey));
-    }
-
+    }    
+    
 }
+
+
+database.idb = dbName => new dbConnectorIdb(dbName);

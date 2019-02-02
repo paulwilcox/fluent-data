@@ -1,5 +1,6 @@
-import * as general from "./general.js";
-import { hashBuckets } from "./hashBuckets.js";
+import * as general from './general.js';
+import { parser } from './parser.js';
+import { hashBuckets } from './hashBuckets.js';
 
 export class joiner { 
 
@@ -40,7 +41,7 @@ export class joiner {
             throw "First argument passed to 'executeJoin' cannot be null";
             
         let parsedFuncs = 
-            new general.parser(matchingLogic)
+            new parser(matchingLogic)
             .pairEqualitiesToObjectSelectors();
             
         if (parsedFuncs)

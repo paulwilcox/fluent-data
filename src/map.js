@@ -1,10 +1,11 @@
-import {pretendPromise} from "./pretendPromise.js";
-import {unresolvedIdb} from "./unresolvedIdb.js";
-import * as general from "./general.js";
+//import {pretendPromise} from "./pretendPromise.js";
+//import {unresolvedIdb} from "./unresolvedIdb.js";
+import * as g from "./general.js";
+import { dsGetterIdb } from "./dsGetterIdb.js";
 
 
 export let mapCore = (mappingFunction, aliases, oneQueryObj) => {
-
+/*
     let allSelector = 
         mappingFunction == '*m' ? 'meta'
         : mappingFunction == '*d' ? 'data'
@@ -13,36 +14,21 @@ export let mapCore = (mappingFunction, aliases, oneQueryObj) => {
 
     if (allSelector) 
         return showDatabase(allSelector, oneQueryObj);
-
+*/
     mappingFunction = 
         aliases.size > 1
-        ? general.inputLiteralizer(mappingFunction)
+        ? g.inputLiteralizer(mappingFunction)
         : mappingFunction;
 
-    let mapFunc = mappingFunction; 
-
-    let mapIt = array => {
-
-        let mappedRecords = [];
-
-        for (let record of array) 
-            mappedRecords.push(
-                mapFunc(record)
-            );
-
-        return mappedRecords; 
-
-    }
-
-    return oneQueryObj.getDataset(aliases) 
+    return oneQueryObj.getData(aliases) 
         .then(dataset => 
-            dataset instanceof unresolvedIdb 
+            dataset instanceof dsGetterIdb 
             ? dataset.setSelector(mappingFunction)
-            : general.applyToNestedArray(dataset, array => mapIt(array))
+            : g.applyToNestedArray(dataset, array => array.map(mappingFunction))
         );
 
 }
-
+/*
 export let showDatabase = (display, oneQueryObj) => { // display = 'meta', 'data', 'both'
 
     let keyStrings = [];
@@ -98,3 +84,4 @@ export let showDatabase = (display, oneQueryObj) => { // display = 'meta', 'data
     });
 
 }
+*/
