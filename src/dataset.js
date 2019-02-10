@@ -8,9 +8,11 @@ export class dataset {
         this.data = data;
     }
 
-    keyMatch (partialKey) {
-        partialKey = g.asSet(partialKey);
-        return g.isSubsetOf(partialKey, this.key);
+    keyMatch (key, matchExactly = false) {
+        key = g.asSet(key);
+        return matchExactly
+            ? g.isSubsetOf(key, this.key) && g.isSubsetOf(this.key, key)
+            : g.isSubsetOf(key, this.key);
     }
 
     rename (newKey) {

@@ -2,7 +2,7 @@
 
     import { sampleIdb, sampleDataSets } from './data.js';
     import { $$ } from '../src/oneQuery.js';
-    import { database } from '../src/database.js';
+    import * as g from '../src/general.js';
 
     let db = 
         $$({
@@ -10,17 +10,20 @@
             c: sam => 'customers',
             o: sampleDataSets.orders
         })
-        .filter(c => c.id != null)
-        .then(db => { 
-            console.log(db.getDs('c').data);
-            return db;
-        })        
-        .map(c => c)
-        //.filter(o => o.rating >= 10)
-        //.map(o => ({ id: o.id, speed: o.speed, rating: o.rating, o }))
-        //.then(db => {console.log({db}); return db;})
+        .dual((c,o) => 'dummy')
+        .filter(c => true)
+        .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
         .execute();
 
-    console.log({db})
+    console.log({db});
+
+/*
+
+    phi.report (φ.report)
+    phi.ninja (φ.ninja)
+    philos.us
+    philososaur.us
+
+*/
 
 </script>

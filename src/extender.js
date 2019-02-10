@@ -21,6 +21,8 @@ export class extender {
         return this;
     }
 
+    // Note that e.prependFunc and e.appendFunc will utilize
+    // the arguments passed to the original function.  
     execute () {
 
         let e = this;
@@ -32,12 +34,12 @@ export class extender {
             e.container[e.funcName] = function() {
                 
                 if (e.prependFunc) 
-                    var prependRes = e.prependFunc.apply( this );
+                    var prependRes = e.prependFunc.apply( this, arguments );
                 
                 let result = proxied.apply( this, arguments );
                 
                 if (e.appendFunc) 
-                    var appendRes = e.appendFunc.apply( this );
+                    var appendRes = e.appendFunc.apply( this, arguments );
                 
                 return e.returnFunc == 'prepend' ? prependRes
                     :  e.returnFunc == 'append' ? appendRes

@@ -6,8 +6,8 @@ export class deferable {
     constructor(initial) {
         this.value = initial;
         this.thens = [];
-        this.onCatch;
-        this.onFinally;
+        this.currentFunc;
+        this.currentArgs;
     }
 
     then(func) {
@@ -15,42 +15,26 @@ export class deferable {
         return this;
     }
 
-    catch(func) {
-        this.onCatch = func;
-        return this;
+    before(func) {
+        this.beforeThen = func;
     }
 
-    finally(func) {
-        this.onFinally = func;
-        return this;
+    after(func) {
+        this.afterThen = func;
     }
 
     execute() {
 
-        for(var func of this.thens) 
-            if (g.isPromise(this.value))
-                this.value.then(func);
+        let runFunc = f => { 
+            if (g.isPromise(this.value)) 
+                this.value.then(f);
             else 
-                this.value = func(this.value);
-        
-        return this.value;
-
-    }
-
-    wrapExecute(wrapFunc) {
-
-        for(var func of this.thens) {
-
-            if (wrapFunc)
-                
-
-            if (g.isPromise(this.value))
-                this.value.then(func);
-            else 
-                this.value = func(this.value);
-
+                this.value = f(this.value);
         }
-        
+
+        for(var func of this.thens) 
+            runFunc(func);
+
         return this.value;
 
     }
@@ -68,7 +52,23 @@ deferable.deferify = function (container, funcNamesCsv) {
 
         container[funcName] = 
             function(...args) {
-                return this.then(cont => cont[funcName](...args) );
+                return this
+                    .then(cont => {
+                        if (this.beforeThen) 
+                            return this.beforeThen(args);
+                        return cont;
+                    })
+                    .then(cont => {
+                        cont[funcName](...args);
+                        return cont;
+                    })
+                    .then(cont => {
+                        if (this.afterThen) 
+                            return this.afterThen(args);
+                        return cont;
+                    });
+
             };
 
 }
+
