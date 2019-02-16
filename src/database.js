@@ -26,12 +26,9 @@ export class database {
         if (g.isString(key))
             key = [key];
 
-        if (key instanceof Set)
-            key = Array.from(key);
-
         return this
             .datasets
-            .filter(ds => key.some(k => ds.keyMatch(k)));
+            .filter(ds => key.some(k => ds.key == k));
 
     }
 
@@ -40,13 +37,13 @@ export class database {
         return this;
     }    
 
-    removeSource (key, matchExactKey = true) {
+    removeSource (key) {
 
         for (let i in this.datasets) {
             
             let ds = this.datasets[i];
             
-            if (ds.keyMatch(key, true)) {
+            if (ds.key == key) {
                 this.datasets.splice(i, 1);
                 return this;
             }
@@ -107,69 +104,22 @@ export class database {
         return this;
     }
 
-    dual(func) {
-        let pars = parser.parameters(func);
-        let ds1 = this.getDataset(pars[0]);
-        let ds2 = this.getDataset(pars[1]);
-        console.log({
-            ds1, 
-            ds2,
-            ds1row1: ds1.data[0],
-            ds2row1: ds2.data[0] 
-        });
-        return this;
-    }
-
-    // accepts multiple join commands 
-    join (...commands) {
-
-        for (let command of commands) {
-                
-            if(typeof command == 'function')
-                command = { 
-                    joinType: 'inner', 
-                    matchingLogic: command,
-                    algorithm: 'default'
-                };
-
-            this.joinRecords(
-                command.matchingLogic, 
-                command.joinType
-            );
-
-        }
-
-        return this;
-
-    }
-
-    // works on a particular join command
-    joinRecords (
+    join (
+        newKey,
+        joinType, // "inner", "left", "right", "full"
         matchingLogic, // (f,j) => [f.col1 == j.col1, f.col2 < j.col2],
-        joinType // "inner", "left", "right", "full"
+        algorithm = "default" // "default", "hash", "loop"
     ) {
 
-        let fromKeys = new parser.parameters(matchingLogic);
-        let joinKey = fromKeys.pop();
+        let keys = new parser.parameters(matchingLogic);
+        let fromDs = this.getDataset(keys[0]);
+        let joinDs = this.getDataset(keys[1]);
 
-        let fromDs = this.getDataset(fromKeys);
-        let joinDs = this.getDataset(joinKey);
+        let joinedRows = 
+            new joiner (fromDs, joinDs, joinType)
+            .executeJoin(matchingLogic, algorithm);
 
-        let resultKey = new Set(fromDs.key);
-        resultKey.add(joinDs.key);
-
-        let resultData = 
-            new joiner (
-                fromDs.key,   joinDs.key,
-                fromDs,       joinDs, 
-                joinType
-            )
-            .executeJoin(matchingLogic);
-
-        this.addSource(resultKey, resultData);
-
-        this.removeSource(fromDs.key);
-        this.removeSource(joinDs.key);
+        this.addSource(newKey, joinedRows);
 
         return this;
 

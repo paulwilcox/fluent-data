@@ -19,6 +19,10 @@
             $$.inner( (o,p) => o.product == p.id ),
             $$.left( (o,c) => o.customer == c.id )
         )
+        .join( (o,p,c) => 
+            $$.inner( o.product == p.id ),
+            $$.left( o.customer == c.id )
+        )
         .orderBy((o,p) => o.product)
         .groupBy(o => o.product)
         .fold('f', {

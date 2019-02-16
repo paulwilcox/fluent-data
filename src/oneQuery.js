@@ -3,7 +3,6 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { joiner } from './joiner.js';
 
 export class oneQuery extends deferable {
 
@@ -87,25 +86,10 @@ export class oneQuery extends deferable {
 
 deferable.deferify(
     oneQuery.prototype, 
-    'addSources, filter, map, dual'
+    'addSources, filter, map, join'
 );
 
 export let $$ = obj => new oneQuery().addSources(obj);
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
 $$.idb = oneQuery.idb;
-
-
-// for the sake of: 
-//   ...join($$.left(arrowFunc), $$.inner(arrowFunc))  
-joiner.forEachJoinType(joinType => {
-
-    database[joinType] = (matchingLogic, algorithm = 'default') => ({
-        joinType: joinType,
-        matchingLogic,
-        algorithm
-    });     
-
-    $$[joinType] = database[joinType];
-
-})

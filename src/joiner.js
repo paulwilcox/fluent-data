@@ -1,75 +1,76 @@
-import * as general from './general.js';
 import { parser } from './parser.js';
 import { hashBuckets } from './hashBuckets.js';
 
 export class joiner { 
 
-    constructor (
-        fromAliases,
-        joinAlias,
-        fromStore, 
-        joinStore, 
-        joinType
-    ) {
+    constructor (fromDs, joinDs, joinType) {
 
-        this.fromAliases = fromAliases;
-        this.joinAlias = joinAlias;
-        this.fromStore = fromStore;
-        this.joinStore = joinStore;
+        this.fromDs = fromDs;
+        this.joinDs = joinDs;
         this.joinType = joinType;
 
         this.results = [];
         this.fromHits = [];
         this.joinHits = [];
-
-        let firstFromAlias = Array.from(this.fromAliases)[0];
-
-        // Returns a function that in turn:
-        // returns a store record based on an index.
-        // the record format depends on the number of 
-        // aliases.
-        this.getFromRecord =            
-            this.fromAliases.size > 1 
-            ? rowIx => fromStore[rowIx]
-            : rowIx => ({[firstFromAlias]: fromStore[rowIx]});
-    
+        
     }
             
-    executeJoin(matchingLogic, algorithm = 'default') {
+    executeJoin(matchingLogic, algorithm) {
 
         if (typeof arguments[0] == null)
             throw "First argument passed to 'executeJoin' cannot be null";
             
-        let parsedFuncs = 
-            new parser(matchingLogic)
-            .pairEqualitiesToObjectSelectors();
-            
-        if (parsedFuncs)
-            return this.executeHashJoin(
-                parsedFuncs.leftFunc,
-                parsedFuncs.rightFunc
-            );
+        if (['default', 'hash'].includes(algorithm)) {
+                
+            let parsedFuncs = 
+                parser.pairEqualitiesToObjectSelectors(matchingLogic);
 
-        // todo: have the default try a hash and do a loop on catch, or
-        // detect which is possible, or otherwise be more flexible.
-        return  algorithm = 'default' ? this.executeHashJoin(matchingLogic)
-                : algorithm = 'hash' ? this.executeHashJoin(matchingLogic)
-                : this.executeLoopJoin(matchingLogic);
+            if (parsedFuncs) 
+                try {
+                    return this.executeHashJoin(
+                        parsedFuncs.leftFunc,
+                        parsedFuncs.rightFunc
+                    );
+                }
+                catch(e) {   
+
+                    if (algorithm == 'hash') // explicit hash should fail.
+                        throw e; 
+
+                    console.warn(
+                        "Join matching logic successfully parsed into hashselector" +
+                        "functions.  However, an error was encountered in processing " + 
+                        "the hash join.  Switching from hash join to loop join.  " + 
+                        "Relevant information will follow in the subsequent logs."
+                    );
+
+                    console.log({
+                        error: e,
+                        matchingLogic: matchingLogic.toString(),
+                        parsedFromHashSelector: parsedFuncs.leftFunc.toString(),
+                        parsedJoinHashSelector: parsedFuncs.rightFunc.toString() 
+                    });
+
+                    algorithm = 'loop';
+
+                }
+
+        }
+
+        return this.executeLoopJoin(matchingLogic);
 
     }
 
     executeLoopJoin(matchingLogic) {
 
-        let matchingLogicLiteralized = general.inputLiteralizer(matchingLogic);
+        for (let fix in this.fromDs) 
+        for (let jix in this.joinDs) {
 
-        for (let fix in this.fromStore) 
-        for (let jix in this.joinStore) {
+            let fromRow = this.fromDs[fix];
+            let joinRow = {[this.joinKey]: this.joinDs[jix]};
 
-            let fromRecord = this.getFromRecord(fix);
-            let joinRecord = {[this.joinAlias]: this.joinStore[jix]};
-
-            if (matchingLogicLiteralized(fromRecord, joinRecord)) 
-                this.executeInnerPartForRow(fromRecord, joinRecord, fix, jix);
+            if (matchingLogic(fromRow, joinRow)) 
+                this.executeInnerPartForRow(fromRow, joinRow, fix, jix);
             
         }
 
@@ -86,22 +87,18 @@ export class joiner {
 
         joinEqualitySelector = joinEqualitySelector || fromEqualitySelector;
 
-        fromEqualitySelector = general.inputLiteralizer(fromEqualitySelector);
-        joinEqualitySelector = general.inputLiteralizer(joinEqualitySelector);
-
         let fromBucketsMap = new hashBuckets(fromEqualitySelector);
 
-        for (let fix in this.fromStore) 
-            fromBucketsMap.addItem(this.getFromRecord(fix));
+        for (let fromRow of this.fromDs.data) 
+            fromBucketsMap.addItem(fromRow);
 
-        for (let jix in this.joinStore) {
+        for (let joinRow of this.joinDs.data) {
 
-            let joinRecord = {[this.joinAlias]: this.joinStore[jix]};            
-            let fromBucket = fromBucketsMap.getBucket(joinRecord, joinEqualitySelector);
+            let fromBucket = fromBucketsMap.getBucket(joinRow, joinEqualitySelector);
 
             if (fromBucket)
-            for (let fromRecord of fromBucket) 
-                this.executeInnerPartForRow(fromRecord, joinRecord);
+            for (let fromRow of fromBucket) 
+                this.executeInnerPartForRow(fromRow, joinRow);
                 
         }
 
@@ -112,15 +109,10 @@ export class joiner {
     }
 
     executeInnerPartForRow(fromRecord, joinRecord, fix, jix) {
-
-        let flatRecord = {};
-        Object.assign(flatRecord, fromRecord);
-        Object.assign(flatRecord, joinRecord);
-        
+        let flatRecord = Object.assign({}, fromRecord, joinRecord);
         this.results.push(flatRecord);
         this.fromHits[fix] = true;
         this.joinHits[jix] = true;
-
     }
 
     executeLeftPart() {
@@ -128,10 +120,10 @@ export class joiner {
         if (!["left", "full"].includes(this.joinType))
             return;
 
-        for (let fix in this.fromStore) 
+        for (let fix in this.fromDs) 
             if (!this.fromHits[fix]) 
                 this.results.push(
-                    this.recordTemplate(this.fromStore[fix])
+                    this.recordTemplate(this.fromDs[fix])
                 );
 
     }
@@ -141,11 +133,11 @@ export class joiner {
         if (!["right", "full"].includes(this.joinType))
             return;
 
-        for (let jix in this.joinStore)
+        for (let jix in this.joinDs)
             if(!this.joinHits[jix]) 
                 results.push(
                     this.recordTemplate({
-                        [this.joinAlias]: this.joinStore[jix]
+                        [this.joinKey]: this.joinDs[jix]
                     })
                 );
 
@@ -155,10 +147,8 @@ export class joiner {
     
         let record = {};
     
-        let aliases = Array.from(this.fromAliases);
-        aliases.push(this.joinAlias);
-    
-        aliases.forEach(a => record[a] = null);
+        this.fromKeys.forEach(a => record[a] = null);
+        record[this.joinKey] = null;
     
         if (objectForAssignment) 
             Object.assign(record, objectForAssignment);
