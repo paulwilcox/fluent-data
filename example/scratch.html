@@ -1,12 +1,14 @@
 <script type='module'>
 
     import { sampleIdb, sampleDataSets } from './data.js';
-    import { $$ } from '../src/oneQuery.js';
+    import { oneQuery } from '../src/oneQuery.js';
 
     let db = 
-        $$({
-            sam: $$.idb('sampleIdb'),
+        new oneQuery()
+        .addSources({
+            sam: oneQuery.idb('sampleIdb'),
             c: sam => 'customers',
+            //c: sampleDataSets.customers,
             o: sampleDataSets.orders
         })
         .filter(c => true)

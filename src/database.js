@@ -19,16 +19,21 @@ export class database {
     }
 
     getDatasets(key) {
-        
+
         if (g.isFunction(key)) 
             key = new parser.parameters(key);
 
         if (g.isString(key))
             key = [key];
 
-        return this
+        let foundDss = this
             .datasets
             .filter(ds => key.some(k => ds.key == k));
+
+        if (foundDss.length == 0) 
+            throw `No datasets found with passed keys (${key.join(',')})`;
+
+        return foundDss;
 
     }
 
