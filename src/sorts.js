@@ -5,7 +5,7 @@
 //
 // orderedValuesSelector accepts a single function that selects 
 // values from an object "{}" and returns an array "[]"
-export let quicksort = (unsorted, orderedValuesSelector) => {
+export let quickSort = (unsorted, orderedValuesSelector) => {
 
     if (unsorted.length <= 1) 
         return unsorted;
@@ -28,9 +28,9 @@ export let quicksort = (unsorted, orderedValuesSelector) => {
 
     }
 
-    return quicksort(left, orderedValuesSelector)
+    return quickSort(left, orderedValuesSelector)
         .concat([pivot])
-        .concat(quicksort(right, orderedValuesSelector));
+        .concat(quickSort(right, orderedValuesSelector));
 
 };
 

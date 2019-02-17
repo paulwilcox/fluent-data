@@ -3,6 +3,8 @@ import { dataset } from './dataset.js';
 import { parser } from './parser.js';
 import { dbConnector } from './dbConnector.js';
 import { joiner } from './joiner.js';
+import { hashBuckets } from './hashBuckets.js';
+import { quickSort } from './sorts.js';
 
 export class database {
 
@@ -130,11 +132,25 @@ export class database {
 
     }
 
+    group = groupKeySelector => {
+    
+        let ds = this.getDataset(groupKeySelector);
+
+        let buckets = 
+            new hashBuckets(groupKeySelector)
+            .addItems(ds.data)
+            .getBuckets();
+
+        ds.data = buckets;
+
+        return this;
+
+    }
+
+    sort (orderedValuesSelector) {
+        let ds = this.getDataset(orderedValuesSelector);
+        ds.apply(quickSort, orderedValuesSelector);
+        return this;
+    } 
+
 }
-
-
-// TODO: I don't think this is what is utilized.  There
-// is an equivalent on oneQuery.js and I think that's
-// what's being utilized.
-database.idb = dbName => new dbConnectorIdb(dbName);
-

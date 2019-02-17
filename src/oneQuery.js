@@ -7,10 +7,8 @@ import { dsGetter } from './dsGetter.js';
 export class oneQuery extends deferable {
 
     constructor() {
-
         super(new database())
-        this.mpgExtend('addSources, filter, map, join');
-
+        this.mpgExtend('addSources, filter, map, join, group, sort');
     }
 
     mpgExtend (funcNamesCsv) {
@@ -21,14 +19,11 @@ export class oneQuery extends deferable {
             .map(fn => fn.trim());
 
         for(let funcName of funcNames) 
-
             this[funcName] = function(...args) {
-
                 return this
                     .then(db => this.managePromisesAndGetters(db, args))
                     .then(db => db[funcName](...args))
                     .then(db => this.managePromisesAndGetters(db, args));
-
             };
 
     }
@@ -37,7 +32,6 @@ export class oneQuery extends deferable {
 
         // Initializations
 
-            //let db = this;
             let datasets = []; 
             
         // Get related datasets
