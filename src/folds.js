@@ -1,32 +1,33 @@
 import { parser } from './parser.js';
 
-export let addStaticFolds = oneQueryObj => {
+export let addStaticFolds = reciever => {
 
-    let oneQueryKeysStart = new Set(Object.keys(oneQueryObj));
-
-    oneQueryObj.key = (dataset, selector, errorOut = false, callback = null) => {
+    let obj = {};
+/*
+    obj.key = (dataset, selector, errorOut = false, callback = null) => {
 
         let distinct = [...new Set(dataset.map(selector))];
         
         if (distinct.size > 1) {
             if (errorOut)
-                throw "oneQuery.key found more than one distinct value.";
+                throw "key() found more than one distinct value.";
             return null;
         }
 
         return callback ? callback(distinct[0]) : distinct[0];
 
     }
+*/
 
-    oneQueryObj.sum = (dataset, selector, callback) => {
+    obj.sum = (dataset, selector, callback) => {
         let val =  
             dataset.map(selector)
             .map(f => parseFloat(f || 0))
             .reduce((a,b) => a + b);
         return callback ? callback(val) : val;
     }
-
-    oneQueryObj.count = (dataset, selector, callback) => {
+/*
+    obj.count = (dataset, selector, callback) => {
         let counter = 0;
         for (let element of dataset.map(selector))
             if (!isNaN(parseFloat(element))) 
@@ -34,14 +35,14 @@ export let addStaticFolds = oneQueryObj => {
         return callback ? callback(counter) : counter;
     }
 
-    oneQueryObj.avg = (dataset, selector, callback) => {
-        let val = oneQueryObj.sum(dataset, selector) / oneQueryObj.count(dataset, selector);
+    obj.avg = (dataset, selector, callback) => {
+        let val = obj.sum(dataset, selector) / obj.count(dataset, selector);
         return callback ? callback(val) : val;
     }
 
-    oneQueryObj.std = (dataset, selector, callback) => {
+    obj.std = (dataset, selector, callback) => {
 
-        let avg = oneQueryObj.avg(dataset, selector);
+        let avg = obj.avg(dataset, selector);
 
         let squaredDeviations = 
             dataset.map(selector)
@@ -49,8 +50,8 @@ export let addStaticFolds = oneQueryObj => {
 
         let val = 
             (
-                oneQueryObj.sum(squaredDeviations, x => x) 
-                / oneQueryObj.count(dataset, selector)
+                obj.sum(squaredDeviations, x => x) 
+                / obj.count(dataset, selector)
             ) 
             ** (1/2);
 
@@ -60,7 +61,7 @@ export let addStaticFolds = oneQueryObj => {
 
     // "selector" must return an array with two elements
     // http://www.socscistatistics.com/tests/pearson/
-    oneQueryObj.cor = (dataset, selector, callback) => {
+    obj.cor = (dataset, selector, callback) => {
 
         let pairs = 
             dataset.map(selector)
@@ -70,8 +71,8 @@ export let addStaticFolds = oneQueryObj => {
             }))
             .filter(pair => !isNaN(pair.x) && !isNaN(pair.y));
 
-        let xAvg = oneQueryObj.avg(pairs, pair => pair.x);
-        let yAvg = oneQueryObj.avg(pairs, pair => pair.y);
+        let xAvg = obj.avg(pairs, pair => pair.x);
+        let yAvg = obj.avg(pairs, pair => pair.y);
         let n = pairs.length;
 
         let numerator = 0;
@@ -90,13 +91,13 @@ export let addStaticFolds = oneQueryObj => {
 
 
     }
-
+*/
     // create a version of the passed in function that outputs
     // an object with command directives so that a user can 
     // call a function with partial arguments.    
     let partializable = func => {
 
-        let expectedArgs = new parser(func).parameters;
+        let expectedArgs = parser.parameters(func);
 
         return (...args) => {
 
@@ -110,11 +111,10 @@ export let addStaticFolds = oneQueryObj => {
         };
 
     }
-
-    let oneQueryKeysEnd = new Set(Object.keys(oneQueryObj));
-    let oneQueryKeysNew = [...oneQueryKeysEnd].filter(x => !oneQueryKeysStart.has(x));
-
-    for (let newoneQueryKey of oneQueryKeysNew) 
-        oneQueryObj[newoneQueryKey] = partializable(oneQueryObj[newoneQueryKey]);
     
+    for(let key of Object.keys(obj)) 
+        reciever[key] = partializable(obj[key]);
+
+    reciever['sum2'] = (rowVal) => ({ rowVal, func: (a,b) => a + b });
+
 }

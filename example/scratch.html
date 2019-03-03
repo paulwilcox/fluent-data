@@ -14,8 +14,11 @@
         .filter(c => true)
         .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
         .join('oc', 'inner', (o,c) => o.customer == c.id)
-        .group(oc => oc.id)
-        .sort(oc => oc.rating)
+        //.group(oc => oc.id)
+        //.sort(oc => oc.rating)
+        .fold(oc => {
+            rating: oneQuery.sum2(oc.rating + 5)
+        })
         .execute();
 
     console.log({db});

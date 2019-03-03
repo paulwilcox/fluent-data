@@ -17,7 +17,7 @@ export class dataset {
         }
 
         if (g.isString(arrayOperation))
-            arrayOperation = Array.prototype[arrayOperation];        
+            arrayOperation = Array.prototype[arrayOperation];   
 
         this.data = this.applyToNested(arrayOperation, innerFunc, this.data);
 
@@ -31,7 +31,7 @@ export class dataset {
 
         // if not nested, apply the function
         if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) {
-            return arrayOperation.call(null, maybeNested, innerFunc);           
+            return arrayOperation.call(maybeNested, innerFunc);           
         }
     
         let output = [];
@@ -39,6 +39,35 @@ export class dataset {
         for (let nested of maybeNested)  
             output.push(
                 this.applyToNested(arrayOperation, innerFunc, nested)
+            );
+    
+        return output;
+    
+    }
+
+
+
+
+    apply2 (arrayOperation) {
+
+        this.data = this.applyToNested2(arrayOperation, this.data);
+
+    }
+
+    applyToNested2(
+        arrayOperation,
+        maybeNested
+    ) {
+
+        // if not nested, apply the function
+        if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) 
+            return arrayOperation.call(maybeNested);           
+    
+        let output = [];
+    
+        for (let nested of maybeNested)  
+            output.push(
+                this.applyToNested2(arrayOperation, nested)
             );
     
         return output;

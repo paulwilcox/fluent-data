@@ -1,0 +1,88 @@
+<body>
+<pre id="result"></pre>
+
+<script>
+
+  let dataset = [
+    { a: 1, b: 1 },
+    { a: 2, b: 2 },
+    { a: 3, b: 3 },
+    { a: 4, b: 4 }
+  ];
+
+  let funcMapper = {
+  
+    sum: [
+      { func: (a,b) => a + b, seed: 0 }
+    ],
+
+    count: [
+      { func: (a,b) => a + 1, seed: 0 }
+    ],  
+ 
+    avg: [
+      x => ({ s: sum(x), n: count(x) }),
+      x => x.s / x.n 
+    ],
+
+    mad: [
+      x => ({ av: avg(x) }),
+      x => ({ mad: avg(x - av) }) // but 'av' is not right
+    ]
+
+  };
+
+// TODO: get second entries of 'avg' and 'mad' functional
+
+  let sum = val =>   ({funcs: funcMapper['sum'], val});
+  let count = val => ({funcs: funcMapper['count'], val});
+  let avg = val =>   ({funcs: funcMapper['avg'], val});
+
+  let fold = ds => ({
+    a: sum(ds.a + 100),
+    b: count(ds.b),
+    c: avg(ds.a)
+  });
+
+function applyFold (
+  aggregation, 
+  row, 
+  foldFunc
+) {
+
+    let directives = foldFunc(row);
+
+    for(let key of Object.keys(directives)) {
+
+      let directive = directives[key];
+      let funcInfo = directive.funcs[0];
+      let func = funcInfo.func;
+      let seed = funcInfo.seed;
+      let val = directive.val;
+
+      if (func)         
+	aggregation[key] = 
+	  func (
+	    aggregation[key] || seed, 
+	    val
+	  );
+
+      else {
+	if (!aggregation[key]) 
+	  aggregation[key] = {};
+	aggregation[key] = applyFold(aggregation[key], val, funcInfo);
+      }
+
+    }
+
+    return aggregation;
+
+}
+
+let aggregation = {};
+for(let row of dataset) 
+  aggregation = applyFold(aggregation, row, fold);
+console.log({aggregation});
+
+</script>
+</body>

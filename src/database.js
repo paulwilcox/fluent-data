@@ -132,7 +132,7 @@ export class database {
 
     }
 
-    group = groupKeySelector => {
+    group (groupKeySelector) {
     
         let ds = this.getDataset(groupKeySelector);
 
@@ -153,4 +153,48 @@ export class database {
         return this;
     } 
 
+    fold (outerFunc) {
+
+        let ds = this.getDataset(outerFunc);
+        
+        let x = row => {
+
+            for(let key of Object.keys(row)) {
+                let val = obj[key].rowVal;
+                let func = obj[key].func;
+            }    
+
+        }
+
+        return this;
+
+    }
+
+/*
+    fold (obj) {
+
+        let applyPartialFuncs = array => {
+
+            let output = {};
+
+            for (let key of Object.keys(obj)) {
+
+                let func = obj[key].func;
+                let args = obj[key].storedArguments.slice(0);
+                args.unshift(array);
+
+                output[key] = func.apply(null, args);
+                
+            }
+
+            return output;
+
+        };
+
+        ds.apply2(applyPartialFuncs);
+
+        return this;
+
+    }
+*/
 }

@@ -3,12 +3,13 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
+import { addStaticFolds } from './folds.js';
 
 export class oneQuery extends deferable {
 
     constructor() {
         super(new database())
-        this.mpgExtend('addSources, filter, map, join, group, sort');
+        this.mpgExtend('addSources, filter, map, join, group, sort, fold');
     }
 
     mpgExtend (funcNamesCsv) {
@@ -25,10 +26,10 @@ export class oneQuery extends deferable {
                     .then(db => db[funcName](...args))
                     .then(db => this.managePromisesAndGetters(db, args));
             };
+        
+    } 
 
-    }
-
-    managePromisesAndGetters = function (db, args) {
+    managePromisesAndGetters (db, args) {
 
         // Initializations
 
@@ -98,3 +99,5 @@ export class oneQuery extends deferable {
 }
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
+
+addStaticFolds(oneQuery);
