@@ -1,0 +1,140 @@
+<body>
+<pre id="result"></pre>
+
+<script type="module">
+
+    import { parser } from '../src/parser.js';
+
+    class Fs {
+
+        constructor(input) {
+            this.input = input;
+            this.steps = [];
+        }
+
+        applyInitial (key, dataRow) {
+            dataRow[key] = this.input;
+        }
+
+        aggregateStep(br, def) {
+            
+            this.steps.push({                
+                betweenRows: br, 
+                default: def,
+                type: 'aggregateStep'
+            });
+
+            return this;
+        }
+
+        changeDataStep(func) {
+            this.steps.push({
+                func: func,
+                type: 'changeDataStep'
+            });
+            return this;
+        }
+
+        changeAggregateStep(func) {
+            this.steps.push({
+                func: func,
+                type: 'changeAggregateStep'
+            });
+            return this;
+        }
+
+    }
+
+    Fs.applyStep = function (step, key, data, aggregation) {
+
+        if (step.type == 'changeAggregateStep') 
+            Fs.applyChangeAggregateStep(step, key, aggregation);
+
+        else if (step.type == 'aggregateStep')
+            for (let row of data)
+                Fs.applyAggregateStep(step, key, row, aggregation);
+        else if (step.type == 'changeDataStep')
+            for(let row of data)
+                Fs.applyChangeDataStep(step, key, row, aggregation);
+
+    }
+
+    Fs.applyAggregateStep = function (step, key, dataRow, aggregation) {
+
+        if (!aggregation[key])
+            aggregation[key] = step.default;
+
+        aggregation[key] = 
+            step.betweenRows(
+                aggregation[key] || step.default,
+                dataRow[key]
+            );
+
+    }
+
+    Fs.applyChangeDataStep = function (step, key, dataRow, agg) {
+        let aggProp = agg ? agg[key] : null;
+        dataRow[key] = step.func(dataRow[key], aggProp);
+    }
+
+    Fs.applyChangeAggregateStep = function (step, key, agg) {
+        agg[key] = step.func(agg[key]);
+    }
+
+    let dataset = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }];
+
+    let fold = row => ({ 
+        a: 
+            new Fs(Math.abs(row.a))
+            .aggregateStep( 
+                (a,b) => ({ sum: a.sum + b, count: a.count + 1 }),  
+                { sum: 0, count: 0 } 
+            )
+            .changeAggregateStep(agg => agg.sum / agg.count)
+            .changeDataStep((data, agg) => data - agg)
+            
+    });
+
+    let aggregation = {};
+    let appliedFold = {};
+
+    for (let row of dataset) {
+
+        let fld = fold(row);
+        
+        for (let key of Object.keys(row)) {
+            let fk = fld[key];
+            fk.applyInitial(key, row);
+            appliedFold[key] = appliedFold[key] || fk; 
+        }
+
+    }
+
+    let maxSteps =  
+        Object.values(appliedFold)
+        .reduce(
+            (a,b) => a > b.steps.length ? a : b.steps.length, 
+            0
+        );
+
+    for (let i = 0; i <= maxSteps; i++) 
+    for (let key of Object.keys(appliedFold)) {
+
+        let step = appliedFold[key].steps.shift();
+
+        if (!step)
+            continue;
+
+        Fs.applyStep(step, key, dataset, aggregation);
+
+    }
+
+    
+
+    console.log({
+        dataset,
+        aggregation
+    });
+
+</script>
+</body>
