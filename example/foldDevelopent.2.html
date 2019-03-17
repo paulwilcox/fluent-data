@@ -1,0 +1,162 @@
+<body>
+<pre id="result"></pre>
+
+<script type="module">
+
+    import { parser } from '../src/parser.js';
+
+    class aggregator {
+
+        constructor() {
+            this.data = [];
+            this.aggregation;
+            this.steps = [];
+        }
+
+        loadValue(value) {
+            this.data.push(value);
+        }
+
+        aggregateStep(br, def) {
+            
+            this.steps.push({                
+                betweenRows: br, 
+                default: def,
+                type: 'aggregateStep'
+            });
+
+            return this;
+        }
+
+        changeDataStep(func) {
+            this.steps.push({
+                func: func,
+                type: 'changeDataStep'
+            });
+            return this;
+        }
+
+        changeAggregateStep(func) {
+            this.steps.push({
+                func: func,
+                type: 'changeAggregateStep'
+            });
+            return this;
+        }
+
+        execute () {
+            for(let step of this.steps) 
+                this.applyStep(step);
+            return this.aggregation;
+        }
+
+        applyStep (step) {
+
+            if (this.aggregation == undefined || this.aggregation == null)
+                this.aggregation = step.default;
+
+            if (step.type == 'changeAggregateStep') 
+                this.aggregation = step.func(this.aggregation);
+
+            else if (step.type == 'aggregateStep')
+                for (let rowIx in this.data) 
+                    this.aggregation = step.betweenRows(
+                        this.aggregation, 
+                        this.data[rowIx]
+                    );
+
+            else if (step.type == 'changeDataStep')
+                for(let rowIx in this.data)
+                    this.data[rowIx] = step.func(
+                        this.data[rowIx], 
+                        this.aggregation
+                    );
+
+        }
+
+    }
+
+    // Aggregators such as 'sum' or 'avg' operate on
+    // columnar data.  But the values passed to the
+    // aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
+    // are point data.  'emulator' stores the row value,
+    // but it also stores the name of the intented 
+    // function (the one it emulates), for later loading
+    // into a master aggregators object.  The name keeps
+    // things cheap.  Obviously we don't want the whole
+    // function for every row.  
+    //
+    // TODO: Put in a reference to the function if I can
+    // ensure it's static.
+    aggregator.emulator = class {
+        constructor(rowValue, funcName) {
+            this.rowValue = rowValue;
+            this.funcName = funcName;
+        }
+    }
+
+    // 'emulatorsFunc' is what the user will pass in.
+    aggregator.runEmulators = function (
+        emulatorsFunc, 
+        dataset
+    ) {
+
+        let chosenAggregators = {};
+
+        for (let row of dataset) {
+
+            let emulators = emulatorsFunc(row);
+            
+            for (let key of Object.keys(emulators)) {
+
+                if (!chosenAggregators[key]) 
+                    chosenAggregators[key] = aggregators[emulators[key].funcName];
+
+                chosenAggregators[key].loadValue(emulators[key].rowValue);
+
+            }
+
+        }
+
+        for (let key of Object.keys(chosenAggregators)) 
+            chosenAggregators[key] = chosenAggregators[key].execute();
+
+        return chosenAggregators;
+
+        }
+
+
+    // This is where you would want other developers to 
+    // plug-in new functions.
+    let aggregators = {
+
+        mad:    
+            new aggregator()
+            .aggregateStep( 
+                (a,b) => ({ sum: a.sum + b, count: a.count + 1 }),  
+                { sum: 0, count: 0 } 
+            )
+            .changeAggregateStep(agg => agg.sum / agg.count)
+            .changeDataStep((data, agg) => data - agg)
+
+    }
+
+    let $$ = {};
+
+    for (let aggregatorName of Object.keys(aggregators))
+        $$[aggregatorName] = 
+            value => new aggregator.emulator(value, aggregatorName); 
+
+    let dataset = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }];
+
+    let result = aggregator.runEmulators(
+        row => ({ 
+            ag: $$.mad(Math.abs(row.a))            
+        }),
+        dataset
+    );
+
+    console.log({result})
+
+</script>
+</body>

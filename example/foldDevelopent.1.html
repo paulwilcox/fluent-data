@@ -83,6 +83,7 @@
 
     let dataset = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }];
 
+    // TODO: make it so that agg key need not be same as source key.
     let fold = row => ({ 
         a: 
             new Fs(Math.abs(row.a))
@@ -97,15 +98,18 @@
 
     let aggregation = {};
     let appliedFold = {};
+    let data = {};
 
-    for (let row of dataset) {
+    for (let dsRow of dataset) {
 
-        let fld = fold(row);
+        let fld = fold(dsRow);
         
-        for (let key of Object.keys(row)) {
-            let fk = fld[key];
-            fk.applyInitial(key, row);
-            appliedFold[key] = appliedFold[key] || fk; 
+
+        for (let dsRowKey of Object.keys(dsRow)) {
+            let fk = fld[dsRowKey];
+            fk.applyInitial(dsRowKey, dsRow);
+            appliedFold[dsRowKey] = appliedFold[dsRowKey] || fk;
+
         }
 
     }
