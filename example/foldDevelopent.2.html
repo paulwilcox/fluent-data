@@ -3,7 +3,14 @@
 
 <script type="module">
 
-    import { parser } from '../src/parser.js';
+    // TODO:    - Null and undefined handling
+    //          - Reuse of aggregator steps inside other aggregators
+    //            (e.g. use avg steps inside mad function).  We may
+    //            need to revisit old code in folds.js.  Or that may
+    //            no longer be useful.
+    //          - Can we return aggregator.data, but in a way that 
+    //            all aggregator.datas are joined together?
+    //          - Formalize pluging in new functions.
 
     class aggregator {
 
@@ -17,29 +24,36 @@
             this.data.push(value);
         }
 
-        aggregateStep(br, def) {
-            
+        aggregate(func, def, filter) {
             this.steps.push({                
-                betweenRows: br, 
-                default: def,
-                type: 'aggregateStep'
-            });
-
-            return this;
-        }
-
-        changeDataStep(func) {
-            this.steps.push({
-                func: func,
-                type: 'changeDataStep'
+                func: func, 
+                filter: filter || (x => true),
+                default: def || null,
+                type: 'aggregate'
             });
             return this;
         }
 
-        changeAggregateStep(func) {
+        changeData(func) {
             this.steps.push({
                 func: func,
-                type: 'changeAggregateStep'
+                type: 'changeData'
+            });
+            return this;
+        }
+
+        changeAggregated(func) {
+            this.steps.push({
+                func: func,
+                type: 'changeAggregated'
+            });
+            return this;
+        }
+
+        emulators(func) {
+            this.steps.push({
+                func: func,
+                type: 'emulators'
             });
             return this;
         }
@@ -52,25 +66,35 @@
 
         applyStep (step) {
 
-            if (this.aggregation == undefined || this.aggregation == null)
-                this.aggregation = step.default;
-
-            if (step.type == 'changeAggregateStep') 
+            if (step.type == 'changeAggregated') 
                 this.aggregation = step.func(this.aggregation);
+            
+            else if (step.type == 'aggregate') {
 
-            else if (step.type == 'aggregateStep')
-                for (let rowIx in this.data) 
-                    this.aggregation = step.betweenRows(
+                this.aggregation = step.default; 
+
+                for (let val of this.data)
+                if (step.filter(val)) 
+                    this.aggregation = step.func(
                         this.aggregation, 
-                        this.data[rowIx]
+                        val
                     );
 
-            else if (step.type == 'changeDataStep')
-                for(let rowIx in this.data)
+            }
+
+            else if (step.type == 'changeData') 
+                for (let rowIx in this.data)
                     this.data[rowIx] = step.func(
                         this.data[rowIx], 
                         this.aggregation
                     );
+            
+
+            else if (step.type == 'emulators') 
+                this.aggregation = aggregator.runEmulators(
+                    step.func, 
+                    this.data
+                );
 
         }
 
@@ -106,11 +130,19 @@
         for (let row of dataset) {
 
             let emulators = emulatorsFunc(row);
-            
+
             for (let key of Object.keys(emulators)) {
 
-                if (!chosenAggregators[key]) 
-                    chosenAggregators[key] = aggregators[emulators[key].funcName];
+                if (!chosenAggregators[key]) {
+
+                    let isEmulator = emulators[key].funcName;
+
+                    if (!isEmulator) 
+                        emulators[key] = $$.first(emulators[key]);
+
+                    chosenAggregators[key] = aggregators[emulators[key].funcName]();
+
+                }
 
                 chosenAggregators[key].loadValue(emulators[key].rowValue);
 
@@ -123,35 +155,54 @@
 
         return chosenAggregators;
 
-        }
-
+    }
 
     // This is where you would want other developers to 
     // plug-in new functions.
+    //
+    // aggregators is an object of functions that return 
+    // aggregators.  If it had direct aggregators, then
+    // any repeated use of the same property (such as using
+    // sum twice, would refer to the same aggregator instance).
     let aggregators = {
 
-        mad:    
-            new aggregator()
-            .aggregateStep( 
-                (a,b) => ({ sum: a.sum + b, count: a.count + 1 }),  
-                { sum: 0, count: 0 } 
-            )
-            .changeAggregateStep(agg => agg.sum / agg.count)
-            .changeDataStep((data, agg) => data - agg)
+        first:  () => new aggregator().aggregate((a,b) => a, null, a => a != null),
+        last:   () => new aggregator().aggregate((a,b) => b),
+        sum:    () => new aggregator().aggregate((a,b) => a + b, 0),
+        count:  () => new aggregator().aggregate((a,b) => a + 1, 0),
+
+        avg:    () => new aggregator()
+                .emulators(v => ({ 
+                    sum: $$.sum(v), 
+                    count: $$.count(v) 
+                }))
+                .changeAggregated(agg => agg.sum / agg.count),
+
+        mad:    () => new aggregator()
+                .emulators(v => ({ avg: $$.avg(v) }))
+                .changeData((dataRow,agg) => Math.abs(dataRow - agg.avg)) 
+                .emulators(v => ({ avg: $$.avg(v) }))
+                .changeAggregated(agg => agg.avg)
 
     }
 
-    let $$ = {};
+    // Load emulators into $$ so that user calls $$.aggFunc(val)
+    // instead of new aggregator.emulator(val, 'aggFunc');
+    
+        let $$ = {};
 
-    for (let aggregatorName of Object.keys(aggregators))
-        $$[aggregatorName] = 
-            value => new aggregator.emulator(value, aggregatorName); 
+        for (let aggregatorName of Object.keys(aggregators))
+            $$[aggregatorName] = 
+                value => new aggregator.emulator(value, aggregatorName); 
 
     let dataset = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }];
 
     let result = aggregator.runEmulators(
         row => ({ 
-            ag: $$.mad(Math.abs(row.a))            
+            x: row.a,
+            sum: $$.sum(row.a),
+            avg: $$.avg(row.a),
+            mad: $$.mad(Math.abs(row.a))            
         }),
         dataset
     );
