@@ -154,18 +154,13 @@
 
             for (let key of Object.keys(emulators)) {
 
-                if (!chosenAggregators[key]) {
+                let isEmulator = emulators[key].funcName;
 
-                    let isEmulator = emulators[key].funcName;
+                if (!isEmulator) 
+                    emulators[key] = $$.last(emulators[key]);
 
-                    if (!isEmulator) {
-                        
-                        emulators[key] = $$.last(emulators[key]);
-                    }
-
+                if (!chosenAggregators[key]) 
                     chosenAggregators[key] = aggregators[emulators[key].funcName]();
-
-                }
 
                 chosenAggregators[key].loadValue(emulators[key].rowValue);
 
