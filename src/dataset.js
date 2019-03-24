@@ -1,6 +1,5 @@
 import * as g from './general.js';
 import { dsGetter } from './dsGetter.js';
-import { quickSort } from './sorts.js';
 
 export class dataset {
 
@@ -31,7 +30,7 @@ export class dataset {
 
         // if not nested, apply the function
         if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) {
-            return arrayOperation.call(maybeNested, innerFunc);           
+            return arrayOperation.call(null, maybeNested, innerFunc);           
         }
     
         let output = [];

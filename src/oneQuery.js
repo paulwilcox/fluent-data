@@ -3,7 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { addStaticFolds } from './folds.js';
+import { addAggregators } from './aggregators.js';
 
 export class oneQuery extends deferable {
 
@@ -100,4 +100,4 @@ export class oneQuery extends deferable {
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
 
-addStaticFolds(oneQuery);
+addAggregators(oneQuery);

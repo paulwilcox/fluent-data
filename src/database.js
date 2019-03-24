@@ -5,6 +5,7 @@ import { dbConnector } from './dbConnector.js';
 import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
+import { aggregator } from './aggregator.js';
 
 export class database {
 
@@ -154,47 +155,9 @@ export class database {
     } 
 
     fold (outerFunc) {
-
         let ds = this.getDataset(outerFunc);
-        
-        let x = row => {
-
-            for(let key of Object.keys(row)) {
-                let val = obj[key].rowVal;
-                let func = obj[key].func;
-            }    
-
-        }
-
+        ds.apply(aggregator.runEmulators, outerFunc);
         return this;
-
     }
 
-/*
-    fold (obj) {
-
-        let applyPartialFuncs = array => {
-
-            let output = {};
-
-            for (let key of Object.keys(obj)) {
-
-                let func = obj[key].func;
-                let args = obj[key].storedArguments.slice(0);
-                args.unshift(array);
-
-                output[key] = func.apply(null, args);
-                
-            }
-
-            return output;
-
-        };
-
-        ds.apply2(applyPartialFuncs);
-
-        return this;
-
-    }
-*/
 }
