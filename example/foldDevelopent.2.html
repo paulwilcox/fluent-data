@@ -4,10 +4,10 @@
 <script type="module">
 
     // TODO:    - Null and undefined handling
-    //          - Reuse of aggregator steps inside other aggregators
-    //            (e.g. use avg steps inside mad function).  We may
-    //            need to revisit old code in folds.js.  Or that may
-    //            no longer be useful.
+    //              > default and seed are not the same thing
+    //              > have aggs use first non-null/undefined value
+    //              > instead of depending on seed, unless 
+    //                explicitly desired.
     //          - Can we return aggregator.data, but in a way that 
     //            all aggregator.datas are joined together?
     //          - Formalize pluging in new functions.
@@ -24,11 +24,11 @@
             this.data.push(value);
         }
 
-        aggregate(func, def, filter) {
+        aggregate(func, seed, filter) {
             this.steps.push({                
                 func: func, 
+                seed: seed,
                 filter: filter || (x => true),
-                default: def || null,
                 type: 'aggregate'
             });
             return this;
@@ -71,25 +71,46 @@
             
             else if (step.type == 'aggregate') {
 
-                this.aggregation = step.default; 
+                // Return 'null' instead of 'typeerror' (which 
+                // is what Array.prototype.reduce returns)
+                if (this.data.length == 0) {
+                    this.aggregation = null;
+                    return;
+                }
 
-                for (let val of this.data)
-                if (step.filter(val)) 
+                let v = 0; 
+
+                // if the seed doesn't meet the filter, it's as
+                // though no seed were set.
+                if (step.seed === undefined || !step.filter(step.seed)) {
+                    this.aggregation = this.data[0];
+                    v = 1;
+                } 
+                else
+                    this.aggregation = step.seed;
+
+                for (v; v < this.data.length; v++) 
+                if (step.filter(this.data[v])) 
+
+                    // matches signature of first 'reducer' argument
+                    // in Array.prototype.reduce
                     this.aggregation = step.func(
-                        this.aggregation, 
-                        val
+                        this.aggregation, // accumulator
+                        this.data[v], // current value
+                        v, // current index
+                        this.data // source array
                     );
 
             }
 
             else if (step.type == 'changeData') 
-                for (let rowIx in this.data)
+                for (let rowIx in this.data) 
                     this.data[rowIx] = step.func(
                         this.data[rowIx], 
                         this.aggregation
                     );
-            
 
+            
             else if (step.type == 'emulators') 
                 this.aggregation = aggregator.runEmulators(
                     step.func, 
@@ -137,8 +158,10 @@
 
                     let isEmulator = emulators[key].funcName;
 
-                    if (!isEmulator) 
-                        emulators[key] = $$.first(emulators[key]);
+                    if (!isEmulator) {
+                        
+                        emulators[key] = $$.last(emulators[key]);
+                    }
 
                     chosenAggregators[key] = aggregators[emulators[key].funcName]();
 
@@ -168,7 +191,7 @@
 
         first:  () => new aggregator().aggregate((a,b) => a, null, a => a != null),
         last:   () => new aggregator().aggregate((a,b) => b),
-        sum:    () => new aggregator().aggregate((a,b) => a + b, 0),
+        sum:    () => new aggregator().aggregate((a,b) => a + b),
         count:  () => new aggregator().aggregate((a,b) => a + 1, 0),
 
         avg:    () => new aggregator()
@@ -201,8 +224,9 @@
         row => ({ 
             x: row.a,
             sum: $$.sum(row.a),
+            cnt: $$.count(row.a),
             avg: $$.avg(row.a),
-            mad: $$.mad(Math.abs(row.a))            
+            mad: $$.mad(row.a)            
         }),
         dataset
     );
