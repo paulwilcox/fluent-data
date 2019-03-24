@@ -3,12 +3,7 @@
 
 <script type="module">
 
-    // TODO:    - Null and undefined handling
-    //              > default and seed are not the same thing
-    //              > have aggs use first non-null/undefined value
-    //              > instead of depending on seed, unless 
-    //                explicitly desired.
-    //          - Can we return aggregator.data, but in a way that 
+    // TODO:    - Can we return aggregator.data, but in a way that 
     //            all aggregator.datas are joined together?
     //          - Formalize pluging in new functions.
 
@@ -147,10 +142,16 @@
     ) {
 
         let chosenAggregators = {};
+        let isNaked = false;
 
         for (let row of dataset) {
 
             let emulators = emulatorsFunc(row);
+            
+            isNaked = emulators instanceof aggregator.emulator;
+
+            if (isNaked) 
+                emulators = { x: emulators };
 
             for (let key of Object.keys(emulators)) {
 
@@ -170,6 +171,9 @@
 
         for (let key of Object.keys(chosenAggregators)) 
             chosenAggregators[key] = chosenAggregators[key].execute();
+
+        if (isNaked) 
+            chosenAggregators = chosenAggregators.x;
 
         return chosenAggregators;
 
@@ -197,10 +201,9 @@
                 .changeAggregated(agg => agg.sum / agg.count),
 
         mad:    () => new aggregator()
-                .emulators(v => ({ avg: $$.avg(v) }))
-                .changeData((dataRow,agg) => Math.abs(dataRow - agg.avg)) 
-                .emulators(v => ({ avg: $$.avg(v) }))
-                .changeAggregated(agg => agg.avg)
+                .emulators(v => $$.avg(v))
+                .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
+                .emulators(v => $$.avg(v))
 
     }
 
