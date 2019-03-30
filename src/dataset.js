@@ -8,65 +8,46 @@ export class dataset {
         this.data = data;
     }
 
-    apply (arrayOperation, innerFunc) {
+    call (arrayOperation, ...args) {
 
         if (this.data instanceof dsGetter) {
-            this.data = this.data[arrayOperation](innerFunc);
+            // ...args simply the lambda function
+            this.data = this.data[arrayOperation](...args); 
             return;
         }
 
-        if (g.isString(arrayOperation))
-            arrayOperation = Array.prototype[arrayOperation];   
+        let fromArrayProto = g.isString(arrayOperation);
 
-        this.data = this.applyToNested(arrayOperation, innerFunc, this.data);
+        if (fromArrayProto) 
+            arrayOperation = Array.prototype[arrayOperation];        
+
+        this.data = this.callNested(
+            arrayOperation, 
+            fromArrayProto,
+            this.data,
+            ...args 
+        );
 
     }
 
-    applyToNested(
+    callNested(
         arrayOperation,
-        innerFunc,
-        maybeNested
-    ) {
-
-        // if not nested, apply the function
-        if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) {
-            return arrayOperation.call(null, maybeNested, innerFunc);           
-        }
-    
-        let output = [];
-    
-        for (let nested of maybeNested)  
-            output.push(
-                this.applyToNested(arrayOperation, innerFunc, nested)
-            );
-    
-        return output;
-    
-    }
-
-
-
-
-    apply2 (arrayOperation) {
-
-        this.data = this.applyToNested2(arrayOperation, this.data);
-
-    }
-
-    applyToNested2(
-        arrayOperation,
-        maybeNested
+        fromArrayProto,
+        maybeNested,
+        ...args
     ) {
 
         // if not nested, apply the function
         if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) 
-            return arrayOperation.call(maybeNested);           
+            return fromArrayProto 
+                ? arrayOperation.call(maybeNested, ...args)
+                : arrayOperation.call(null, maybeNested, ...args);    
     
         let output = [];
     
         for (let nested of maybeNested)  
             output.push(
-                this.applyToNested2(arrayOperation, nested)
+                this.callNested(arrayOperation, fromArrayProto, nested, ...args)
             );
     
         return output;

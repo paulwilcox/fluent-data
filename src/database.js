@@ -102,13 +102,13 @@ export class database {
 
     filter (func) { 
         let ds = this.getDataset(func)
-        ds.apply('filter', func);
+        ds.call('filter', func);
         return this;
     }
 
     map (func) {    
         let ds = this.getDataset(func);
-        ds.apply('map', func);
+        ds.call('map', func);
         return this;
     }
 
@@ -150,13 +150,19 @@ export class database {
 
     sort (orderedValuesSelector) {
         let ds = this.getDataset(orderedValuesSelector);
-        ds.apply(quickSort, orderedValuesSelector);
+        ds.call(quickSort, orderedValuesSelector);
         return this;
     } 
 
     fold (outerFunc) {
         let ds = this.getDataset(outerFunc);
-        ds.apply(aggregator.runEmulators, outerFunc);
+        ds.call(aggregator.runEmulators, outerFunc);
+
+        // Ungrouped aggregates will return a naked object.
+        // So instead we return a single row array. 
+        if (!Array.isArray(ds.data))
+            ds.data = [ds.data];
+
         return this;
     }
 

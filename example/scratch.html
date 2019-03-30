@@ -3,14 +3,14 @@
     import { sampleIdb, sampleDataSets } from './data.js';
     import { oneQuery } from '../src/oneQuery.js';
 
-// TODO: .fold results in object.  Should result in array of single row.
+// TODO: .join should work inside groupings
 
     let db = 
         new oneQuery()
         .addSources({
-            sam: oneQuery.idb('sampleIdb'),
-            c: sam => 'customers',
-            //c: sampleDataSets.customers,
+            //sam: oneQuery.idb('sampleIdb'),
+            //c: sam => 'customers',
+            c: sampleDataSets.customers,
             o: sampleDataSets.orders
         })
         .filter(c => true)
@@ -23,7 +23,7 @@
         }))
         .execute();
 
-    console.log({db});
+    console.log(db.datasets);
 
 
 </script>
