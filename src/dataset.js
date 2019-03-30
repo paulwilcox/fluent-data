@@ -10,6 +10,12 @@ export class dataset {
 
     call (arrayOperation, ...args) {
 
+        if (this.data instanceof dsGetter) {
+            // ...args simply the lambda function
+            this.data = this.data[arrayOperation](...args); 
+            return;
+        }
+
         this.data = this.callWithoutModify(
             arrayOperation, 
             ...args 
@@ -19,11 +25,8 @@ export class dataset {
 
     callWithoutModify (arrayOperation, ...args) {
 
-        if (this.data instanceof dsGetter) {
-            // ...args simply the lambda function
-            this.data = this.data[arrayOperation](...args); 
-            return;
-        }
+        if (this.data instanceof dsGetter) 
+            throw 'cannot call "callWithoutModify" on a dsGetter';
 
         let fromArrayProto = g.isString(arrayOperation);
 
@@ -36,7 +39,7 @@ export class dataset {
             this.data,
             ...args 
         );
-            
+
     }
 
     callNested(

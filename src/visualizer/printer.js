@@ -1,20 +1,7 @@
-//import {pretendPromise} from "../pretendPromise.js";
 import { addPagerToTables } from "../visualizer/pager.js";
 import { addDefaultCss } from "../visualizer/css.js";
 
 export function print(target, obj, caption) {
-
-/*
-    let isPromisy = obj instanceof pretendPromise || Promise.resolve(obj) == obj;
-
-    if (isPromisy) {
-        console.trace();
-        throw(
-            "Can't print object.  It is a promise.  " + 
-            "Print from inside 'then' function instead."
-        );
-    }
-*/
 
     document.querySelector(target).innerHTML +=
         makeHtml(obj, caption);

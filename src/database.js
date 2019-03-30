@@ -6,7 +6,7 @@ import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { aggregator } from './aggregator.js';
-import { print } from './visualizer/printer.js';
+import { print as prn } from './visualizer/printer.js';
 
 export class database {
 
@@ -108,7 +108,7 @@ export class database {
     }
 
     map (func) {    
-        let ds = this.getDataset(func);
+        let ds = this.getDataset(func);    
         ds.call('map', func);
         return this;
     }
@@ -169,7 +169,7 @@ export class database {
     print (func, target, caption) {
         let ds = this.getDataset(func);
         let rows = ds.callWithoutModify('map', func);
-        print(target, rows, caption);
+        prn(target, rows, caption);
         return this;
     }
 

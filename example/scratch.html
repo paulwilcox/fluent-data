@@ -20,15 +20,15 @@
         })
         .filter(c => true)
         .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
-        //.join('oc', 'inner', (o,c) => o.customer == c.id)
+        .join('oc', 'inner', (o,c) => o.customer == c.id)
         //.group(oc => oc.id)
-        //.sort(oc => oc.rating)
-        /*.fold(oc => ({
+        .sort(oc => oc.rating)
+        .fold(oc => ({
             rating: oneQuery.sum(oc.rating + 5)
-        }))*/
-        //.print(c => c, '#printResult', 'c')
-        //.print(o => o, '#printResult', 'o')
-        //.print(oc => oc, '#printResult', 'oc')
+        }))
+        .print(c => c, '#printResult', 'c')
+        .print(o => o, '#printResult', 'o')
+        .print(oc => oc, '#printResult', 'oc')
         .execute();
 
     console.log(db);
