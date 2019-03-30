@@ -6,6 +6,7 @@ import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { aggregator } from './aggregator.js';
+import { print } from './visualizer/printer.js';
 
 export class database {
 
@@ -157,13 +158,21 @@ export class database {
     fold (outerFunc) {
         let ds = this.getDataset(outerFunc);
         ds.call(aggregator.runEmulators, outerFunc);
-
         // Ungrouped aggregates will return a naked object.
         // So instead we return a single row array. 
         if (!Array.isArray(ds.data))
             ds.data = [ds.data];
-
         return this;
     }
+
+    // Got rid of external db printing, at least for now
+    print (func, target, caption) {
+        let ds = this.getDataset(func);
+        let rows = ds.callWithoutModify('map', func);
+        print(target, rows, caption);
+        return this;
+    }
+
+
 
 }

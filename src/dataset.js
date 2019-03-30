@@ -10,6 +10,15 @@ export class dataset {
 
     call (arrayOperation, ...args) {
 
+        this.data = this.callWithoutModify(
+            arrayOperation, 
+            ...args 
+        );
+
+    }
+
+    callWithoutModify (arrayOperation, ...args) {
+
         if (this.data instanceof dsGetter) {
             // ...args simply the lambda function
             this.data = this.data[arrayOperation](...args); 
@@ -21,13 +30,13 @@ export class dataset {
         if (fromArrayProto) 
             arrayOperation = Array.prototype[arrayOperation];        
 
-        this.data = this.callNested(
+        return this.callNested(
             arrayOperation, 
             fromArrayProto,
             this.data,
             ...args 
         );
-
+            
     }
 
     callNested(
