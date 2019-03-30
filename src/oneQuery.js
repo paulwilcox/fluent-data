@@ -9,7 +9,7 @@ export class oneQuery extends deferable {
 
     constructor() {
         super(new database())
-        this.mpgExtend('addSources, filter, map, join, group, sort, fold, print');
+        this.mpgExtend('addSources, filter, map, join, group, sort, fold, print, merge');
     }
 
     mpgExtend (funcNamesCsv) {

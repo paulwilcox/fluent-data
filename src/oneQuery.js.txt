@@ -13,38 +13,7 @@ import { dbConnector } from './dbConnector.js';
 import { dbConnectorIdb } from "./dbConnectorIdb.js";
 import { deferable } from "./deferable.js";
 
-export let $$ = obj => new oneQuery(obj);
-
 export class oneQuery extends deferable { 
-
-    this.print = (mappingFunction, target, caption) => {
-
-        this.executeAll();
-
-        let aliases = new g.parser(mappingFunction).parameters;
-
-        // Just print the idbdataset as a whole.
-        if (Object.keys(this.externalDbs).includes(aliases[0])) {
-            
-            let externalDb = this.externalDbs[aliases[0]];
-            let datasetName = mappingFunction();
-
-            if (externalDb.dbType == 'idb')
-                printIdbStore(datasetName, externalDb.database, target, caption);
-
-            return this;
-
-        }
-
-        let dataset = this.getDataset(aliases);
-        dataset = dataset.then(dataset => {
-            print(target, mappingFunction(dataset), caption);
-            return dataset;
-        });
-
-        return this;
-
-    }
 
     let printIdbStore = (storeName, database, target, caption) => 
 

@@ -173,6 +173,82 @@ export class database {
         return this;
     }
 
+    merge (
+        targetIdentityKey, 
+        source, // mapper function or maybe even direct array of objects  
+        action = 'upsert'
+    ) {
 
+        let target = this.getDataset(targetIdentityKey);
+
+        let sourceArray = 
+            g.isFunction(source) ? this.getDataset(source).callWithoutModify('map', source)
+            : source instanceof dataset ? source.data
+            : Array.isArray(source) ? source
+            : null; 
+
+        if (!Array.isArray(sourceArray))
+            throw 'parameter "source" failed to convert to an array.';
+
+        let incomingBuckets = 
+            new hashBuckets(targetIdentityKey)
+            .addItems(sourceArray);
+        
+        for (let t = target.data.length - 1; t >= 0; t--) {
+
+            if (action == 'remove')
+                target.data.splice(t, 1);
+
+            else if (action == 'upsert') {
+
+                let sourceRow = 
+                    incomingBuckets.getBucketFirstItem(
+                        target.data[t], 
+                        targetIdentityKey,
+                        true 
+                    );
+
+                if (sourceRow)
+                    target.data[t] = sourceRow;
+
+            }
+
+        }
+
+        let remainingItems = 
+            incomingBuckets.getBuckets()
+            .map(bucket => bucket[0]);
+
+        for(let item of remainingItems)  
+            target.data.push(item);
+
+        return target;
+
+    }
+
+    /*
+        else {
+
+            let externalDb = this.externalDbs[new g.parser(target).parameters[0]];
+
+            if (externalDb.dbType == 'idb') 
+                
+                // Why did I (psw) have to wrap in pretend promise to work?
+                pretendPromise.all([mc]) 
+                .then(obj => {
+                    let mapped = obj[0];
+                    mergeIntoIdb(externalDb.database, target(), mapped, identityKey, action);
+                });
+
+        }
+    */
+
+    /*
+        oneQuery.mergeAction = Object.freeze({
+            nothing: null,
+            upsert: 'upsert',
+            remove: 'remove'
+        })
+    */
 
 }

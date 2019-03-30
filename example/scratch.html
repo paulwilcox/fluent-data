@@ -5,9 +5,14 @@
     import { sampleIdb, sampleDataSets } from './data.js';
     import { oneQuery } from '../src/oneQuery.js';
 
-/* TODO:    .join should work inside groupings
-            version of .print but for external database
-            ressurect .merge
+/* TODO:    - join() should work inside groupings, as with
+              any other user-facing method possible.
+            - print() for external database
+            - ressurect merge(), internal, then external
+            - aggregators should all reference the common
+              aggregate object.  Not have 'data' property
+              inside them that they reference (but this 
+              will be difficult.  So do it last).
 */
 
     let db = 
@@ -26,9 +31,16 @@
         .fold(oc => ({
             rating: oneQuery.sum(oc.rating + 5)
         }))
-        .print(c => c, '#printResult', 'c')
-        .print(o => o, '#printResult', 'o')
-        .print(oc => oc, '#printResult', 'oc')
+        .print(c => c, '#printResult', 'customers')
+        .merge(
+            c => c.id, 
+            [
+                {id: 2, fullname: 'overwritten'},
+                {id: 3, fullname: 'inserted'}
+            ],
+            'upsert'
+        )
+        .print(c => c, '#printResult', 'customers2')
         .execute();
 
     console.log(db);
