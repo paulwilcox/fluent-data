@@ -206,8 +206,8 @@ export class database {
             if (sourceRow)
                 target.data[t] = sourceRow;
 
-            //else if (allowDelete) // target but no source
-                //target.data.splice(t, 1);
+            else if (allowDelete) // target but no source
+                target.data.splice(t, 1);
 
         }
 
