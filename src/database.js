@@ -222,7 +222,7 @@ export class database {
         for(let item of remainingItems)  
             target.data.push(item);
 
-        return target;
+        return this;
 
     }
 
