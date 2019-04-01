@@ -176,7 +176,7 @@ export class database {
     merge (
         targetIdentityKey, 
         source, // mapper function or maybe even direct array of objects  
-        action = 'upsert'
+        allowDelete = false
     ) {
 
         let target = this.getDataset(targetIdentityKey);
@@ -196,26 +196,22 @@ export class database {
         
         for (let t = target.data.length - 1; t >= 0; t--) {
 
-            if (action == 'remove')
-                target.data.splice(t, 1);
+            let sourceRow = 
+                incomingBuckets.getBucketFirstItem(
+                    target.data[t], 
+                    targetIdentityKey,
+                    true 
+                );
 
-            else if (action == 'upsert') {
+            if (sourceRow)
+                target.data[t] = sourceRow;
 
-                let sourceRow = 
-                    incomingBuckets.getBucketFirstItem(
-                        target.data[t], 
-                        targetIdentityKey,
-                        true 
-                    );
-
-                if (sourceRow)
-                    target.data[t] = sourceRow;
-
-            }
+            //else if (allowDelete) // target but no source
+                //target.data.splice(t, 1);
 
         }
 
-        let remainingItems = 
+        let remainingItems = // source but no target
             incomingBuckets.getBuckets()
             .map(bucket => bucket[0]);
 

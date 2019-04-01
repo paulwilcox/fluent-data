@@ -38,7 +38,7 @@
                 {id: 2, fullname: 'overwritten'},
                 {id: 3, fullname: 'inserted'}
             ],
-            'upsert'
+            false
         )
         .print(c => c, '#printResult', 'customers2')
         .execute();
