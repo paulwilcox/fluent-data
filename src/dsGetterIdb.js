@@ -95,8 +95,6 @@ export class dsGetterIdb extends dsGetter {
     
             let dbCon = this.dbConnector.open();
             
-// TODO: Why does cursor only seem to loop once when there are two rows?
-
             dbCon.onsuccess = () => {
 
                 let db = dbCon.result;
@@ -142,12 +140,7 @@ export class dsGetterIdb extends dsGetter {
                 } 
                     
                 storeCursor.onerror = event => reject(event); 
-                
-                tx.oncomplete = () => {
-console.log({store: db.transaction(this.storeName).objectStore(this.storeName).getAll()})
-                    db.close();
-                } 
-                
+                tx.oncomplete = () => db.close();
                 tx.onerror = event => reject(event); 
 
             };
