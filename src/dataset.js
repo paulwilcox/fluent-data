@@ -1,5 +1,6 @@
 import * as g from './general.js';
 import { dsGetter } from './dsGetter.js';
+import { database } from './database.js';
 
 export class dataset {
 
@@ -11,7 +12,6 @@ export class dataset {
     call (arrayOperation, ...args) {
 
         if (this.data instanceof dsGetter) {
-            // ...args simply the lambda function
             this.data = this.data[arrayOperation](...args); 
             return;
         }

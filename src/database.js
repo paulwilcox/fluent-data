@@ -222,29 +222,15 @@ export class database {
 
     }
 
-    /*
-        else {
-
-            let externalDb = this.externalDbs[new g.parser(target).parameters[0]];
-
-            if (externalDb.dbType == 'idb') 
-                
-                // Why did I (psw) have to wrap in pretend promise to work?
-                pretendPromise.all([mc]) 
-                .then(obj => {
-                    let mapped = obj[0];
-                    mergeIntoIdb(externalDb.database, target(), mapped, identityKey, action);
-                });
-
-        }
-    */
-
-    /*
-        oneQuery.mergeAction = Object.freeze({
-            nothing: null,
-            upsert: 'upsert',
-            remove: 'remove'
-        })
-    */
+    mergeExternal (
+        targetIdentityKey, 
+        source,
+        allowDelete = false
+    ) {
+        let ds = this.getDataset(targetIdentityKey);
+console.log({dsData: ds.data})
+        ds.data.merge(targetIdentityKey, source, allowDelete);
+        return this;
+    }
 
 }
