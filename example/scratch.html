@@ -19,10 +19,10 @@
         new oneQuery()
         .addSources({
             sam: oneQuery.idb('sampleIdb'),
-            c: sam => 'customers',
-            //c: sampleDataSets.customers,
+            //c: sam => 'customers',
+            c: sampleDataSets.customers,
             o: sampleDataSets.orders
-        })/*
+        })
         .filter(c => true)
         .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
         .join('oc', 'inner', (o,c) => o.customer == c.id)
@@ -40,7 +40,10 @@
             ],
             false
         )
-        .print(c => c, '#printResult', 'customers2')*/
+        .print(c => c, '#printResult', 'customers2')
+
+/*
+        .printExternal(c => c, '#printResult', 'customers')
         .mergeExternal(
             c => c.id, 
             [
@@ -49,6 +52,9 @@
             ],
             false
         )
+        .printExternal(c => c, '#printResult', 'customers')
+*/
+
         .execute();
 
     console.log(db);

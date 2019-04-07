@@ -1,6 +1,5 @@
 import * as g from './general.js';
 import { dsGetter } from './dsGetter.js';
-import { database } from './database.js';
 
 export class dataset {
 
@@ -8,6 +7,31 @@ export class dataset {
         this.key = key;
         this.data = data;
     }
+
+    call (arrayOperation, ...args) {
+        this.data = this.callWithoutModify(arrayOperation, ...args);
+    }
+
+    callWithoutModify (arrayOperation, ...args) {
+
+        if (this.data instanceof dsGetter) 
+            return this.data[arrayOperation](...args);
+
+        let fromArrayProto = g.isString(arrayOperation);
+
+        if (fromArrayProto) 
+            arrayOperation = Array.prototype[arrayOperation];        
+
+        return this.callNested(
+            arrayOperation, 
+            fromArrayProto,
+            this.data,
+            ...args 
+        );
+
+    }
+
+/*
 
     call (arrayOperation, ...args) {
 
@@ -41,6 +65,7 @@ export class dataset {
         );
 
     }
+*/
 
     callNested(
         arrayOperation,
