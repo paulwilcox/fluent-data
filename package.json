@@ -1,6 +1,6 @@
 {
   "name": "onequery",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  Future work on oneQuery will seek to use the same API to work with a server database from node.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
   "main": ".dist/oneQuery.next.js",
   "directories": {
