@@ -6,11 +6,11 @@
     <script type='module'>
         
         import { sampleIdb } from "./data.js";
-        import { $$ } from "../src/oneQuery.js";
+        import { oneQuery } from "../src/oneQuery.js";
 
         let result = 
-            $$({
-                sam: $$.db(sampleIdb, 'idb'),
+            new oneQuery({
+                sam: oneQuery.idb('sampleIdb'),
                 n: [
                     { id: 1, name: 'taquitos' },
                     { id: 4, name: 'alfredo' },

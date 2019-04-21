@@ -5,6 +5,10 @@ import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
 import { addAggregators } from './aggregators.js';
 
+export function $$(obj) { 
+    return new oneQuery().addSources(obj); 
+}
+
 export class oneQuery extends deferable {
 
     constructor() {
@@ -102,5 +106,10 @@ export class oneQuery extends deferable {
 }
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
-
 addAggregators(oneQuery);
+
+for (let p of Object.getOwnPropertyNames(oneQuery)) 
+    if (!['length', 'prototype', 'name'].includes(p)) 
+        $$[p] = oneQuery[p];
+    
+

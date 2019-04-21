@@ -3,12 +3,16 @@
 <script type='module'>
 
     import { sampleIdb, sampleDataSets } from './data.js';
-    import { oneQuery } from '../src/oneQuery.js';
+    import { $$, oneQuery } from '../src/oneQuery.js';
 
 /* TODO:    - join() should work inside groupings, as with
               any other user-facing method possible.
-            - print() for external database
-            - merge() into external database
+            - delete() method, internal and external.  
+              merge() is not really sufficient.
+            - seems like dataset should not know it
+              can be nested and database sould know it 
+              might be.  But I have it reversed.  But this
+              should probably wait until a future rebuild.
             - aggregators should all reference the common
               aggregate object.  Not have 'data' property
               inside them that they reference (but this 
@@ -16,11 +20,10 @@
 */
 
     let db = 
-        new oneQuery()
-        .addSources({
-            sam: oneQuery.idb('sampleIdb'),
-            //c: sam => 'customers',
-            c: sampleDataSets.customers,
+        $$({
+            sam: $$.idb('sampleIdb'),
+            c: sam => 'customers',
+            //c: sampleDataSets.customers,
             o: sampleDataSets.orders
         })
         .filter(c => true)
@@ -29,7 +32,7 @@
         //.group(oc => oc.id)
         .sort(oc => oc.rating)
         .fold(oc => ({
-            rating: oneQuery.sum(oc.rating + 5)
+            rating: $$.sum(oc.rating + 5)
         }))
         .print(c => c, '#printResult', 'customers')
         .merge(
