@@ -247,4 +247,14 @@ export class database {
         return this;
     }
 
+    printExternal (func, target, caption) {
+        let ds = this.getDataset(func);
+        ds.callWithoutModify('map', func)
+        .then(rows => {
+            console.log({target, rows});
+            prn(target, rows, caption);    
+        })
+        return this;
+    }
+
 }
