@@ -7,8 +7,6 @@
 
 /* TODO:    - join() should work inside groupings, as with
               any other user-facing method possible.
-            - delete() method, internal and external.  
-              merge() is not really sufficient.
             - seems like dataset should not know it
               can be nested and database sould know it 
               might be.  But I have it reversed.  But this
@@ -34,29 +32,28 @@
         .fold(oc => ({
             rating: $$.sum(oc.rating + 5)
         }))
-        .print(c => c, '#printResult', 'customers')
+/*        .print(c => c, '#printResult', 'customers')
         .merge(
             c => c.id, 
             [
                 {id: 2, fullname: 'overwritten'},
                 {id: 3, fullname: 'inserted'}
             ],
-            false
+            'upsert'
         )
         .print(c => c, '#printResult', 'customers2')
 
-/*
+*/
         .printExternal(c => c, '#printResult', 'customers')
-        .mergeExternal(
+        /*.mergeExternal(
             c => c.id, 
             [
                 {id: 2, fullname: 'overwritten'},
                 {id: 3, fullname: 'inserted'}
             ],
-            false
+            'upsert'
         )
-        .printExternal(c => c, '#printResult', 'customers')
-*/
+        .printExternal(c => c, '#printResult', 'customers')*/
 
         .execute();
 

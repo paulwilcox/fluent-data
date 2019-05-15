@@ -1,6 +1,6 @@
 import "../node_modules/idb/lib/idb.js";
     
-//window.indexedDB.deleteDatabase('sampleIdb');
+window.indexedDB.deleteDatabase('sampleIdb');
 
 export let sampleDataSets = {
 

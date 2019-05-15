@@ -190,8 +190,16 @@ export class database {
     merge (
         targetIdentityKey, 
         source, // mapper function or maybe even direct array of objects  
-        allowDelete = false
+        type = 'upsert' // update, insert, delete, upsert, full, or [] of 3 bools
     ) {
+
+        let typeIx = ix => (Array.isArray(type) && type[ix]);
+        let typeIn = (...args) => [...args].includes(type.toLowerCase());
+        
+        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
+        let deleteIfMatched = typeIn('delete') || typeIx(1);
+        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
+        let deleteIfNoSource = typeIn('full') || typeIx(3);
 
         let target = this.getDataset(targetIdentityKey);
 
@@ -218,19 +226,26 @@ export class database {
                 );
 
             if (sourceRow)
-                target.data[t] = sourceRow;
+                if (deleteIfMatched)
+                    target.data.splice(t, 1);
+                else if (updateIfMatched)
+                    target.data[t] = sourceRow;
 
-            else if (allowDelete) // target but no source
+            else if (deleteIfNoSource) // target but no source
                 target.data.splice(t, 1);
 
         }
 
-        let remainingItems = // source but no target
-            incomingBuckets.getBuckets()
-            .map(bucket => bucket[0]);
+        if (insertIfNoTarget) {
+                
+            let remainingItems = // source but no target
+                incomingBuckets.getBuckets()
+                .map(bucket => bucket[0]);
 
-        for(let item of remainingItems)  
-            target.data.push(item);
+            for(let item of remainingItems)  
+                target.data.push(item);
+
+        }
 
         return this;
 
@@ -239,10 +254,10 @@ export class database {
     mergeExternal (
         targetIdentityKey, 
         source,
-        allowDelete = false
+        type = 'upsert'
     ) {
         let ds = this.getDataset(targetIdentityKey);
-        ds.data.merge(targetIdentityKey, source, allowDelete);
+        ds.data.merge(...arguments);
         return this;
     }
 

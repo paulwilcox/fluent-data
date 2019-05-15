@@ -73,10 +73,18 @@ export class dsGetterIdb extends dsGetter {
     }
 
     merge (
-        targetIdentityKey,
-        source,
-        allowDelete = false
+        targetIdentityKey, 
+        source, // mapper function or maybe even direct array of objects  
+        type = 'upsert' // update, insert, delete, upsert, full, or [] of 3 bools
     ) {
+
+        let typeIx = ix => (Array.isArray(type) && type[ix]);
+        let typeIn = (...args) => [...args].includes(type.toLowerCase());
+        
+        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
+        let deleteIfMatched = typeIn('delete') || typeIx(1);
+        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
+        let deleteIfNoSource = typeIn('full') || typeIx(3);
 
         return new Promise((resolve, reject) => {
 
@@ -109,13 +117,17 @@ export class dsGetterIdb extends dsGetter {
 
                     if (!cursor) {
                         
-                        let remainingItems = // source but no target
-                            incomingBuckets.getBuckets()
-                            .map(bucket => bucket[0]);
-        
-                        for(let item of remainingItems) {
-                            let addRequest = store.add(item);
-                            addRequest.onerror = event => reject(event); 
+                        if (insertIfNoTarget) {
+                                
+                            let remainingItems = // source but no target
+                                incomingBuckets.getBuckets()
+                                .map(bucket => bucket[0]);
+            
+                            for(let item of remainingItems) {
+                                let addRequest = store.add(item);
+                                addRequest.onerror = event => reject(event); 
+                            }
+                        
                         }
 
                         return;
@@ -130,9 +142,12 @@ export class dsGetterIdb extends dsGetter {
                         );
 
                     if (sourceRow)
-                        cursor.update(sourceRow);
+                        if (deleteIfMatched) 
+                            cursor.delete();
+                        else if (updateIfMatched) 
+                            cursor.update(sourceRow);
         
-                    else if (allowDelete) // target but no source
+                    else if (deleteIfNoSource) 
                         cursor.delete();
 
                     cursor.continue();
