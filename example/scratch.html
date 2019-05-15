@@ -19,9 +19,9 @@
 
     let db = 
         $$({
-            sam: $$.idb('sampleIdb'),
-            c: sam => 'customers',
-            //c: sampleDataSets.customers,
+            //sam: $$.idb('sampleIdb'),
+            //c: sam => 'customers',
+            c: sampleDataSets.customers,
             o: sampleDataSets.orders
         })
         .filter(c => true)
