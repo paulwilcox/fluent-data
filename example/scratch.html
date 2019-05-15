@@ -32,7 +32,7 @@
         .fold(oc => ({
             rating: $$.sum(oc.rating + 5)
         }))
-/*        .print(c => c, '#printResult', 'customers')
+        .print(c => c, '#printResult', 'customers')
         .merge(
             c => c.id, 
             [
@@ -43,9 +43,9 @@
         )
         .print(c => c, '#printResult', 'customers2')
 
-*/
-        .printExternal(c => c, '#printResult', 'customers')
-        /*.mergeExternal(
+/*
+        .print(c => c, '#printResult', 'customers')
+        .mergeExternal(
             c => c.id, 
             [
                 {id: 2, fullname: 'overwritten'},
@@ -53,8 +53,8 @@
             ],
             'upsert'
         )
-        .printExternal(c => c, '#printResult', 'customers')*/
-
+        .print(c => c, '#printResult', 'customers')
+*/
         .execute();
 
     console.log(db);

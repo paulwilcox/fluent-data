@@ -173,20 +173,6 @@ export class database {
         return this;
     }
 
-    printExternal (func, target, caption) {
-        
-        this
-            .getDataset(func)
-            .callWithoutModify('map', func)
-            .then(rows => {
-                console.log({rows})
-                prn(target, rows, caption)
-            });
-
-        return this;
-
-    }
-
     merge (
         targetIdentityKey, 
         source, // mapper function or maybe even direct array of objects  
