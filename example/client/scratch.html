@@ -33,6 +33,7 @@
         .fold(oc => ({
             rating: $$.sum(oc.rating + 5)
         }))
+        .print(c => c, '#printResult', 'customers')
 
         /*.printExternal(c => c, '#printResult', 'customers')
         .mergeExternal(
