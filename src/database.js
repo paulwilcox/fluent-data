@@ -248,12 +248,9 @@ export class database {
     }
 
     printExternal (func, target, caption) {
-        let ds = this.getDataset(func);
-        ds.callWithoutModify('map', func)
-        .then(rows => {
-            console.log({target, rows});
-            prn(target, rows, caption);    
-        })
+        this.getDataset(func)
+            .callWithoutModify('map', func)
+            .then(rows => prn(target, rows, caption))
         return this;
     }
 
