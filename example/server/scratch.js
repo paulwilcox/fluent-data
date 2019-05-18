@@ -1,12 +1,19 @@
-/*
-var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/sampleMongo";
+let sampleDataSets = require('../sampleDataSets.js');
+let dbConnectorMongo = require('../../src/dbConnectorMongo.js');
+let $$ = require('../../src/oneQuery.js');
 
-MongoClient.connect(url, function(err, db) {
-  if (err) throw err;
-  console.log("Database created!");
-  db.close();
-});
+$$.mongo = url => new dbConnectorMongo(url);
+
+/*
+let db = 
+    $$({
+        sam: $$.mongo('mongodb://localhost:27017/sampleMongo'),
+        c: sam => 'customers',
+        o: sampleDataSets.orders
+    })
+    .filter(c => true)
+    .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
+    .execute();
 */
 
-export let json = { 'a': 'eigh', 'b': 'bee' };
+module.exports.json = JSON.stringify(sampleDataSets);

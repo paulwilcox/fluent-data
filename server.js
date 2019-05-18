@@ -1,34 +1,36 @@
 var http = require('http');
 var fs = require('fs');
-var path = require('path');
+var scratch = require('./example/server/scratch.js');
 
 http.createServer(function (request, response) {
 
     console.log('request ', request.url);
 
-    let filePath =
-        request.url == '/' 
-        ? './example/server/index.html'
-        : '.' + request.url;
-    
-    let ex = path.extname(filePath);
+    if (request.url == '/favicon.ico') {
+        response.writeHead(204);
+        response.end();
+    }
 
-    let contentType = 
-          ex == '.html' ? 'text/html'
-        : ex == '.js' ? 'text/javascript'
-        : 'application/octet-stream';
-    
-    fs.readFile(filePath, function(error, content) {
-        if (error) {
-            response.writeHead(500);
-            response.end('error');
-        }
-        else {
-            response.writeHead(200, { 'Content-Type': contentType });
-            response.end(content, 'utf-8');
-        }
-    });
+    else if (request.url == '/scratch') {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(scratch.json);    
+    }
 
+    else if (request.url == '/') {
+
+        fs.readFile('./example/server/index.html', function(error, content) {
+            if (error) {
+                response.writeHead(500);
+                response.end(error.message);
+            }
+            else {
+                response.writeHead(200, { 'Content-Type': 'text/html' });
+                response.end(content, 'utf-8');
+            }
+        });
+    
+    }
+    
 }).listen(8081);
 
 console.log('Server running at http://127.0.0.1:8081/');
