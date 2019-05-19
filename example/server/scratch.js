@@ -1,8 +1,8 @@
-let sampleDataSets = require('../sampleDataSets.js');
-let dbConnectorMongo = require('../../src/dbConnectorMongo.js');
-let $$ = require('../../src/oneQuery.js');
+//import { sampleDataSets } from '../sampleDataSets.js';
+//let dbConnectorMongo = require('../../src/dbConnectorMongo.js');
+//let $$ = require('../../src/oneQuery.js');
 
-$$.mongo = url => new dbConnectorMongo(url);
+//$$.mongo = url => new dbConnectorMongo(url);
 
 /*
 let db = 
@@ -16,4 +16,4 @@ let db =
     .execute();
 */
 
-module.exports.json = JSON.stringify(sampleDataSets);
+export let json = 'here';

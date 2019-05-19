@@ -1,5 +1,3 @@
-import "../node_modules/idb/lib/idb.js";
-    
 export let sampleDataSets = {
 
     products: [

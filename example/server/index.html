@@ -3,7 +3,10 @@ Here at server.
 <script>
 
   fetch('scratch')
-  .then(response => response.json())
-  .then(json => console.log({json}));
+  .then(response => {
+      return response.text();
+  })
+  .then(json => console.log({json}))
+  .catch(e => console.log({e}));
 
 </script>
