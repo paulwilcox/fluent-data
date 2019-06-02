@@ -1,19 +1,17 @@
-//import { sampleDataSets } from '../sampleDataSets.js';
-//let dbConnectorMongo = require('../../src/dbConnectorMongo.js');
-//let $$ = require('../../src/oneQuery.js');
+import { resetSampleMongo } from './resetSampleMongo.js';
+import { dbConnectorMongo } from '../../src/dbConnectorMongo';
+import { $$ } from '../../src/oneQuery.js';
 
-//$$.mongo = url => new dbConnectorMongo(url);
+resetSampleMongo();
+$$.mongo = url => new dbConnectorMongo(url);
 
-/*
-let db = 
+let x = 
     $$({
         sam: $$.mongo('mongodb://localhost:27017/sampleMongo'),
-        c: sam => 'customers',
-        o: sampleDataSets.orders
+        c: sam => 'customers'
     })
-    .filter(c => true)
-    .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
+    .map(c => c)
     .execute();
-*/
 
-export let json = 'here';
+export let json = JSON.stringify(x); 
+

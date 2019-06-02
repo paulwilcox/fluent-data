@@ -1,6 +1,9 @@
-module.exports.dsGetterMongo = class {
+import { dsGetter } from './dsGetter.js';
+
+export class dsGetterMongo extends dsGetter {
 
     constructor (collectionName, connector) {
+        super();
         this.collectionName = collectionName;
         this.connector = connector;
         this.filterFunc;

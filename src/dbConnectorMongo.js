@@ -1,6 +1,8 @@
-let dsGetterMongo = require('./dsGetterMongo.js');
+import { dsGetterMongo } from './dsGetterMongo.js';
+import { dbConnector } from './dbConnector.js';
+import { MongoClient } from 'mongodb';
 
-module.exports.dbConnectorMongo = class {
+export class dbConnectorMongo extends dbConnector {
 
     constructor (url) {
         super();
@@ -8,7 +10,7 @@ module.exports.dbConnectorMongo = class {
     }
 
     dsGetter(collectionName) {
-        return new dsGetterMongo(collectionName, this);
+        return new dsGetterMongo(collectionName, this.db);
     }
 
 } 

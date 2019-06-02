@@ -4,7 +4,7 @@ Here at server.
 
   fetch('scratch')
   .then(response => {
-      return response.text();
+      return response.json();
   })
   .then(json => console.log({json}))
   .catch(e => console.log({e}));

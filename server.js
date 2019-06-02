@@ -1,6 +1,9 @@
 var http = require('http');
 var fs = require('fs');
-var scratch = require('./example/server/scratch.transpiled.js');
+var scratch = require('./example/server/scratch.bundle.js');
+
+let x = Object.keys(scratch);
+console.log(x);
 
 http.createServer(function (request, response) {
 
@@ -12,9 +15,9 @@ http.createServer(function (request, response) {
     }
 
     else if (request.url == '/scratch') {
-        //response.writeHead(200, { 'Content-Type': 'application/json' });
-        response.writeHead(200, { 'Content-Type': 'text/plain' });
-        console.log(scratch.json);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        console.log('scratch requested');
+        //response.writeHead(200, { 'Content-Type': 'text/plain' });
         response.end(scratch.json);    
     }
 

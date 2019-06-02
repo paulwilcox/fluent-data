@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "example\\start.cmd",
-    "git-publish": "node_scripts\\gitPublish.cmd"
+    "git-publish": "node_scripts\\gitPublish.cmd",
+    "build-server": "npx babel ./example/server/scratch.js --out-file ./example/server/scratch.transpiled2.js --presets @babel/preset-env"
   },
   "repository": {
     "type": "git",
@@ -37,11 +38,14 @@
     "mongodb": "^3.2.5"
   },
   "devDependencies": {
+    "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.4",
+    "@babel/plugin-transform-modules-commonjs": "^7.4.4",
     "@babel/preset-env": "^7.4.4",
     "babel-loader": "^8.0.6",
     "esm": "^3.2.25",
     "idb": "^2.1.3",
+    "rollup": "^1.13.1",
     "webpack": "^4.31.0"
   }
 }
