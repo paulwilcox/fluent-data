@@ -6,11 +6,11 @@ export class dbConnectorMongo extends dbConnector {
 
     constructor (url) {
         super();
-        this.db = MongoClient.connect(url, { useNewUrlParser: true });
+        this.client = MongoClient.connect(url, { useNewUrlParser: true });
     }
 
     dsGetter(collectionName) {
-        return new dsGetterMongo(collectionName, this.db);
+        return new dsGetterMongo(collectionName, this.client);
     }
 
 } 

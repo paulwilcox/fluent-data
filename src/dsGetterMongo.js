@@ -23,17 +23,20 @@ export class dsGetterMongo extends dsGetter {
     map(mapFunc) {
             
         return this.connector
-            .then(db => {
+            .then(client => {
                 
+                let db = client.db();
                 let filterFunc = this.filterFunc || (x => true);
-                
+                    
                 let results = 
                     db.collection(this.collectionName)
-                    .find(filterFunc)
+                    .find()
                     .map(mapFunc)
                     .toArray();
-                
-                db.close(); // TODO: decide if I want to close here or elsewhere or at all
+
+results.then(r => { console.log(r); return r; });
+
+                client.close(); // TODO: decide if I want to close here or elsewhere or at all
                 
                 return results;
 

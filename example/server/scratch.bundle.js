@@ -4,74 +4,6 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var mongodb = require('mongodb');
 
-let sampleDataSets = {
-
-    products: [
-        { id: 123456, price: 5 },
-        { id: 123457, price: 2 },
-        { id: 123458, price: 1.5 },
-        { id: 123459, price: 4 }
-    ],        
-
-    customers: [
-        { id: 1, fullname: "Jane Doe" },
-        { id: 2, fullname: "John Doe" }
-    ],          
-
-    orders: [
-        { id: 901, customer: 1, product: 123456, speed: 1, rating: 2 },
-        { id: 902, customer: 1, product: 123457, speed: 2, rating: 7 },
-        { id: 903, customer: 2, product: 123456, speed: 3, rating: 43 },
-        { id: 904, customer: 2, product: 123457, speed: 4, rating: 52 },
-        { id: 905, customer: 1, product: 123459, speed: 5, rating: 93 },
-        { id: 906, customer: 1, product: 123459, speed: 6, rating: 74 },
-        { id: 907, customer: 2, product: 123458, speed: 7, rating: 3 },
-        { id: 908, customer: 2, product: 123458, speed: 8, rating: 80 },
-        { id: 909, customer: 1, product: 123459, speed: 7, rating: 23 },
-        { id: 910, customer: 1, product: 123459, speed: 8, rating: 205 },
-        { id: 911, customer: 1, product: 123459, speed: 3, rating: 4 },
-        { id: 912, customer: 7, product: 123457, speed: 2, rating: 6 } // notice no customer 7 (use for outer joins)
-    ],    
-
-    students: [
-        { id: "a", name: "Andrea" },
-        { id: "b", name: "Becky" },
-        { id: "c", name: "Colin" }
-    ],
-
-    foods: [
-        { id: 1, name: 'tacos' },
-        { id: 2, name: 'skittles' },
-        { id: 3, name: 'flan' }
-    ],
-
-    scores: [
-        {id: 1, student: "a", score: 5 },
-        {id: 2, student: "b", score: 7 },
-        {id: 3, student: "c", score: 10 },
-        {id: 4, student: "a", score: 0 },
-        {id: 5, student: "b", score: 6 },
-        {id: 6, student: "c", score: 9 }
-    ]
-
-};
-
-let url = 'mongodb://localhost:27017/sampleMongo';
-
-let resetSampleMongo = () =>
-    mongodb.MongoClient.connect(url)
-    .then(db => {
-
-        for (let key of Object.keys(sampleDataSets)) {
-            if (db[key]) 
-                db[key].drop();
-            db.createCollection(key);
-            db[key].insertMany(sampleDataSets[key]);
-        }
-
-    })
-    .catch(err => console.log(err));
-
 class dsGetter {
 
     constructor(dbConnector) {
@@ -107,17 +39,20 @@ class dsGetterMongo extends dsGetter {
     map(mapFunc) {
             
         return this.connector
-            .then(db => {
+            .then(client => {
                 
+                let db = client.db();
                 let filterFunc = this.filterFunc || (x => true);
-                
+                    
                 let results = 
                     db.collection(this.collectionName)
-                    .find(filterFunc)
+                    .find()
                     .map(mapFunc)
                     .toArray();
-                
-                db.close(); // TODO: decide if I want to close here or elsewhere or at all
+
+results.then(r => { console.log(r); return r; });
+
+                client.close(); // TODO: decide if I want to close here or elsewhere or at all
                 
                 return results;
 
@@ -136,11 +71,11 @@ class dbConnectorMongo extends dbConnector {
 
     constructor (url) {
         super();
-        this.db = mongodb.MongoClient.connect(url, { useNewUrlParser: true });
+        this.client = mongodb.MongoClient.connect(url, { useNewUrlParser: true });
     }
 
     dsGetter(collectionName) {
-        return new dsGetterMongo(collectionName, this.db);
+        return new dsGetterMongo(collectionName, this.client);
     }
 
 }
@@ -1982,7 +1917,9 @@ for (let p of Object.getOwnPropertyNames(oneQuery))
     if (!['length', 'prototype', 'name'].includes(p)) 
         $$$1[p] = oneQuery[p];
 
-resetSampleMongo();
+// resetSampleMongo(); But be warned, this is async and so
+// will likely run during after the code that follows it.
+
 $$$1.mongo = url => new dbConnectorMongo(url);
 
 let x = 
@@ -1993,6 +1930,7 @@ let x =
     .map(c => c)
     .execute();
 
+// TODO: json is empty.  Is the async nature of mongo causing this?
 let json = JSON.stringify(x);
 
 exports.json = json;
