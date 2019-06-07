@@ -39,18 +39,19 @@ class dsGetterMongo extends dsGetter {
     map(mapFunc) {
             
         return this.connector
-            .then(client => {
+            .then(async client => {
                 
                 let db = client.db();
                 let filterFunc = this.filterFunc || (x => true);
                     
-                let results = 
-                    db.collection(this.collectionName)
-                    .find()
-                    .map(mapFunc)
-                    .toArray();
+                let results = [];
 
-results.then(r => { console.log(r); return r; });
+                await db.collection(this.collectionName)
+                    .find()
+                    .forEach(record => {
+                        if (filterFunc(record))
+                            results.push(mapFunc(record));
+                    });
 
                 client.close(); // TODO: decide if I want to close here or elsewhere or at all
                 
@@ -1925,10 +1926,18 @@ $$$1.mongo = url => new dbConnectorMongo(url);
 let x = 
     $$$1({
         sam: $$$1.mongo('mongodb://localhost:27017/sampleMongo'),
-        c: sam => 'customers'
+        o: sam => 'orders'
     })
-    .map(c => c)
-    .execute();
+    .filter(o => o.customer == 1)
+    .map(o => ({ 
+        id: o.id, 
+        customer: o.customer, 
+        product: o.product,
+        rating: o.rating 
+    }))
+    .group(o => o.rating <= 10)
+    .execute()
+    .then(obj => console.log(obj.datasets[0].data));
 
 // TODO: json is empty.  Is the async nature of mongo causing this?
 let json = JSON.stringify(x);
