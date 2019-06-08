@@ -2,6 +2,7 @@ import * as g from './general.js';
 import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
+import { dbConnectorMongo } from './dbConnectorMongo.js';
 import { dsGetter } from './dsGetter.js';
 import { addAggregators } from './aggregators.js';
 
@@ -106,6 +107,7 @@ export class oneQuery extends deferable {
 }
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
+oneQuery.mongo = url => new dbConnectorMongo(url);
 addAggregators(oneQuery);
 
 for (let p of Object.getOwnPropertyNames(oneQuery)) 

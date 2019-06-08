@@ -4,82 +4,78 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var mongodb = require('mongodb');
 
-class dsGetter {
+let sampleDataSets = {
 
-    constructor(dbConnector) {
-        this.dbConnector = dbConnector;
-    }
+    products: [
+        { id: 123456, price: 5 },
+        { id: 123457, price: 2 },
+        { id: 123458, price: 1.5 },
+        { id: 123459, price: 4 }
+    ],        
 
-    map() { throw "Please override 'map'." }
-    filter() { throw "Please override 'filter'." }
-    merge() { throw "Please override 'merge'." }
+    customers: [
+        { id: 1, fullname: "Jane Doe" },
+        { id: 2, fullname: "John Doe" }
+    ],          
 
-}
+    orders: [
+        { id: 901, customer: 1, product: 123456, speed: 1, rating: 2 },
+        { id: 902, customer: 1, product: 123457, speed: 2, rating: 7 },
+        { id: 903, customer: 2, product: 123456, speed: 3, rating: 43 },
+        { id: 904, customer: 2, product: 123457, speed: 4, rating: 52 },
+        { id: 905, customer: 1, product: 123459, speed: 5, rating: 93 },
+        { id: 906, customer: 1, product: 123459, speed: 6, rating: 74 },
+        { id: 907, customer: 2, product: 123458, speed: 7, rating: 3 },
+        { id: 908, customer: 2, product: 123458, speed: 8, rating: 80 },
+        { id: 909, customer: 1, product: 123459, speed: 7, rating: 23 },
+        { id: 910, customer: 1, product: 123459, speed: 8, rating: 205 },
+        { id: 911, customer: 1, product: 123459, speed: 3, rating: 4 },
+        { id: 912, customer: 7, product: 123457, speed: 2, rating: 6 } // notice no customer 7 (use for outer joins)
+    ],    
 
-class dsGetterMongo extends dsGetter {
+    students: [
+        { id: "a", name: "Andrea" },
+        { id: "b", name: "Becky" },
+        { id: "c", name: "Colin" }
+    ],
 
-    constructor (collectionName, connector) {
-        super();
-        this.collectionName = collectionName;
-        this.connector = connector;
-        this.filterFunc;
-    }
+    foods: [
+        { id: 1, name: 'tacos' },
+        { id: 2, name: 'skittles' },
+        { id: 3, name: 'flan' }
+    ],
 
-    filter(filterFunc) {
+    scores: [
+        {id: 1, student: "a", score: 5 },
+        {id: 2, student: "b", score: 7 },
+        {id: 3, student: "c", score: 10 },
+        {id: 4, student: "a", score: 0 },
+        {id: 5, student: "b", score: 6 },
+        {id: 6, student: "c", score: 9 }
+    ]
 
-        if (!this.filterFunc) 
-            this.filterFunc = filterFunc;
-        else 
-            this.filterFunc = this.filterFunc && filterFunc;
+};
 
-        return this;
+let url = 'mongodb://localhost:27017/sampleMongo';
 
-    }
+let resetSampleMongo = () =>
+    mongodb.MongoClient.connect(url, { useNewUrlParser: true})
+    .then(async client => {
 
-    map(mapFunc) {
-            
-        return this.connector
-            .then(async client => {
-                
-                let db = client.db();
-                let filterFunc = this.filterFunc || (x => true);
-                    
-                let results = [];
+        let db = client.db();
 
-                await db.collection(this.collectionName)
-                    .find()
-                    .forEach(record => {
-                        if (filterFunc(record))
-                            results.push(mapFunc(record));
-                    });
+        for (let key of Object.keys(sampleDataSets)) {
+            console.log('processing: ' + key);
+            if (db.listCollections({name: key}).hasNext()) 
+                await db.collection(key).drop();
+            await db.createCollection(key); 
+            await db.collection(key).insertMany(sampleDataSets[key]);
+        }
 
-                client.close(); // TODO: decide if I want to close here or elsewhere or at all
-                
-                return results;
+        return db;
 
-            });
-
-    }
-
-}
-
-class dbConnector {
-    open() { throw "Please override 'open'." }
-    dsGetter() { throw "Please override 'dsGetter'."}
-}
-
-class dbConnectorMongo extends dbConnector {
-
-    constructor (url) {
-        super();
-        this.client = mongodb.MongoClient.connect(url, { useNewUrlParser: true });
-    }
-
-    dsGetter(collectionName) {
-        return new dsGetterMongo(collectionName, this.client);
-    }
-
-}
+    })
+    .catch(err => console.log(err));
 
 class parser {
 
@@ -268,6 +264,18 @@ class deferable {
 
 }
 
+class dsGetter {
+
+    constructor(dbConnector) {
+        this.dbConnector = dbConnector;
+    }
+
+    map() { throw "Please override 'map'." }
+    filter() { throw "Please override 'filter'." }
+    merge() { throw "Please override 'merge'." }
+
+}
+
 class dataset {
 
     constructor(key, data) {
@@ -322,6 +330,11 @@ class dataset {
     
     }
 
+}
+
+class dbConnector {
+    open() { throw "Please override 'open'." }
+    dsGetter() { throw "Please override 'dsGetter'."}
 }
 
 class hashBuckets {
@@ -1811,6 +1824,66 @@ class dbConnectorIdb extends dbConnector {
 
 }
 
+class dsGetterMongo extends dsGetter {
+
+    constructor (collectionName, connector) {
+        super();
+        this.collectionName = collectionName;
+        this.connector = connector;
+        this.filterFunc;
+    }
+
+    filter(filterFunc) {
+
+        if (!this.filterFunc) 
+            this.filterFunc = filterFunc;
+        else 
+            this.filterFunc = this.filterFunc && filterFunc;
+
+        return this;
+
+    }
+
+    map(mapFunc) {
+            
+        return this.connector
+            .then(async client => {
+                
+                let db = client.db();
+                let filterFunc = this.filterFunc || (x => true);
+                    
+                let results = [];
+
+                await db.collection(this.collectionName)
+                    .find()
+                    .forEach(record => {
+                        if (filterFunc(record))
+                            results.push(mapFunc(record));
+                    });
+
+                client.close(); // TODO: decide if I want to close here or elsewhere or at all
+                
+                return results;
+
+            });
+
+    }
+
+}
+
+class dbConnectorMongo extends dbConnector {
+
+    constructor (url) {
+        super();
+        this.client = mongodb.MongoClient.connect(url, { useNewUrlParser: true });
+    }
+
+    dsGetter(collectionName) {
+        return new dsGetterMongo(collectionName, this.client);
+    }
+
+}
+
 function $$$1(obj) { 
     return new oneQuery().addSources(obj); 
 }
@@ -1912,34 +1985,33 @@ class oneQuery extends deferable {
 }
 
 oneQuery.idb = dbName => new dbConnectorIdb(dbName);
+oneQuery.mongo = url => new dbConnectorMongo(url);
 addAggregators(oneQuery);
 
 for (let p of Object.getOwnPropertyNames(oneQuery)) 
     if (!['length', 'prototype', 'name'].includes(p)) 
         $$$1[p] = oneQuery[p];
 
-// resetSampleMongo(); But be warned, this is async and so
-// will likely run during after the code that follows it.
+async function getJson (resetMongo) {
 
-$$$1.mongo = url => new dbConnectorMongo(url);
+    if (resetMongo)
+        await resetSampleMongo();
 
-let x = 
-    $$$1({
-        sam: $$$1.mongo('mongodb://localhost:27017/sampleMongo'),
-        o: sam => 'orders'
-    })
-    .filter(o => o.customer == 1)
-    .map(o => ({ 
-        id: o.id, 
-        customer: o.customer, 
-        product: o.product,
-        rating: o.rating 
-    }))
-    .group(o => o.rating <= 10)
-    .execute()
-    .then(obj => console.log(obj.datasets[0].data));
+    return $$$1({
+            sam: $$$1.mongo('mongodb://localhost:27017/sampleMongo'),
+            o: sam => 'orders'
+        })
+        .filter(o => o.customer == 1)
+        .map(o => ({ 
+            id: o.id, 
+            customer: o.customer, 
+            product: o.product,
+            rating: o.rating 
+        }))
+        .group(o => o.rating <= 10)
+        .execute()
+        .then(db => JSON.stringify(db));
 
-// TODO: json is empty.  Is the async nature of mongo causing this?
-let json = JSON.stringify(x);
+}
 
-exports.json = json;
+exports.getJson = getJson;
