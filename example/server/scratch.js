@@ -1,7 +1,7 @@
-import { resetSampleMongo } from './resetSampleMongo.js';
-import { $$ } from '../../src/oneQuery.js';
+let resetSampleMongo = require('./resetSampleMongo.js').resetSampleMongo;
+let $$ = require('../../dist/oneQuery.server.next.js').$$;
 
-export async function getJson (resetMongo) {
+module.exports.getJson = async function (resetMongo) {
 
     if (resetMongo)
         await resetSampleMongo();

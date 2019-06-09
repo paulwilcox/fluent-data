@@ -1,6 +1,6 @@
 var http = require('http');
 var fs = require('fs');
-var scratch = require('./example/server/scratch.bundle.js');
+var scratch = require('./example/server/scratch.js');
 
 http.createServer(function (request, response) {
 

@@ -1,9 +1,9 @@
-import { sampleDataSets } from '../sampleDataSets.js';
-import { MongoClient } from 'mongodb';
+let MongoClient = require('mongodb').MongoClient;
+let sampleDataSets = require('../sampleDataSetsCjs.js').sampleDataSets;
 
 let url = 'mongodb://localhost:27017/sampleMongo';
 
-export let resetSampleMongo = () =>
+module.exports = () =>
     MongoClient.connect(url, { useNewUrlParser: true})
     .then(async client => {
 
