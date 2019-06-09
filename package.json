@@ -1,7 +1,7 @@
 {
   "name": "onequery",
   "version": "0.0.17",
-  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  Future work on oneQuery will seek to use the same API to work with a server database from node.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
+  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, mongoDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
   "main": ".dist/oneQuery.client.next.js",
   "directories": {
     "example": "example"
@@ -27,7 +27,8 @@
     "visualize",
     "filter",
     "map",
-    "IndexedDb"
+    "IndexedDb",
+    "MongoDB"
   ],
   "author": "Paul Wilcox",
   "license": "ISC",
