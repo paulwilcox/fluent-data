@@ -9,7 +9,7 @@ module.exports = [
             path: path.resolve(__dirname, 'dist'),
             filename: `[name].next.js` 
         },
-        watch: true,
+        watch: false,
         mode: 'production',
         node: {
             fs: 'empty' // fixes a bug during webpack build
