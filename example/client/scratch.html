@@ -1,54 +1,17 @@
-<div id='printResult'></div>
-
 <script type='module'>
 
     import { sampleDataSets } from '../sampleDataSets.js';
     import { sampleIdb } from './sampleIdb.js';
-    import { $$, oneQuery } from '../../src/oneQuery.js';
-
-/* TODO:    - join() should work inside groupings, as with
-              any other user-facing method possible.
-            - seems like dataset should not know it
-              can be nested and database sould know it 
-              might be.  But I have it reversed.  But this
-              should probably wait until a future rebuild.
-            - aggregators should all reference the common
-              aggregate object.  Not have 'data' property
-              inside them that they reference (but this 
-              will be difficult.  So do it last).
-*/
+    import { $$, oneQuery } from '../../dist/oneQuery.client.next.js';
 
     let db = 
         $$({
-            sam: $$.idb('sampleIdb'),
-            c: sam => 'customers',
-            //c: sampleDataSets.customers,
+            c: sampleDataSets.customers,
             o: sampleDataSets.orders
         })
         .filter(c => true)
-        .map(c => ({ id: c.id, fullname: `name: ${c.fullname}`}))
-        .join('oc', 'inner', (o,c) => o.customer == c.id)
-        //.group(oc => oc.id)
-        .sort(oc => oc.rating)
-        .fold(oc => ({
-            rating: $$.sum(oc.rating + 5)
-        }))
-        .print(c => c, '#printResult', 'customers')
-
-        /*.printExternal(c => c, '#printResult', 'customers')
-        .mergeExternal(
-            c => c.id, 
-            [
-                {id: 2, fullname: 'overwritten'},
-                {id: 3, fullname: 'inserted'}
-            ],
-            'upsert'
-        )
-        .printExternal(c => c, '#printResult', 'customers2')*/
-
         .execute();
 
-    console.log(db);
-
+    console.log(db.datasets);
 
 </script>
