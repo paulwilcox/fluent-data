@@ -7,7 +7,8 @@
     "example": "example"
   },
   "scripts": {
-    "git-publish": "node_scripts\\gitPublish.cmd"
+    "gitPublish": "node_scripts\\gitPublish.cmd",
+    "afterVersionBump": "node node_scripts\\afterVersionBump.js"
   },
   "repository": {
     "type": "git",
