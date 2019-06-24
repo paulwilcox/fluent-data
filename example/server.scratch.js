@@ -1,10 +1,10 @@
-let resetSampleMongo = require('./resetSampleMongo.js').resetSampleMongo;
-let $$ = require('../../dist/oneQuery.server.next.js').$$;
+let sampleMongo = require('../dist/FluentDB.sampleMongo.js');
+let $$ = require('../dist/FluentDB.server.next.js').$$;
 
 module.exports.getJson = async function (resetMongo) {
 
     if (resetMongo)
-        await resetSampleMongo();
+        await sampleMongo('mongodb://localhost:27017/sampleMongo', true);
 
     return $$({
             sam: $$.mongo('mongodb://localhost:27017/sampleMongo'),

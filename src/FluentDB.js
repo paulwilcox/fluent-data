@@ -5,11 +5,11 @@ import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
 import { addAggregators } from './aggregators.js';
 
-export function $$(obj) { 
-    return new oneQuery().addSources(obj); 
+export default function $$(obj) { 
+    return new FluentDB().addSources(obj); 
 }
 
-export class oneQuery extends deferable {
+export class FluentDB extends deferable {
 
     constructor() {
         super(new database())
@@ -105,11 +105,11 @@ export class oneQuery extends deferable {
 
 }
 
-oneQuery.idb = dbName => new dbConnectorIdb(dbName);
-addAggregators(oneQuery);
+FluentDB.idb = dbName => new dbConnectorIdb(dbName);
+addAggregators(FluentDB);
 
-for (let p of Object.getOwnPropertyNames(oneQuery)) 
+for (let p of Object.getOwnPropertyNames(FluentDB)) 
     if (!['length', 'prototype', 'name'].includes(p)) 
-        $$[p] = oneQuery[p];
+        $$[p] = FluentDB[p];
     
 

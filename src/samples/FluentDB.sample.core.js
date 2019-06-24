@@ -1,4 +1,4 @@
-export let sampleDataSets = {
+export default {
 
     products: [
         { id: 123456, price: 5 },
@@ -49,5 +49,3 @@ export let sampleDataSets = {
     ]
 
 }
-
-

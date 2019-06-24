@@ -1,14 +1,16 @@
 let MongoClient = require('mongodb').MongoClient;
-let sampleDataSets = require('../sampleDataSetsCjs.js').sampleDataSets;
+let sampleDataSets = require('../dist/fluentDb.sample.server.js');
 
-let url = 'mongodb://localhost:27017/sampleMongo';
-
-module.exports = () =>
+module.exports.sampleMongo = (
+    url = 'mongodb://localhost:27017/sampleMongo', 
+    reset = true
+) =>
     MongoClient.connect(url, { useNewUrlParser: true})
     .then(async client => {
 
         let db = client.db();
 
+        if (reset)
         for (let key of Object.keys(sampleDataSets)) {
             console.log('processing: ' + key);
             if (db.listCollections({name: key}).hasNext()) 

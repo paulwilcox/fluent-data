@@ -1,7 +1,11 @@
-import { sampleDataSets } from '../sampleDataSets.js';
-import "../../node_modules/idb/lib/idb.js";
+import * as idb from 'idb';
+import _sample from './FluentDB.sample.core.js';
 
-//window.indexedDB.deleteDatabase('sampleIdb');
+export let sample = _sample;
+
+export function resetIdb () { 
+    window.indexedDB.deleteDatabase('sampleIdb'); 
+}
 
 export let sampleIdb = 
     idb.open(
@@ -15,7 +19,7 @@ export let sampleIdb =
     )
     .then(db => {
 
-        for (let datasetKvp of Object.entries(sampleDataSets)) {
+        for (let datasetKvp of Object.entries(sample)) {
 
             let store = 
                 db

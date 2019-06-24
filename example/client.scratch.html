@@ -1,0 +1,16 @@
+<script type='module'>
+
+    import { sample } from '../dist/FluentDB.sample.client.js';
+    import $$ from '../dist/FluentDB.client.next.js';
+
+    let db = 
+        $$({
+            c: sample.customers,
+            o: sample.orders
+        })
+        .filter(c => true)
+        .execute(c => c);
+
+    console.log(db.datasets);
+
+</script>

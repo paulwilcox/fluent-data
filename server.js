@@ -1,6 +1,6 @@
 var http = require('http');
 var fs = require('fs');
-var scratch = require('./example/server/scratch.js');
+var scratch = require('./example/server.scratch.js');
 
 http.createServer(function (request, response) {
 
@@ -26,7 +26,7 @@ http.createServer(function (request, response) {
 
     else if (request.url == '/') {
 
-        fs.readFile('./example/server/index.html', function(error, content) {
+        fs.readFile('./example/server.index.html', function(error, content) {
             if (error) {
                 response.writeHead(500);
                 response.end(error.message);

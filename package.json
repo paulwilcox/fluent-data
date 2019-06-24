@@ -1,8 +1,8 @@
 {
-  "name": "onequery",
+  "name": "fluentdb",
   "version": "0.0.17",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, mongoDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
-  "main": ".dist/oneQuery.client.next.js",
+  "main": ".dist/FluentDB.client.next.js",
   "directories": {
     "example": "example"
   },
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/paulwilcox/oneQuery"
+    "url": "https://github.com/paulwilcox/FluentDB"
   },
   "keywords": [
     "linq",
@@ -45,6 +45,8 @@
     "esm": "^3.2.25",
     "idb": "^2.1.3",
     "rollup": "^1.13.1",
+    "rollup-plugin-commonjs": "^10.0.0",
+    "rollup-plugin-node-resolve": "^5.0.4",
     "webpack": "^4.31.0"
   }
 }
