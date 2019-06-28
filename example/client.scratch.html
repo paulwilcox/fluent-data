@@ -3,14 +3,14 @@
     import { sample } from '../dist/FluentDB.sample.client.js';
     import $$ from '../dist/FluentDB.client.next.js';
 
-    let db = 
+    let x = 
         $$({
             c: sample.customers,
             o: sample.orders
         })
-        .filter(c => true)
-        .execute(c => c);
+        .filter(o => o.customer == 2)
+        .execute(o => o);
 
-    console.log(db.datasets);
+    console.log(x);
 
 </script>

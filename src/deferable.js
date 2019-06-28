@@ -13,14 +13,17 @@ export class deferable {
         return this;
     }
 
-    execute() {
+    execute(finalFunc) {
+
+        if (finalFunc !== undefined)
+            this.thens.push(finalFunc);
 
         for(var func of this.thens) 
             if (g.isPromise(this.value)) 
                 this.value.then(func);
             else 
                 this.value = func(this.value);
-
+                
         return this.value;
 
     }

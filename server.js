@@ -15,7 +15,7 @@ http.createServer(function (request, response) {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         scratch.getJson().then(json => response.end(json)).catch(e => console.log(e));
     }
-
+/*
     else if (request.url.startsWith('/src/visualizer')) {
         let cType;
         if (request.url.endsWith('.css')) cType = 'text/css';
@@ -23,7 +23,7 @@ http.createServer(function (request, response) {
         response.writeHead(200, { 'Content-Type': cType });
         response.end( fs.readFileSync('.' + request.url) );
     }
-
+*/
     else if (request.url == '/') {
 
         fs.readFile('./example/server.index.html', function(error, content) {
@@ -37,6 +37,27 @@ http.createServer(function (request, response) {
             }
         });
     
+    }
+
+    else {
+
+        let cType =
+              request.url.endsWith('.css') ? 'text/css'
+            : request.url.endsWith('.js') ? 'text/javascript'
+            : request.url.endsWith('.html') ? 'text/html'
+            : null;
+
+        fs.readFile('.' + request.url, function(error, content) {
+            if (error) {
+                response.writeHead(500);
+                response.end(error.message);
+            }
+            else {
+                response.writeHead(200, { 'Content-Type': cType });
+                response.end(content, 'utf-8');
+            }
+        });
+
     }
     
 }).listen(8081);

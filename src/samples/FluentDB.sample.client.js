@@ -13,7 +13,7 @@ export let sampleIdb =
         1, 
         udb => {            
             if (udb.oldVersion == 0) 
-                for (let datasetName of Object.keys(sampleDataSets)) 
+                for (let datasetName of Object.keys(sample)) 
                     udb.createObjectStore(datasetName, {keyPath: 'id'});
         }
     )
