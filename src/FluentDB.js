@@ -19,6 +19,16 @@ export class FluentDB extends deferable {
         );
     }
 
+    execute (finalMapper) {
+        
+        let result = super.execute();
+        
+        return finalMapper === undefined ? result
+            : g.isPromise(result) ? result.then(db => db.getDataset(finalMapper).data.map(finalMapper))
+            : result.getDataset(finalMapper).data.map(finalMapper);
+        
+    }
+
     mpgExtend (funcNamesCsv) {
 
         let funcNames = 
