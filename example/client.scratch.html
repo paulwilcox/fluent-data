@@ -3,11 +3,20 @@
     import { sample } from '../dist/FluentDB.sample.client.js';
     import $$ from '../dist/FluentDB.client.next.js';
 
-    let ordersForCustomer2 = 
-        $$({ o: sample.orders })
-        .filter(o => o.customer == 2)
-        .execute(o => o);
+    let joined = 
+        $$({
+            o: sample.orders,
+            p: sample.products,
+            c: sample.customers
+        })
+        .join('op', 'inner', (o,p) => o.product == p.id)
+        .join('opc', 'left', (op,c) => op.customer == c.id)
+        .execute(opc => ({
+            customerName: opc.fullname,
+            productPrice: opc.price,
+            orderRating: opc.rating
+        }));
 
-    console.log(ordersForCustomer2);
+    console.log(joined);
 
 </script>

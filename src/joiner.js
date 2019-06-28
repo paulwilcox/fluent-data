@@ -87,23 +87,36 @@ export class joiner {
 
         joinEqualitySelector = joinEqualitySelector || fromEqualitySelector;
 
+        // Create a bucketed hashtable from the left-hand ('from') rows 
         let fromBucketsMap = new hashBuckets(fromEqualitySelector);
-
         for (let fromRow of this.fromDs.data) 
             fromBucketsMap.addItem(fromRow);
 
         for (let joinRow of this.joinDs.data) {
 
-            let fromBucket = fromBucketsMap.getBucket(joinRow, joinEqualitySelector);
+            // Get the left-hand rows that match the right-hand ('join') row.
+            // These are removed from the hashtable. 
+            let fromBucket = fromBucketsMap.getBucket(joinRow, joinEqualitySelector, true);
 
+            // Add the merged row to the results.
             if (fromBucket)
             for (let fromRow of fromBucket) 
-                this.executeInnerPartForRow(fromRow, joinRow);
-                
+                this.results.push(
+                    Object.assign({}, fromRow, joinRow)
+                );
+               
+            // If there were no matches, just add the unmerged right-hand row to the results.
+            else if (["right", "full"].includes(this.joinType))
+                this.results.push(joinRow);
+
         }
 
-        this.executeLeftPart();
-        this.executeRightPart();    
+        // Add any remaining left-hand rows in the hash-table to the results
+        if (["left", "full"].includes(this.joinType))
+        for(let fromBucket of fromBucketsMap.getBuckets()) 
+        for(let fromRow of fromBucket) 
+            this.results.push(fromRow);
+
         return this.results;
 
     }
