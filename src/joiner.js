@@ -4,56 +4,23 @@ import { hashBuckets } from './hashBuckets.js';
 export class joiner { 
 
     constructor (fromDs, joinDs, joinType) {
-
         this.fromDs = fromDs;
         this.joinDs = joinDs;
         this.joinType = joinType;
-
         this.results = [];
-        this.fromHits = [];
-        this.joinHits = [];
-        
     }
             
     executeJoin(matchingLogic, algorithm) {
 
         if (typeof arguments[0] == null)
-            throw "First argument passed to 'executeJoin' cannot be null";
+            throw "'matchingLogic in 'executeJoin' cannot be null";
             
-        if (['default', 'hash'].includes(algorithm)) {
+        if (algorithm == 'hash') {
                 
-            let parsedFuncs = 
-                parser.pairEqualitiesToObjectSelectors(matchingLogic);
+            let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
 
-            if (parsedFuncs) 
-                try {
-                    return this.executeHashJoin(
-                        parsedFuncs.leftFunc,
-                        parsedFuncs.rightFunc
-                    );
-                }
-                catch(e) {   
-
-                    if (algorithm == 'hash') // explicit hash should fail.
-                        throw e; 
-
-                    console.warn(
-                        "Join matching logic successfully parsed into hashselector" +
-                        "functions.  However, an error was encountered in processing " + 
-                        "the hash join.  Switching from hash join to loop join.  " + 
-                        "Relevant information will follow in the subsequent logs."
-                    );
-
-                    console.log({
-                        error: e,
-                        matchingLogic: matchingLogic.toString(),
-                        parsedFromHashSelector: parsedFuncs.leftFunc.toString(),
-                        parsedJoinHashSelector: parsedFuncs.rightFunc.toString() 
-                    });
-
-                    algorithm = 'loop';
-
-                }
+            if (parsed) 
+                return this.executeHashJoin(parsed.leftFunc, parsed.rightFunc);
 
         }
 
@@ -63,19 +30,35 @@ export class joiner {
 
     executeLoopJoin(matchingLogic) {
 
-        for (let fix in this.fromDs) 
-        for (let jix in this.joinDs) {
+        let fromHits = [];
+        let joinHits = [];
 
-            let fromRow = this.fromDs[fix];
-            let joinRow = {[this.joinKey]: this.joinDs[jix]};
+        for (let fix in this.fromDs.data) 
+        for (let jix in this.joinDs.data) {
 
-            if (matchingLogic(fromRow, joinRow)) 
-                this.executeInnerPartForRow(fromRow, joinRow, fix, jix);
+            let fromRow = this.fromDs.data[fix];
+            let joinRow = this.joinDs.data[jix];
+
+            if (matchingLogic(fromRow, joinRow)) { 
+                this.results.push(
+                    Object.assign({}, fromRow, joinRow)
+                );
+                fromHits[fix] = true;
+                joinHits[jix] = true;
+            }
             
         }
 
-        this.executeLeftPart();
-        this.executeRightPart();    
+        if (["left", "full"].includes(this.joinType))
+        for (let fix in this.fromDs.data) 
+        if (!fromHits[fix]) 
+            this.results.push(this.fromDs.data[fix]);
+    
+        if (["right", "full"].includes(this.joinType))
+        for (let fix in this.fromDs.data) 
+        if (!joinHits[fix]) 
+            this.results.push(this.joinDs.data[fix]);
+
         return this.results;
 
     }
@@ -119,55 +102,6 @@ export class joiner {
 
         return this.results;
 
-    }
-
-    executeInnerPartForRow(fromRecord, joinRecord, fix, jix) {
-        let flatRecord = Object.assign({}, fromRecord, joinRecord);
-        this.results.push(flatRecord);
-        this.fromHits[fix] = true;
-        this.joinHits[jix] = true;
-    }
-
-    executeLeftPart() {
-
-        if (!["left", "full"].includes(this.joinType))
-            return;
-
-        for (let fix in this.fromDs) 
-            if (!this.fromHits[fix]) 
-                this.results.push(
-                    this.recordTemplate(this.fromDs[fix])
-                );
-
-    }
-
-    executeRightPart() {
-
-        if (!["right", "full"].includes(this.joinType))
-            return;
-
-        for (let jix in this.joinDs)
-            if(!this.joinHits[jix]) 
-                results.push(
-                    this.recordTemplate({
-                        [this.joinKey]: this.joinDs[jix]
-                    })
-                );
-
-    }
-
-    recordTemplate (objectForAssignment = null) {
-    
-        let record = {};
-    
-        this.fromKeys.forEach(a => record[a] = null);
-        record[this.joinKey] = null;
-    
-        if (objectForAssignment) 
-            Object.assign(record, objectForAssignment);
-    
-        return record;
-    
     }
 
 }
