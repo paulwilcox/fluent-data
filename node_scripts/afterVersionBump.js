@@ -4,11 +4,11 @@ let fs = require('fs');
 for (let fileType of ['client','server'])
 
     fs.copyFile(
-        `./dist/fluentDb.${fileType}.next.js`, 
-        `./dist/fluentDb.${fileType}.${pjVersion}.js`, 
+        `./dist/FluentDB.${fileType}.next.js`, 
+        `./dist/FluentDB.${fileType}.${pjVersion}.js`, 
         err => {
             if (err) throw err;
-            console.log(`created fluentDb.${fileType}.${pjVersion}.js from fluentDb.${fileType}.next.js`);
+            console.log(`created FluentDB.${fileType}.${pjVersion}.js from FluentDB.${fileType}.next.js`);
         }
     );
 
