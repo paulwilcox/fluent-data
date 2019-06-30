@@ -18,6 +18,7 @@ module.exports.getJson = async function (resetMongo) {
             rating: o.rating 
         }))
         .group(o => o.rating <= 10)
+        .fold(o => ({ avgRating: $$.avg(o.rating) }))
         .execute()
         .then(db => JSON.stringify(db));
 

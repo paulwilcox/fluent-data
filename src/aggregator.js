@@ -101,8 +101,8 @@ export class aggregator {
         
         else if (step.type == 'emulators') 
             this.aggregation = aggregator.runEmulators(
-                step.func, 
-                this.data
+                this.data,
+                step.func 
             );
 
     }
@@ -140,21 +140,23 @@ aggregator.runEmulators = function (
     for (let row of dataset) {
 
         let emulators = emulatorsFunc(row);
-                
-        isNaked = emulators instanceof aggregator.emulator;
 
-        if (isNaked) 
+        // If the user passes in a singleton emulator, such 
+        // as .fold(x => $$.first(x.prop)), then this needs
+        // to be wrapped so we don't have to create seperate
+        // logic for singletons.
+        if (emulators instanceof aggregator.emulator) 
             emulators = { x: emulators };
 
         for (let key of Object.keys(emulators)) {
 
-            let isEmulator = emulators[key].funcName;
-
-            if (!isEmulator) 
-                emulators[key] = $$.last(emulators[key]);
+            let funcName = 
+                !emulators[key].funcName 
+                ? aggregators[key]
+                : emulators[key].funcName;
 
             if (!chosenAggregators[key]) 
-                chosenAggregators[key] = aggregators[emulators[key].funcName]();
+                chosenAggregators[key] = aggregators[funcName]();
 
             chosenAggregators[key].loadValue(emulators[key].rowValue);
 
