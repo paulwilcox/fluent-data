@@ -1,5 +1,24 @@
 import $$ from './FluentDB.js';
 
+// Aggregators such as 'sum' or 'avg' operate on
+// columnar data.  But the values passed to the
+// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
+// are point data.  'emulator' stores the row value,
+// but it also stores the name of the intented 
+// function (the one it emulates), for later loading
+// into a master aggregators object.  The name keeps
+// things cheap.  Obviously we don't want the whole
+// function for every row.  
+//
+// TODO: Put in a reference to the function if I can
+// ensure it's static.
+export class emulator {
+    constructor(rowValue, funcName) {
+        this.rowValue = rowValue;
+        this.funcName = funcName;
+    }
+}
+
 // 'folder' signifies 'aggregator', not
 // 'holder of files'
 class folder {
@@ -111,25 +130,6 @@ class folder {
 
 }
 
-// Aggregators such as 'sum' or 'avg' operate on
-// columnar data.  But the values passed to the
-// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
-// are point data.  'emulator' stores the row value,
-// but it also stores the name of the intented 
-// function (the one it emulates), for later loading
-// into a master aggregators object.  The name keeps
-// things cheap.  Obviously we don't want the whole
-// function for every row.  
-//
-// TODO: Put in a reference to the function if I can
-// ensure it's static.
-class emulator {
-    constructor(rowValue, funcName) {
-        this.rowValue = rowValue;
-        this.funcName = funcName;
-    }
-}
-
 // 'emulatorsFunc' is what the user will pass in.
 export let runEmulators = function (
     dataset,
@@ -176,7 +176,13 @@ export let runEmulators = function (
 
 }
 
-class foldMaker {
+// folders is an object of functions that return 
+// folder.  If it had direct folders, then
+// any repeated use of the same property (such as using
+// sum twice), would refer to the same folder INSTANCE.
+export let folders = {};
+
+export class foldMaker {
     constructor() {
         this.funcs = [];
     }
@@ -205,45 +211,4 @@ class foldMaker {
     }
 }
 
-let folders = {};
 
-$$.foldMaker = (name) => {
-    folders[name] = new foldMaker();
-    $$[name] = val => new emulator(val, name);
-    return folders[name];
-}
-
-// This is where you would want other developers to 
-// plug-in new functions.
-//
-// aggregators is an object of functions that return 
-// aggregators.  If it had direct aggregators, then
-// any repeated use of the same property (such as using
-// sum twice), would refer to the same aggregator instance.
-$$.foldMaker('first').fold((a,b) => a, null, a => a != null)
-$$.foldMaker('last').fold((a,b) => b)
-$$.foldMaker('sum').fold((a,b) => a + b)
-$$.foldMaker('count').fold((a,b) => a + 1, 0)
-
-$$.foldMaker('avg')
-    .emulators(v => ({ 
-        sum: $$.sum(v), 
-        count: $$.count(v) 
-    }))
-    .changeFolded(agg => agg.sum / agg.count)
-
-$$.foldMaker('mad')
-    .emulators(v => $$.avg(v))
-    .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
-    .emulators(v => $$.avg(v))
-/*
-// Load emulators into $$ so that user calls $$.aggFunc(val)
-// instead of new aggregator.emulator(val, 'aggFunc');
-export function addAggregators (obj) {
-        
-    for (let key of Object.keys(folders))
-        obj[key] = 
-            value => new emulator(value, key); 
-
-}
-*/

@@ -3,6 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
+import { folders, foldMaker, emulator } from './folders.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -114,8 +115,30 @@ export class FluentDB extends deferable {
 
 }
 
+$$.foldMaker = (name) => {
+    folders[name] = new foldMaker();
+    $$[name] = val => new emulator(val, name);
+    return folders[name];
+}
+
+$$.foldMaker('first').fold((a,b) => a, null, a => a != null)
+$$.foldMaker('last').fold((a,b) => b)
+$$.foldMaker('sum').fold((a,b) => a + b)
+$$.foldMaker('count').fold((a,b) => a + 1, 0)
+
+$$.foldMaker('avg')
+    .emulators(v => ({ 
+        sum: $$.sum(v), 
+        count: $$.count(v) 
+    }))
+    .changeFolded(agg => agg.sum / agg.count)
+
+$$.foldMaker('mad')
+    .emulators(v => $$.avg(v))
+    .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
+    .emulators(v => $$.avg(v))
+
 FluentDB.idb = dbName => new dbConnectorIdb(dbName);
-//addAggregators(FluentDB);
 
 for (let p of Object.getOwnPropertyNames(FluentDB)) 
     if (!['length', 'prototype', 'name'].includes(p)) 

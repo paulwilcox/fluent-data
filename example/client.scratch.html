@@ -10,7 +10,7 @@
             num: $$.sum(o.speed),
             den: $$.count(o.speed),
             avg: $$.avg(o.speed),
-            sm: $$.sum(o.rating)
+            sm: $$.first(o.rating)
         }))
         .execute(o => o);
 
