@@ -3,7 +3,6 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { addAggregators } from './aggregators.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -116,7 +115,7 @@ export class FluentDB extends deferable {
 }
 
 FluentDB.idb = dbName => new dbConnectorIdb(dbName);
-addAggregators(FluentDB);
+//addAggregators(FluentDB);
 
 for (let p of Object.getOwnPropertyNames(FluentDB)) 
     if (!['length', 'prototype', 'name'].includes(p)) 

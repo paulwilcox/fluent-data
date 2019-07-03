@@ -5,7 +5,7 @@ import { dbConnector } from './dbConnector.js';
 import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
-import { aggregator } from './aggregator.js';
+import { runEmulators } from './folders.js';
 import { print as prn } from './visualizer/printer.js';
 
 export class database {
@@ -157,7 +157,7 @@ export class database {
 
     fold (outerFunc) {
         let ds = this.getDataset(outerFunc);
-        ds.call(aggregator.runEmulators, outerFunc);
+        ds.call(runEmulators, outerFunc);
         // Ungrouped aggregates will return a naked object.
         // So instead we return a single row array. 
         if (!Array.isArray(ds.data))
