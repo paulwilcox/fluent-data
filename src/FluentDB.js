@@ -3,7 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { folders, foldMaker, emulator } from './folders.js';
+import { folders, foldBuilder, emulator } from './foldTools.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -115,25 +115,25 @@ export class FluentDB extends deferable {
 
 }
 
-$$.foldMaker = (name) => {
-    folders[name] = new foldMaker();
+$$.foldBuilder = (name) => {
+    folders[name] = new foldBuilder();
     $$[name] = val => new emulator(val, name);
     return folders[name];
 }
 
-$$.foldMaker('first').fold((a,b) => a, null, a => a != null)
-$$.foldMaker('last').fold((a,b) => b)
-$$.foldMaker('sum').fold((a,b) => a + b)
-$$.foldMaker('count').fold((a,b) => a + 1, 0)
+$$.foldBuilder('first').fold((a,b) => a, null, a => a != null)
+$$.foldBuilder('last').fold((a,b) => b)
+$$.foldBuilder('sum').fold((a,b) => a + b)
+$$.foldBuilder('count').fold((a,b) => a + 1, 0)
 
-$$.foldMaker('avg')
+$$.foldBuilder('avg')
     .emulators(v => ({ 
         sum: $$.sum(v), 
         count: $$.count(v) 
     }))
     .changeFolded(agg => agg.sum / agg.count)
 
-$$.foldMaker('mad')
+$$.foldBuilder('mad')
     .emulators(v => $$.avg(v))
     .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
     .emulators(v => $$.avg(v))

@@ -1,24 +1,3 @@
-import $$ from './FluentDB.js';
-
-// Aggregators such as 'sum' or 'avg' operate on
-// columnar data.  But the values passed to the
-// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
-// are point data.  'emulator' stores the row value,
-// but it also stores the name of the intented 
-// function (the one it emulates), for later loading
-// into a master aggregators object.  The name keeps
-// things cheap.  Obviously we don't want the whole
-// function for every row.  
-//
-// TODO: Put in a reference to the function if I can
-// ensure it's static.
-export class emulator {
-    constructor(rowValue, funcName) {
-        this.rowValue = rowValue;
-        this.funcName = funcName;
-    }
-}
-
 // 'folder' signifies 'aggregator', not
 // 'holder of files'
 class folder {
@@ -130,6 +109,25 @@ class folder {
 
 }
 
+// Aggregators such as 'sum' or 'avg' operate on
+// columnar data.  But the values passed to the
+// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
+// are point data.  'emulator' stores the row value,
+// but it also stores the name of the intented 
+// function (the one it emulates), for later loading
+// into a master aggregators object.  The name keeps
+// things cheap.  Obviously we don't want the whole
+// function for every row.  
+//
+// TODO: Put in a reference to the function if I can
+// ensure it's static.
+export class emulator {
+    constructor(rowValue, funcName) {
+        this.rowValue = rowValue;
+        this.funcName = funcName;
+    }
+}
+
 // 'emulatorsFunc' is what the user will pass in.
 export let runEmulators = function (
     dataset,
@@ -182,7 +180,7 @@ export let runEmulators = function (
 // sum twice), would refer to the same folder INSTANCE.
 export let folders = {};
 
-export class foldMaker {
+export class foldBuilder {
     constructor() {
         this.funcs = [];
     }
