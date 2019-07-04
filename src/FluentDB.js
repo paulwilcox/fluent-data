@@ -9,7 +9,7 @@ export default function $$(obj) {
     return new FluentDB().addSources(obj); 
 }
 
-export class FluentDB extends deferable {
+class FluentDB extends deferable {
 
     constructor() {
         super(new database())
@@ -138,10 +138,6 @@ $$.foldBuilder('mad')
     .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
     .emulators(v => $$.avg(v))
 
-FluentDB.idb = dbName => new dbConnectorIdb(dbName);
-
-for (let p of Object.getOwnPropertyNames(FluentDB)) 
-    if (!['length', 'prototype', 'name'].includes(p)) 
-        $$[p] = FluentDB[p];
-    
+$$.idb = dbName => new dbConnectorIdb(dbName);
+  
 

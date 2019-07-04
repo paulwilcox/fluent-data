@@ -1,5 +1,5 @@
 let sampleMongo = require('../dist/FluentDB.sampleMongo.js');
-let $$ = require('../dist/FluentDB.server.next.js').$$;
+let $$ = require('../dist/FluentDB.server.next.js');
 
 module.exports.getJson = async function (resetMongo) {
 
