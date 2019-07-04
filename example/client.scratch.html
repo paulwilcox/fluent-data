@@ -7,10 +7,8 @@
         $$({ o: sample.orders })
         //.group(o => o.customer)
         .fold(o => ({
-            num: $$.sum(o.speed),
-            den: $$.count(o.speed),
-            avg: $$.avg(o.speed),
-            sm: $$.first(o.rating)
+            customer: $$.first(o.customer), 
+            speed: $$.avg(o.speed)
         }))
         .execute(o => o);
 

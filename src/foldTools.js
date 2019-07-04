@@ -47,7 +47,7 @@ class folder {
     }
 
     execute () {
-        for(let step of this.steps) 
+        for(let step of this.steps)  
             this.applyStep(step);
         return this.folded;
     }
@@ -177,27 +177,30 @@ export let runEmulators = function (
 // folders is an object of functions that return 
 // folder.  If it had direct folders, then
 // any repeated use of the same property (such as using
-// sum twice), would refer to the same folder INSTANCE.
+// sum twice) would refer to the same folder INSTANCE.
 export let folders = {};
 
+// Because 'folders' needs functions, not folder objects
+// directly, this class is created so that the user can
+// create a fold function where it's creation is deferred.
 export class foldBuilder {
     constructor() {
         this.funcs = [];
     }
-    fold (func) {
-        this.funcs.push((val) => val.fold(func));
+    fold (...args) {
+        this.funcs.push((val) => val.fold(...args));
         return this;
     }
-    changeFolded(func) {
-        this.funcs.push((val) => val.changeFolded(func));
+    changeFolded(...args) {
+        this.funcs.push((val) => val.changeFolded(...args));
         return this;
     }
-    changeData(func) {
-        this.funcs.push((val) => val.changeData(func));
+    changeData(...args) {
+        this.funcs.push((val) => val.changeData(...args));
         return this;
     }
-    emulators(func) {
-        this.funcs.push((val) => val.emulators(func));
+    emulators(...args) {
+        this.funcs.push((val) => val.emulators(...args));
         return this;
     }
     build() {
