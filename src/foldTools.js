@@ -1,6 +1,6 @@
 // 'folder' signifies 'aggregator', not
 // 'holder of files'
-class folder {
+export class foldBuilder {
 
     constructor() {
         this.data = [];
@@ -12,52 +12,9 @@ class folder {
         this.data.push(value);
     }
 
-    fold(func, seed, filter) {
-        this.steps.push({                
-            func: func, 
-            seed: seed,
-            filter: filter || (x => true),
-            type: 'fold'
-        });
-        return this;
-    }
+    fold(func, seed, filter = x => true) {
 
-    changeData(func) {
-        this.steps.push({
-            func: func,
-            type: 'changeData'
-        });
-        return this;
-    }
-
-    changeFolded(func) {
-        this.steps.push({
-            func: func,
-            type: 'changeFolded'
-        });
-        return this;
-    }
-
-    emulators(func) {
-        this.steps.push({
-            func: func,
-            type: 'emulators'
-        });
-        return this;
-    }
-
-    execute () {
-        for(let step of this.steps)  
-            this.applyStep(step);
-        return this.folded;
-    }
-
-    applyStep (step) {
-
-        if (step.type == 'changeFolded') 
-            this.folded = step.func(this.folded);
-        
-        else if (step.type == 'fold') {
+        this.steps.push(() => {
 
             // Return 'null' instead of 'typeerror' (which 
             // is what Array.prototype.reduce returns)
@@ -70,41 +27,56 @@ class folder {
 
             // if the seed doesn't meet the filter, it's as
             // though no seed were set.
-            if (step.seed === undefined || !step.filter(step.seed)) {
+            if (seed === undefined || !filter(seed)) {
                 this.folded = this.data[0];
                 v = 1;
             } 
             else
-                this.folded = step.seed;
+                this.folded = seed;
 
             for (v; v < this.data.length; v++) 
-            if (step.filter(this.data[v])) 
+            if (filter(this.data[v])) 
 
                 // matches signature of first 'reducer' argument
                 // in Array.prototype.reduce
-                this.folded = step.func(
+                this.folded = func(
                     this.folded, // accumulator
                     this.data[v], // current value
                     v, // current index
                     this.data // source array
                 );
+        });
 
-        }
+        return this;
 
-        else if (step.type == 'changeData') 
+    }
+
+    changeData(func) {
+        this.steps.push(() => {
             for (let rowIx in this.data) 
-                this.data[rowIx] = step.func(
-                    this.data[rowIx], 
-                    this.folded
-                );
+                this.data[rowIx] = func(this.data[rowIx], this.folded);
+        });
+        return this;
+    }
 
-        
-        else if (step.type == 'emulators') 
-            this.folded = runEmulators(
-                this.data,
-                step.func 
-            );
+    changeFolded(func) {
+        this.steps.push(() => {
+            this.folded = func(this.folded);
+        });
+        return this;
+    }
 
+    emulators(func) {
+        this.steps.push(() => {
+            this.folded = runEmulators(this.data, func);        
+        });
+        return this;
+    }
+
+    execute() {
+        for(let step of this.steps)  
+            step();
+        return this.folded;
     }
 
 }
@@ -140,23 +112,17 @@ export let runEmulators = function (
     for (let row of dataset) {
 
         let emulators = emulatorsFunc(row);
+        let isNaked = emulators instanceof emulator;
 
-        // If the user passes in a singleton emulator, such 
-        // as .fold(x => $$.first(x.prop)), then this needs
-        // to be wrapped so we don't have to create seperate
-        // logic for singletons.
-        if (emulators instanceof emulator) 
+        // So that user can pass unwrapped emulator and 
+        // we still use the same logic.
+        if (isNaked) 
             emulators = { x: emulators };
 
         for (let key of Object.keys(emulators)) {
 
-            let funcName = 
-                !emulators[key].funcName 
-                ? folders[key]
-                : emulators[key].funcName;
-
             if (!chosenFolders[key]) 
-                chosenFolders[key] = folders[funcName].build();
+                chosenFolders[key] = folders[emulators[key].funcName];
 
             chosenFolders[key].loadValue(emulators[key].rowValue);
 
@@ -179,37 +145,4 @@ export let runEmulators = function (
 // any repeated use of the same property (such as using
 // sum twice) would refer to the same folder INSTANCE.
 export let folders = {};
-
-// Because 'folders' needs functions, not folder objects
-// directly, this class is created so that the user can
-// create a fold function where it's creation is deferred.
-export class foldBuilder {
-    constructor() {
-        this.funcs = [];
-    }
-    fold (...args) {
-        this.funcs.push((val) => val.fold(...args));
-        return this;
-    }
-    changeFolded(...args) {
-        this.funcs.push((val) => val.changeFolded(...args));
-        return this;
-    }
-    changeData(...args) {
-        this.funcs.push((val) => val.changeData(...args));
-        return this;
-    }
-    emulators(...args) {
-        this.funcs.push((val) => val.emulators(...args));
-        return this;
-    }
-    build() {
-        let funcs = this.funcs;
-        let val = new folder();
-        for(let func of funcs) 
-            val = func(val);
-        return val;
-    }
-}
-
 

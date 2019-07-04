@@ -121,22 +121,25 @@ $$.foldBuilder = (name) => {
     return folders[name];
 }
 
-$$.foldBuilder('first').fold((a,b) => a, null, a => a != null)
-$$.foldBuilder('last').fold((a,b) => b)
-$$.foldBuilder('sum').fold((a,b) => a + b)
-$$.foldBuilder('count').fold((a,b) => a + 1, 0)
+$$.foldBuilder('first').fold((a,b) => a, null, a => a != null);
+$$.foldBuilder('last').fold((a,b) => b);
+$$.foldBuilder('sum').fold((a,b) => a + b);
+$$.foldBuilder('count').fold((a,b) => a + 1, 0);
 
 $$.foldBuilder('avg')
     .emulators(v => ({ 
         sum: $$.sum(v), 
         count: $$.count(v) 
     }))
-    .changeFolded(agg => agg.sum / agg.count)
+    .changeFolded(agg => agg.sum / agg.count);
 
 $$.foldBuilder('mad')
     .emulators(v => $$.avg(v))
     .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
-    .emulators(v => $$.avg(v))
+    .emulators(v => $$.avg(v));
+
+$$.foldBuilder('test')
+    .emulators((x,y) => ({ x: $$.count(x), y: $$.sum(y)}));
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
   
