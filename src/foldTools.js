@@ -35,8 +35,8 @@ export class foldBuilder {
                 this.folded = seed;
 
             for (v; v < this.data.length; v++) 
-            if (filter(this.data[v])) 
-
+            if (filter(this.data[v])) {
+                
                 // matches signature of first 'reducer' argument
                 // in Array.prototype.reduce
                 this.folded = func(
@@ -45,6 +45,8 @@ export class foldBuilder {
                     v, // current index
                     this.data // source array
                 );
+            }
+
         });
 
         return this;
@@ -68,7 +70,7 @@ export class foldBuilder {
 
     emulators(func) {
         this.steps.push(() => {
-            this.folded = runEmulators(this.data, func);        
+            this.folded = runEmulators(this.data, func);    
         });
         return this;
     }
@@ -111,7 +113,12 @@ export let runEmulators = function (
 
     for (let row of dataset) {
 
-        let emulators = emulatorsFunc(row);
+        // o => $$.test(o.speed, o.rating)  
+        // will output new emulator { funcName: 'test', rowValue: o.speed }
+        // that is bad because we've lost o.rating
+
+        let emulators = Array.isArray(row) ? emulatorsFunc(...row) : emulatorsFunc(row);
+
         let isNaked = emulators instanceof emulator;
 
         // So that user can pass unwrapped emulator and 
@@ -121,10 +128,15 @@ export let runEmulators = function (
 
         for (let key of Object.keys(emulators)) {
 
+            let rowValue = emulators[key].rowValue;
+            
+            if(Array.isArray(rowValue) && rowValue.length == 1) 
+                rowValue = rowValue[0];
+
             if (!chosenFolders[key]) 
                 chosenFolders[key] = folders[emulators[key].funcName];
 
-            chosenFolders[key].loadValue(emulators[key].rowValue);
+            chosenFolders[key].loadValue(rowValue);
 
         }
 
@@ -145,4 +157,3 @@ export let runEmulators = function (
 // any repeated use of the same property (such as using
 // sum twice) would refer to the same folder INSTANCE.
 export let folders = {};
-

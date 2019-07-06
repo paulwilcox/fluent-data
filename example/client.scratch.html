@@ -7,12 +7,11 @@
         $$({ o: sample.orders })
         //.group(o => o.customer)
         .fold(o => ({
-            //customer: $$.first(o.customer), 
-            //speed: $$.avg(o.speed),
+            //x: $$.count(o.speed), 
+            //y: $$.sum(o.rating),
             test: $$.test(o.speed, o.rating)
         }))
-        .execute(o => o)
-        [0].test;
+        .execute(o => o);
 
     console.log(grouped);
 

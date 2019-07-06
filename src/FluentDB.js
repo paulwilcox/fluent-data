@@ -117,7 +117,7 @@ class FluentDB extends deferable {
 
 $$.foldBuilder = (name) => {
     folders[name] = new foldBuilder();
-    $$[name] = val => new emulator(val, name);
+    $$[name] = (...vals) => new emulator(vals, name);
     return folders[name];
 }
 
@@ -139,7 +139,7 @@ $$.foldBuilder('mad')
     .emulators(v => $$.avg(v));
 
 $$.foldBuilder('test')
-    .emulators((x,y) => ({ x: $$.count(x), y: $$.sum(y)}));
+    .emulators((x,y) => ({ x: $$.count(x), y: $$.sum(y) }));
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
   
