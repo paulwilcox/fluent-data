@@ -117,7 +117,7 @@ class FluentDB extends deferable {
 
 $$.foldBuilder = (name) => {
     folders[name] = new foldBuilder();
-    $$[name] = (...vals) => new emulator(vals, name);
+    $$[name] = (...vals) => new emulator(name, vals);
     return folders[name];
 }
 
@@ -138,8 +138,24 @@ $$.foldBuilder('mad')
     .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
     .emulators(v => $$.avg(v));
 
-$$.foldBuilder('test')
-    .emulators((x,y) => ({ x: $$.count(x), y: $$.sum(y) }));
+$$.foldBuilder('cor') 
+    .emulators((x,y) => ({ xAvg: $$.avg(x), yAvg: $$.avg(y) }))
+    .changeData((row, agg) => ({ 
+        // Knowing that the data will be row[0] and row[1] will 
+        // be difficult on the user.  Is there anything that can
+        // be done about this?
+        //
+        // At present my thoughts are to allow the user to capture
+        // what happens to ...vals inside of $$[name] above. 
+        xDiff: row[0] - agg.xAvg, 
+        yDiff: row[1] - agg.yAvg
+    }))
+    .emulators(row => ({  
+        xyDiff: $$.sum(row.xDiff * row.yDiff), 
+        xDiffSq: $$.sum(row.xDiff ** 2),
+        yDiffSq: $$.sum(row.yDiff ** 2)
+    }))
+    .changeFolded(agg => agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5));
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
   

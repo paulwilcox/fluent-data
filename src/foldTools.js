@@ -3,22 +3,17 @@
 export class foldBuilder {
 
     constructor() {
-        this.data = [];
         this.folded;
         this.steps = [];
     }
 
-    loadValue(value) {
-        this.data.push(value);
-    }
-
     fold(func, seed, filter = x => true) {
 
-        this.steps.push(() => {
+        this.steps.push((data) => {
 
             // Return 'null' instead of 'typeerror' (which 
             // is what Array.prototype.reduce returns)
-            if (this.data.length == 0) {
+            if (data.length == 0) {
                 this.folded = null;
                 return;
             }
@@ -28,22 +23,22 @@ export class foldBuilder {
             // if the seed doesn't meet the filter, it's as
             // though no seed were set.
             if (seed === undefined || !filter(seed)) {
-                this.folded = this.data[0];
+                this.folded = data[0];
                 v = 1;
             } 
             else
                 this.folded = seed;
 
-            for (v; v < this.data.length; v++) 
-            if (filter(this.data[v])) {
+            for (v; v < data.length; v++) 
+            if (filter(data[v])) {
                 
                 // matches signature of first 'reducer' argument
                 // in Array.prototype.reduce
                 this.folded = func(
                     this.folded, // accumulator
-                    this.data[v], // current value
+                    data[v], // current value
                     v, // current index
-                    this.data // source array
+                    data // source array
                 );
             }
 
@@ -53,31 +48,31 @@ export class foldBuilder {
 
     }
 
-    changeData(func) {
-        this.steps.push(() => {
-            for (let rowIx in this.data) 
-                this.data[rowIx] = func(this.data[rowIx], this.folded);
-        });
+    changeFolded(func) {
+        this.steps.push(() => 
+            this.folded = func(this.folded)
+        );
         return this;
     }
 
-    changeFolded(func) {
-        this.steps.push(() => {
-            this.folded = func(this.folded);
+    changeData(func) { 
+        this.steps.push(data => {
+            for (let rowIx in data) 
+                data[rowIx] = func(data[rowIx], this.folded);
         });
         return this;
     }
 
     emulators(func) {
-        this.steps.push(() => {
-            this.folded = runEmulators(this.data, func);    
+        this.steps.push(data => {
+            this.folded = runEmulators(data, func, false);    
         });
         return this;
     }
 
-    execute() {
+    execute(data) {
         for(let step of this.steps)  
-            step();
+            step(data);
         return this.folded;
     }
 
@@ -96,7 +91,7 @@ export class foldBuilder {
 // TODO: Put in a reference to the function if I can
 // ensure it's static.
 export class emulator {
-    constructor(rowValue, funcName) {
+    constructor(funcName, rowValue) {
         this.rowValue = rowValue;
         this.funcName = funcName;
     }
@@ -105,50 +100,48 @@ export class emulator {
 // 'emulatorsFunc' is what the user will pass in.
 export let runEmulators = function (
     dataset,
-    emulatorsFunc
+    emulatorsFunc,
+    isFirstRun = true
 ) {
 
-    let chosenFolders = {};
+    let keyStore = {};
     let isNaked = false;
 
     for (let row of dataset) {
 
-        // o => $$.test(o.speed, o.rating)  
-        // will output new emulator { funcName: 'test', rowValue: o.speed }
-        // that is bad because we've lost o.rating
-
-        let emulators = Array.isArray(row) ? emulatorsFunc(...row) : emulatorsFunc(row);
-
-        let isNaked = emulators instanceof emulator;
-
-        // So that user can pass unwrapped emulator and 
-        // we still use the same logic.
-        if (isNaked) 
+        let emulators = 
+            isFirstRun || !Array.isArray(row) 
+            ? emulatorsFunc(row) 
+            : emulatorsFunc(...row);
+        
+        if (emulators instanceof emulator) {
+            isNaked = true;
             emulators = { x: emulators };
+        }
 
         for (let key of Object.keys(emulators)) {
 
-            let rowValue = emulators[key].rowValue;
-            
-            if(Array.isArray(rowValue) && rowValue.length == 1) 
-                rowValue = rowValue[0];
+            let rowValue = isFirstRun ? emulators[key].rowValue : emulators[key].rowValue[0];
 
-            if (!chosenFolders[key]) 
-                chosenFolders[key] = folders[emulators[key].funcName];
+            if (!keyStore[key]) 
+                keyStore[key] = {
+                    chosenFolder: folders[emulators[key].funcName],
+                    data: []
+                };
 
-            chosenFolders[key].loadValue(rowValue);
+            keyStore[key].data.push(rowValue);
 
         }
 
     }
 
-    for (let key of Object.keys(chosenFolders)) 
-        chosenFolders[key] = chosenFolders[key].execute();
+    for (let key of Object.keys(keyStore)) 
+        keyStore[key] = keyStore[key].chosenFolder.execute(keyStore[key].data);
 
-    if (isNaked) 
-        chosenFolders = chosenFolders.x;
+    if (isNaked)
+        keyStore = keyStore.x;
 
-    return chosenFolders;
+    return keyStore;
 
 }
 
@@ -157,3 +150,34 @@ export let runEmulators = function (
 // any repeated use of the same property (such as using
 // sum twice) would refer to the same folder INSTANCE.
 export let folders = {};
+
+
+/*
+
+    Testing:
+        - $$.foldBuilder('test2').emulators((x,y) => ({ a: $$.sum(x), b: $$.sum(y)}))
+        - $$({ o: sample.orders }).fold(o => ({test2: $$.test2(1, -1)})).execute(o => o);
+        - Purposes:
+            > Ensures recycling of agg functions works properly (use of $$.sum inside $$.test2)
+            > Ensures state independence of recyled functions (it used to be that properties 'a'
+                and 'b' in the example above would cause the object of $$.sum to load data in 
+                a way such that all row values would go into the data for 'a' and the data for 'b' 
+                would be undefined.  So the result would be {a: 0, b: undefined} because the data
+                for 'a' would have as many 1's as -1's and there would be no data for 'b')
+
+    Round 1:
+        - Dataset: It's the original rows of the 'o' dataset
+        - Emulators: rowValue for first and only emuator 'test2' is an array of singletons, 
+            > because $$[funcName] is (...vals) => new emulator(name, vals);
+
+    Round 2:
+        - Dataset: Its the accumulation of the array of singletons from Round 1
+        - Emulators: is {a, b}, where a and b are both emuators
+            > a has rowValue of [1], b has rowValue of [-1]
+            > but before loading, these are unboxed to be 1 and -1, respectively
+
+    Round 3: 
+        - Fold is run twice, once for a, and once for b
+        - The datasets are array of singletons for the 1's and -1's, respectively
+
+*/
