@@ -3,7 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { folders, foldBuilder, emulator } from './foldTools.js';
+import { foldBuilder, emulator } from './foldTools.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -115,9 +115,12 @@ class FluentDB extends deferable {
 
 }
 
-$$.foldBuilder = (name) => {
+$$.foldBuilder = (
+    name, 
+    rowMaker = val => val // the default is to assume one parameter and just return it
+) => {
     let builder = new foldBuilder();
-    $$[name] = (...vals) => new emulator(builder, vals);
+    $$[name] = (...vals) => new emulator(builder, rowMaker(...vals));
     return builder;
 }
 
@@ -138,24 +141,23 @@ $$.foldBuilder('mad')
     .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
     .emulators(v => $$.avg(v));
 
-$$.foldBuilder('cor') 
-    .emulators((x,y) => ({ xAvg: $$.avg(x), yAvg: $$.avg(y) }))
+$$.foldBuilder('cor', (x,y) => ({ x, y })) 
+    .emulators(row => ({ 
+        xAvg: $$.avg(row.x), 
+        yAvg: $$.avg(row.y) 
+    }))
     .changeData((row, agg) => ({ 
-        // Knowing that the data will be row[0] and row[1] will 
-        // be difficult on the user.  Is there anything that can
-        // be done about this?
-        //
-        // At present my thoughts are to allow the user to capture
-        // what happens to ...vals inside of $$[name] above. 
-        xDiff: row[0] - agg.xAvg, 
-        yDiff: row[1] - agg.yAvg
+        xDiff: row.x - agg.xAvg, 
+        yDiff: row.y - agg.yAvg
     }))
     .emulators(row => ({  
         xyDiff: $$.sum(row.xDiff * row.yDiff), 
         xDiffSq: $$.sum(row.xDiff ** 2),
         yDiffSq: $$.sum(row.yDiff ** 2)
     }))
-    .changeFolded(agg => agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5));
+    .changeFolded(agg => 
+        agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5
+    ));
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
   

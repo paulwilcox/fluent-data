@@ -7,9 +7,9 @@
         $$({ o: sample.orders })
         //.group(o => o.customer)
         .fold(o => ({
-            //customer: $$.first(o.customer), 
-            //speed: $$.avg(o.speed),
-            //rating: $$.avg(o.rating),
+            customer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
             speed_cor: $$.cor(o.speed, o.rating)
         }))
         .execute(o => o);

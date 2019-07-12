@@ -65,7 +65,7 @@ export class foldBuilder {
 
     emulators(func) {
         this.steps.push(data => {
-            this.folded = runEmulators(data, func, false);    
+            this.folded = runEmulators(data, func);    
         });
         return this;
     }
@@ -82,14 +82,9 @@ export class foldBuilder {
 // columnar data.  But the values passed to the
 // aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
 // are point data.  'emulator' stores the row value,
-// but it also stores the name of the intented 
-// function (the one it emulates), for later loading
-// into a master aggregators object.  The name keeps
-// things cheap.  Obviously we don't want the whole
-// function for every row.  
-//
-// TODO: Put in a reference to the function if I can
-// ensure it's static.
+// but it also stores the the intented function (the 
+// one it emulates), for later loading into a master 
+// aggregators object.    
 export class emulator {
     constructor(builder, rowValue) {
         this.rowValue = rowValue;
@@ -100,19 +95,15 @@ export class emulator {
 // 'emulatorsFunc' is what the user will pass in.
 export let runEmulators = function (
     dataset,
-    emulatorsFunc,
-    isFirstRun = true
+    emulatorsFunc
 ) {
 
-    let keyStore = {};
+    let keyStores = {};
     let isNaked = false;
 
     for (let row of dataset) {
 
-        let emulators = 
-            isFirstRun || !Array.isArray(row) 
-            ? emulatorsFunc(row) 
-            : emulatorsFunc(...row);
+        let emulators = emulatorsFunc(row);
         
         if (emulators instanceof emulator) {
             isNaked = true;
@@ -121,36 +112,29 @@ export let runEmulators = function (
 
         for (let key of Object.keys(emulators)) {
 
-            let rowValue = isFirstRun ? emulators[key].rowValue : emulators[key].rowValue[0];
+            let rowValue = emulators[key].rowValue;
 
-            if (!keyStore[key]) 
-                keyStore[key] = {
+            if (!keyStores[key]) 
+                keyStores[key] = {
                     builder: emulators[key].builder,
                     data: []
                 };
 
-            keyStore[key].data.push(rowValue);
+            keyStores[key].data.push(rowValue);
 
         }
 
     }
 
-    for (let key of Object.keys(keyStore)) 
-        keyStore[key] = keyStore[key].builder.execute(keyStore[key].data);
+    for (let key of Object.keys(keyStores)) 
+        keyStores[key] = keyStores[key].builder.execute(keyStores[key].data);
 
     if (isNaked)
-        keyStore = keyStore.x;
+        keyStores = keyStores.x;
 
-    return keyStore;
+    return keyStores;
 
 }
-
-// folders is an object of functions that return 
-// folder.  If it had direct folders, then
-// any repeated use of the same property (such as using
-// sum twice) would refer to the same folder INSTANCE.
-export let folders = {};
-
 
 /*
 
