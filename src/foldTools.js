@@ -91,9 +91,9 @@ export class foldBuilder {
 // TODO: Put in a reference to the function if I can
 // ensure it's static.
 export class emulator {
-    constructor(funcName, rowValue) {
+    constructor(builder, rowValue) {
         this.rowValue = rowValue;
-        this.funcName = funcName;
+        this.builder = builder;
     }
 }
 
@@ -125,7 +125,7 @@ export let runEmulators = function (
 
             if (!keyStore[key]) 
                 keyStore[key] = {
-                    chosenFolder: folders[emulators[key].funcName],
+                    builder: emulators[key].builder,
                     data: []
                 };
 
@@ -136,7 +136,7 @@ export let runEmulators = function (
     }
 
     for (let key of Object.keys(keyStore)) 
-        keyStore[key] = keyStore[key].chosenFolder.execute(keyStore[key].data);
+        keyStore[key] = keyStore[key].builder.execute(keyStore[key].data);
 
     if (isNaked)
         keyStore = keyStore.x;

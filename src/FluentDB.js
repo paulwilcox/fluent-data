@@ -116,9 +116,9 @@ class FluentDB extends deferable {
 }
 
 $$.foldBuilder = (name) => {
-    folders[name] = new foldBuilder();
-    $$[name] = (...vals) => new emulator(name, vals);
-    return folders[name];
+    let builder = new foldBuilder();
+    $$[name] = (...vals) => new emulator(builder, vals);
+    return builder;
 }
 
 $$.foldBuilder('first').fold((a,b) => a, null, a => a != null);
