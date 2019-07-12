@@ -3,7 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { foldBuilder, emulator } from './foldTools.js';
+import { emulator, runEmulators } from './reducer.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -14,7 +14,7 @@ class FluentDB extends deferable {
     constructor() {
         super(new database())
         this.mpgExtend(
-            'addSources, filter, map, join, group, sort, fold, ' + 
+            'addSources, filter, map, join, group, sort, reduce, ' + 
             'print, printExternal, merge, mergeExternal'
         );
     }
@@ -115,49 +115,65 @@ class FluentDB extends deferable {
 
 }
 
-$$.foldBuilder = (
+$$.reducer = (
     name, 
-    rowMaker = val => val // the default is to assume one parameter and just return it
+    rowMaker = val => val, // the default is to assume one parameter and just return it
+    processor
 ) => {
-    let builder = new foldBuilder();
-    $$[name] = (...vals) => new emulator(builder, rowMaker(...vals));
-    return builder;
+    let p = processor;
+    $$[name] = (...vals) => new emulator(p, rowMaker(...vals));
+    return p;
 }
 
-$$.foldBuilder('first').fold((a,b) => a, null, a => a != null);
-$$.foldBuilder('last').fold((a,b) => b);
-$$.foldBuilder('sum').fold((a,b) => a + b);
-$$.foldBuilder('count').fold((a,b) => a + 1, 0);
+$$.reducer('first', v => v, data => data.reduce((a,b) => a || b));
+$$.reducer('last', v => v, data => data.reduce((a,b) => b || a));
+$$.reducer('sum', v => v, data => data.reduce((a,b) => a + b));
+$$.reducer('count', v => v, data => data.reduce((a,b) => a + 1, 0));
 
-$$.foldBuilder('avg')
-    .emulators(v => ({ 
-        sum: $$.sum(v), 
-        count: $$.count(v) 
-    }))
-    .changeFolded(agg => agg.sum / agg.count);
+$$.reducer( 'avg', v => v, array => {
+        
+    let agg = runEmulators(array, val => ({
+        sum: $$.sum(val), 
+        count: $$.count(val)     
+    }));
 
-$$.foldBuilder('mad')
-    .emulators(v => $$.avg(v))
-    .changeData((dataRow,agg) => Math.abs(dataRow - agg)) 
-    .emulators(v => $$.avg(v));
+    return agg.sum / agg.count
 
-$$.foldBuilder('cor', (x,y) => ({ x, y })) 
-    .emulators(row => ({ 
+});
+
+$$.reducer('mad', v => v, data => {
+
+    let agg = runEmulators(array, val => $$.avg(val));
+
+    for (let ix in array)
+        array[ix] = Math.abs(array[ix] - agg);
+
+    return runEmulators(array, val => $$.avg(val));
+    
+});
+
+$$.reducer('cor', (x,y) => ({ x, y }), data => {
+
+    let agg = runEmulators(data, row => ({ 
         xAvg: $$.avg(row.x), 
         yAvg: $$.avg(row.y) 
-    }))
-    .changeData((row, agg) => ({ 
-        xDiff: row.x - agg.xAvg, 
-        yDiff: row.y - agg.yAvg
-    }))
-    .emulators(row => ({  
+    }));
+
+    for(let ix in data) 
+        data[ix] = { 
+            xDiff: data[ix].x - agg.xAvg, 
+            yDiff: data[ix].y - agg.yAvg
+        };
+
+    agg = runEmulators(data, row => ({
         xyDiff: $$.sum(row.xDiff * row.yDiff), 
         xDiffSq: $$.sum(row.xDiff ** 2),
-        yDiffSq: $$.sum(row.yDiff ** 2)
-    }))
-    .changeFolded(agg => 
-        agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5
-    ));
+        yDiffSq: $$.sum(row.yDiff ** 2)    
+    }));
+
+    return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
+    
+});
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
   

@@ -6,7 +6,7 @@
     let grouped = 
         $$({ o: sample.orders })
         //.group(o => o.customer)
-        .fold(o => ({
+        .reduce(o => ({
             customer: $$.first(o.customer), 
             speed: $$.avg(o.speed),
             rating: $$.avg(o.rating),

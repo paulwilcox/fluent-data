@@ -5,7 +5,7 @@ import { dbConnector } from './dbConnector.js';
 import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
-import { runEmulators } from './foldTools.js';
+import { runEmulators } from './reducer.js';
 import { print as prn } from './visualizer/printer.js';
 
 export class database {
@@ -155,7 +155,7 @@ export class database {
         return this;
     } 
 
-    fold (outerFunc) {
+    reduce (outerFunc) {
         let ds = this.getDataset(outerFunc);
         ds.call(runEmulators, outerFunc);
         // Ungrouped aggregates will return a naked object.
