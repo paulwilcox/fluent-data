@@ -3,7 +3,7 @@ import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
-import { emulator, runEmulators } from './reducer.js';
+import { reducer, runEmulators } from './reducer.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -115,22 +115,14 @@ class FluentDB extends deferable {
 
 }
 
-$$.reducer = (
-    name, 
-    rowMaker = val => val, // the default is to assume one parameter and just return it
-    processor
-) => {
-    let p = processor;
-    $$[name] = (...vals) => new emulator(p, rowMaker(...vals));
-    return p;
-}
+$$.reducer = reducer;
 
-$$.reducer('first', v => v, data => data.reduce((a,b) => a || b));
-$$.reducer('last', v => v, data => data.reduce((a,b) => b || a));
-$$.reducer('sum', v => v, data => data.reduce((a,b) => a + b));
-$$.reducer('count', v => v, data => data.reduce((a,b) => a + 1, 0));
+$$.reducer($$, 'first', v => v, array => array.reduce((a,b) => a || b));
+$$.reducer($$, 'last', v => v, array => array.reduce((a,b) => b || a));
+$$.reducer($$, 'sum', v => v, array => array.reduce((a,b) => a + b));
+$$.reducer($$, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
 
-$$.reducer( 'avg', v => v, array => {
+$$.reducer($$, 'avg', v => v, array => {
         
     let agg = runEmulators(array, val => ({
         sum: $$.sum(val), 
@@ -141,7 +133,7 @@ $$.reducer( 'avg', v => v, array => {
 
 });
 
-$$.reducer('mad', v => v, data => {
+$$.reducer($$, 'mad', v => v, array => {
 
     let agg = runEmulators(array, val => $$.avg(val));
 
@@ -152,7 +144,7 @@ $$.reducer('mad', v => v, data => {
     
 });
 
-$$.reducer('cor', (x,y) => ({ x, y }), data => {
+$$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: $$.avg(row.x), 
