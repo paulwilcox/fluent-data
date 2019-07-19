@@ -10,7 +10,18 @@ export default {
     customers: [
         { id: 1, fullname: "Jane Doe" },
         { id: 2, fullname: "John Doe" }
-    ],          
+    ],  
+
+    potentialCustomers: [
+        { id: 2, fullname: "Johnathan Doe" },
+        { id: 3, fullname: "John Q. Public" },
+        { id: 4, fullname: "John J. Gingleheimer-Schmidt" }
+    ],
+
+    shoplifters: [
+        { id: 4, fullname: "John J. Gingleheimer-Schmidt" },
+        { id: 5, fullname: "Sneaky Pete" }
+    ],
 
     orders: [
         { id: 901, customer: 1, product: 123456, speed: 1, rating: 2 },

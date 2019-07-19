@@ -158,8 +158,9 @@ export class database {
     reduce (outerFunc) {
         let ds = this.getDataset(outerFunc);
         ds.call(runEmulators, outerFunc);
-        // Ungrouped aggregates will return a naked object.
-        // So instead we return a single row array. 
+        // 'runEmulators' returns an object, reduced from an array.   
+        // But to keep allowing chaining of methods, we still need 
+        // to return an array, not an object.
         if (!Array.isArray(ds.data))
             ds.data = [ds.data];
         return this;
@@ -174,33 +175,24 @@ export class database {
     }
 
     merge (
+        type, // update, insert, delete, upsert, full, or [] of 3 bools
         targetIdentityKey, 
-        source, // mapper function or maybe even direct array of objects  
-        type = 'upsert' // update, insert, delete, upsert, full, or [] of 3 bools
+        sourceIdentityKey // mapper function or maybe even direct array of objects  
     ) {
 
-        let typeIx = ix => (Array.isArray(type) && type[ix]);
         let typeIn = (...args) => [...args].includes(type.toLowerCase());
         
-        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
-        let deleteIfMatched = typeIn('delete') || typeIx(1);
-        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
-        let deleteIfNoSource = typeIn('full') || typeIx(3);
+        let updateIfMatched = typeIn('upsert', 'update', 'full');
+        let deleteIfMatched = typeIn('delete');
+        let insertIfNoTarget = typeIn('upsert', 'insert', 'full');
+        let deleteIfNoSource = typeIn('full');
 
         let target = this.getDataset(targetIdentityKey);
-
-        let sourceArray = 
-            g.isFunction(source) ? this.getDataset(source).callWithoutModify('map', source)
-            : source instanceof dataset ? source.data
-            : Array.isArray(source) ? source
-            : null; 
-
-        if (!Array.isArray(sourceArray))
-            throw 'parameter "source" failed to convert to an array.';
+        let source = this.getDataset(sourceIdentityKey); 
 
         let incomingBuckets = 
-            new hashBuckets(targetIdentityKey)
-            .addItems(sourceArray);
+            new hashBuckets(sourceIdentityKey)
+            .addItems(source.data);
         
         for (let t = target.data.length - 1; t >= 0; t--) {
 

@@ -116,6 +116,7 @@ class FluentDB extends deferable {
 }
 
 $$.reducer = reducer;
+$$.runEmulators = runEmulators;
 
 $$.reducer($$, 'first', v => v, array => array.reduce((a,b) => a || b));
 $$.reducer($$, 'last', v => v, array => array.reduce((a,b) => b || a));
@@ -123,7 +124,7 @@ $$.reducer($$, 'sum', v => v, array => array.reduce((a,b) => a + b));
 $$.reducer($$, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
 
 $$.reducer($$, 'avg', v => v, array => {
-        
+
     let agg = runEmulators(array, val => ({
         sum: $$.sum(val), 
         count: $$.count(val)     

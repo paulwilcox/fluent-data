@@ -1,19 +1,16 @@
 <script type='module'>
+    
+    import { sample } from "../dist/FluentDB.sample.client.js";
+    import $$ from "../dist/FluentDB.client.next.js";
 
-    import { sample } from '../dist/FluentDB.sample.client.js';
-    import $$ from '../dist/FluentDB.client.next.js';
-
-    let grouped = 
-        $$({ o: sample.orders })
-        //.group(o => o.customer)
-        .reduce(o => ({
-            customer: $$.first(o.customer), 
-            speed: $$.avg(o.speed),
-            rating: $$.avg(o.rating),
-            speed_cor: $$.cor(o.speed, o.rating)
-        }))
-        .execute(o => o);
-
-    console.log(grouped);
+    let result = 
+        new $$({
+            c: sample.customers, 
+            pc: sample.potentialCustomers
+        })
+        .merge('upsert', c => c.id, pc => pc.id)
+        .execute(c => c);
+      
+    console.log(result);
 
 </script>
