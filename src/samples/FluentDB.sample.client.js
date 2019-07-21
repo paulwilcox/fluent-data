@@ -3,18 +3,15 @@ import _sample from './FluentDB.sample.core.js';
 
 export let sample = _sample;
 
-export function resetIdb () { 
-    window.indexedDB.deleteDatabase('sampleIdb'); 
-}
-
 export let sampleIdb = 
     idb.open(
         'sampleIdb', 
-        1, 
-        udb => {            
-            if (udb.oldVersion == 0) 
-                for (let datasetName of Object.keys(sample)) 
-                    udb.createObjectStore(datasetName, {keyPath: 'id'});
+        2, 
+        db => {            
+            for (let name of db.objectStoreNames) 
+                db.deleteObjectStore(name);
+            for (let name of Object.keys(sample)) 
+                db.createObjectStore(name, {keyPath: 'id'});
         }
     )
     .then(db => {
