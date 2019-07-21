@@ -15,7 +15,7 @@ class FluentDB extends deferable {
         super(new database())
         this.mpgExtend(
             'addSources, filter, map, join, group, sort, reduce, ' + 
-            'print, printExternal, merge, mergeExternal'
+            'print, printExternal, merge'
         );
     }
 

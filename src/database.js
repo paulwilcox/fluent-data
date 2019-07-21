@@ -2,6 +2,7 @@ import * as g from './general.js';
 import { dataset } from './dataset.js';
 import { parser } from './parser.js';
 import { dbConnector } from './dbConnector.js';
+import { dsGetter } from './dsGetter';
 import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
@@ -92,7 +93,7 @@ export class database {
             let getter = 
                 this.dbConnectors[conAlias]
                 .dsGetter(dsName);
-
+                
             this.addSource(func.key, getter);
 
         }
@@ -180,6 +181,16 @@ export class database {
         sourceIdentityKey // mapper function or maybe even direct array of objects  
     ) {
 
+        /*
+        let typeIx = ix => (Array.isArray(type) && type[ix]);
+        let typeIn = (...args) => [...args].includes(type.toLowerCase());
+        
+        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
+        let deleteIfMatched = typeIn('delete') || typeIx(1);
+        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
+        let deleteIfNoSource = typeIn('full') || typeIx(3);
+        */
+
         let typeIn = (...args) => [...args].includes(type.toLowerCase());
         
         let updateIfMatched = typeIn('upsert', 'update', 'full');
@@ -188,6 +199,15 @@ export class database {
         let deleteIfNoSource = typeIn('full');
 
         let target = this.getDataset(targetIdentityKey);
+
+        // External datasets (dsGetters) should have their own 'merge'
+        // method.  So implement it instead.
+        if(target.data instanceof dsGetter) {
+            let ds = this.getDataset(targetIdentityKey);
+            ds.data.merge(this, ...arguments);
+            return this;            
+        }
+
         let source = this.getDataset(sourceIdentityKey); 
 
         let incomingBuckets = 
@@ -227,16 +247,6 @@ export class database {
 
         return this;
 
-    }
-
-    mergeExternal (
-        targetIdentityKey, 
-        source,
-        type = 'upsert'
-    ) {
-        let ds = this.getDataset(targetIdentityKey);
-        ds.data.merge(...arguments);
-        return this;
     }
 
     printExternal (func, target, caption) {

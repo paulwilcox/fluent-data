@@ -1,6 +1,4 @@
-import * as g from './general.js';
 import { dsGetter } from './dsGetter.js';
-import { dataset } from './dataset.js';
 import { hashBuckets } from './hashBuckets.js';
 
 export class dsGetterIdb extends dsGetter {
@@ -73,9 +71,10 @@ export class dsGetterIdb extends dsGetter {
     }
 
     merge (
+        fluentDBInstance,
+        type,
         targetIdentityKey, 
-        source, // mapper function or maybe even direct array of objects  
-        type = 'upsert' // update, insert, delete, upsert, full, or [] of 3 bools
+        sourceIdentityKey
     ) {
 
         let typeIx = ix => (Array.isArray(type) && type[ix]);
@@ -88,24 +87,20 @@ export class dsGetterIdb extends dsGetter {
 
         return new Promise((resolve, reject) => {
 
-            let sourceArray = 
-                g.isFunction(source) ? this.getDataset(source).callWithoutModify('map', source)
-                : source instanceof dataset ? source.data
-                : Array.isArray(source) ? source
-                : null; 
-
-            if (!Array.isArray(sourceArray))
-                throw 'parameter "source" failed to convert to an array.';
+            let source = 
+                fluentDBInstance.getDataset(sourceIdentityKey)
+                .callWithoutModify('map', x => x); // just get the raw data
 
             let incomingBuckets = 
-                new hashBuckets(targetIdentityKey)
-                .addItems(sourceArray);
+                new hashBuckets(sourceIdentityKey)
+                .addItems(source);
     
             let dbCon = this.dbConnector.open();
-            
+
             dbCon.onsuccess = () => {
 
                 let db = dbCon.result;
+
                 let tx = db.transaction(this.storeName, "readwrite");
                 let store = tx.objectStore(this.storeName);
 
@@ -122,7 +117,7 @@ export class dsGetterIdb extends dsGetter {
                             let remainingItems = // source but no target
                                 incomingBuckets.getBuckets()
                                 .map(bucket => bucket[0]);
-            
+    
                             for(let item of remainingItems) {
                                 let addRequest = store.add(item);
                                 addRequest.onerror = event => reject(event); 
