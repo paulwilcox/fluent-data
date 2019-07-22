@@ -167,21 +167,30 @@ export class database {
         return this;
     }
 
-    // Got rid of external db printing, at least for now
     print (func, target, caption) {
+
         let ds = this.getDataset(func);
+
+        // if dataset is an external dataset (is a dsGetter),
+        // then it is a promise, so print inside 'then'.
+        if (ds.data instanceof dsGetter) {
+            ds.callWithoutModify('map', func)
+                .then(rows => prn(target, rows, caption));
+            return this;
+        }
+
         let rows = ds.callWithoutModify('map', func);
         prn(target, rows, caption);
         return this;
+
     }
 
     merge (
         type, // update, insert, delete, upsert, full, or [] of 3 bools
         targetIdentityKey, 
-        sourceIdentityKey // mapper function or maybe even direct array of objects  
+        sourceIdentityKey  
     ) {
 
-        /*
         let typeIx = ix => (Array.isArray(type) && type[ix]);
         let typeIn = (...args) => [...args].includes(type.toLowerCase());
         
@@ -189,14 +198,6 @@ export class database {
         let deleteIfMatched = typeIn('delete') || typeIx(1);
         let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
         let deleteIfNoSource = typeIn('full') || typeIx(3);
-        */
-
-        let typeIn = (...args) => [...args].includes(type.toLowerCase());
-        
-        let updateIfMatched = typeIn('upsert', 'update', 'full');
-        let deleteIfMatched = typeIn('delete');
-        let insertIfNoTarget = typeIn('upsert', 'insert', 'full');
-        let deleteIfNoSource = typeIn('full');
 
         let target = this.getDataset(targetIdentityKey);
 
@@ -247,13 +248,6 @@ export class database {
 
         return this;
 
-    }
-
-    printExternal (func, target, caption) {
-        this.getDataset(func)
-            .callWithoutModify('map', func)
-            .then(rows => prn(target, rows, caption))
-        return this;
     }
 
 }

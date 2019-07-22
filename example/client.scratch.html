@@ -1,25 +1,18 @@
-<div id='someHtmlDivId'></div>
-
 <script type='module'>
 
-    import { sample, sampleIdb } from "../dist/FluentDB.sample.client.js";
+    import { sample } from "../dist/FluentDB.sample.client.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
-    let merged = $$({
-        sam: $$.idb('sample'),
-        c: sam => 'customers', 
-        //c: sample.customers,
+    let results = $$({
+        c: sample.customers,
         pc: sample.potentialCustomers,
         s: sample.shoplifters
     })
     .merge('upsert', c => c.id, pc => pc.id)
     .merge('delete', c => c.id, s => s.id)
-    .execute();
+    .execute(c => c);
 
-    window.indexedDB.open('sample').onsuccess = event => 
-        event.target.result
-            .transaction('customers')
-            .objectStore('customers').getAll().onsuccess = event => 
-                console.log(event.target.result);
-    
+    console.log(results); 
+
 </script>
+
