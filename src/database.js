@@ -7,6 +7,7 @@ import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
+import { merger } from './merger.js';
 import { print as prn } from './visualizer/printer.js';
 
 export class database {
@@ -186,68 +187,49 @@ export class database {
     }
 
     merge (
-        type, // update, insert, delete, upsert, full, or [] of 3 bools
+        type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 
         sourceIdentityKey  
     ) {
 
-        let typeIx = ix => (Array.isArray(type) && type[ix]);
-        let typeIn = (...args) => [...args].includes(type.toLowerCase());
-        
-        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
-        let deleteIfMatched = typeIn('delete') || typeIx(1);
-        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
-        let deleteIfNoSource = typeIn('full') || typeIx(3);
-
         let target = this.getDataset(targetIdentityKey);
+        let source = this.getDataset(sourceIdentityKey); 
 
-        // External datasets (dsGetters) should have their own 'merge'
+        // External datasets (dsGetters) have their own 'merge'
         // method.  So implement it instead.
         if(target.data instanceof dsGetter) {
-            let ds = this.getDataset(targetIdentityKey);
-            ds.data.merge(this, ...arguments);
+            target.data.merge(this, ...arguments);
             return this;            
         }
 
-        let source = this.getDataset(sourceIdentityKey); 
-
-        let incomingBuckets = 
-            new hashBuckets(sourceIdentityKey)
-            .addItems(source.data);
-        
-        for (let t = target.data.length - 1; t >= 0; t--) {
-
-            let sourceRow = 
-                incomingBuckets.getBucketFirstItem(
-                    target.data[t], 
-                    targetIdentityKey,
-                    true 
-                );
-
-            if (sourceRow)
-                if (deleteIfMatched)
-                    target.data.splice(t, 1);
-                else if (updateIfMatched)
-                    target.data[t] = sourceRow;
-
-            else if (deleteIfNoSource) // target but no source
-                target.data.splice(t, 1);
-
+        // External datasets, as a source, need to be converted
+        // to a promise.  Then merge occurs inside the promise.
+        if(source.data instanceof dsGetter) {
+            target.data = 
+                Promise.all([
+                    target.data, 
+                    source.data.map(x => x)] // convert dsGetter to promise
+                )
+                .then(obj => merger(
+                    type, 
+                    obj[0], 
+                    obj[1], 
+                    targetIdentityKey, 
+                    sourceIdentityKey
+                ));
+            return this;
         }
 
-        if (insertIfNoTarget) {
-                
-            let remainingItems = // source but no target
-                incomingBuckets.getBuckets()
-                .map(bucket => bucket[0]);
-
-            for(let item of remainingItems)  
-                target.data.push(item);
-
-        }
+        target.data = merger(
+            type, 
+            target.data, 
+            source.data, 
+            targetIdentityKey, 
+            sourceIdentityKey
+        );
 
         return this;
 
     }
-
+    
 }

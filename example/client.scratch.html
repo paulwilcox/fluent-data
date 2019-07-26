@@ -1,18 +1,22 @@
 <script type='module'>
 
-    import { sample } from "../dist/FluentDB.sample.client.js";
+    import { sample, sampleIdb } from "../dist/FluentDB.sample.client.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
-    let results = $$({
-        c: sample.customers,
-        pc: sample.potentialCustomers,
-        s: sample.shoplifters
-    })
-    .merge('upsert', c => c.id, pc => pc.id)
-    .merge('delete', c => c.id, s => s.id)
-    .execute(c => c);
+    let merged = 
+        $$({
+            sam: $$.idb('sample'),
+            c: sample.customers, 
+            pc: sam => 'potentialCustomers',
+            //pc: sample.potentialCustomers,
+            s: sample.shoplifters
+        })
+        //.map(pc => pc) // if 'pc' is external, you have to call this to use it as a merge source
+        .merge('upsert', c => c.id, pc => pc.id)
+        .merge('delete', c => c.id, s => s.id)
+        .execute(c => c);
 
-    console.log(results); 
+    console.log(merged);
 
 </script>
 
