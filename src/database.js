@@ -24,7 +24,7 @@ export class database {
         return dss[0];
     }
 
-    getDatasets(key) {
+    getDatasets(key, errorIfNotFound) {
 
         if (g.isFunction(key)) 
             key = new parser.parameters(key);
@@ -32,12 +32,13 @@ export class database {
         if (g.isString(key))
             key = [key];
 
-        let foundDss = this
-            .datasets
+        let foundDss = 
+            this.datasets
             .filter(ds => key.some(k => ds.key == k));
 
-        if (foundDss.length == 0) 
-            throw `No datasets found with passed keys (${key.join(',')})`;
+        if (errorIfNotFound && foundDss.length != key.length) 
+            throw   `One of the keys passed is not a dataset.  ` + 
+                    `The keys passed are: (${key.join(',')})`;
 
         return foundDss;
 
@@ -130,7 +131,10 @@ export class database {
             new joiner (fromDs, joinDs, joinType)
             .executeJoin(matchingLogic, algorithm);
 
-        this.addSource(newKey, joinedRows);
+        if (!this.getDataset(newKey))
+            this.addSource(newKey, joinedRows);
+        else 
+            this.getDataset(newKey).data = joinedRows;
 
         return this;
 
@@ -194,7 +198,7 @@ export class database {
 
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
-
+/*
         // External datasets (dsGetters) have their own 'merge'
         // method.  So implement it instead.
         if(target.data instanceof dsGetter) {
@@ -219,7 +223,7 @@ export class database {
                 ));
             return this;
         }
-
+*/
         target.data = merger(
             type, 
             target.data, 
@@ -232,4 +236,14 @@ export class database {
 
     }
     
+    mergeExternal (
+        type, // update, insert, delete, upsert, full, or [] of 4 bools
+        dsGetterFunc,
+        targetIdentityKey, 
+        sourceIdentityKey  
+    ) {
+        console.log('here');
+        return this;
+    }
+
 }
