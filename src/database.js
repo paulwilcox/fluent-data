@@ -66,6 +66,24 @@ export class database {
 
     }
 
+    // parameter should be a dsConnector alias
+    // value should be a dataset name (string)
+    makeDsGetter(func) {
+
+        let conAlias = parser.parameters(func.val)[0];
+        let dsName = func.val();
+
+        if (!g.isString(dsName))
+            throw `
+                ${ds.key} did not return a string.  It should 
+                return the name of a dataset in ${conAlias}.
+            `;
+                 
+        return this.dbConnectors[conAlias]
+            .dsGetter(dsName);
+
+    }
+
     addSources (obj) { 
 
         let items = Object.keys(obj).map(k => ({ key: k, val: obj[k]}));
@@ -81,24 +99,11 @@ export class database {
 
         // A function in addSources should only ever have the form:
         //    dbConnectorAlias => 'datasetName';            
-        for (let func of dsFuncs) {
-
-            let conAlias = parser.parameters(func.val)[0];
-            let dsName = func.val();
-
-            if (!g.isString(dsName))
-                throw `
-                    ${ds.key} did not return a string.  It should 
-                    return the name of a dataset in ${conAlias}.
-                `;
-                     
-            let getter = 
-                this.dbConnectors[conAlias]
-                .dsGetter(dsName);
-                
-            this.addSource(func.key, getter);
-
-        }
+        for (let func of dsFuncs) 
+            this.addSource(
+                func.key, 
+                this.makeDsGetter(func)
+            );
 
         return this;
 
@@ -143,7 +148,7 @@ export class database {
     group (groupKeySelector) {
     
         let ds = this.getDataset(groupKeySelector);
-
+console.log({dataset: ds.data})
         let buckets = 
             new hashBuckets(groupKeySelector)
             .addItems(ds.data)

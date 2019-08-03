@@ -39,14 +39,42 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) {
                 return this
-                    .then(db => this.managePromisesAndGetters(db, args))
-                    .then(db => db[funcName](...args))
-                    .then(db => this.managePromisesAndGetters(db, args));
+                    .then(db => this.managePromisesAndGetters(db, args, funcName))
+                    .then(db => {
+
+                        let dsGetter = this.dsGetterIfCallable(db, args, funcName)
+                        if (dsGetter)
+                            return dsGetter[funcName](...args);
+
+                        return db[funcName](...args)
+
+                    })
+                    .then(db => this.managePromisesAndGetters(db, args, funcName));
             };
         
     } 
 
-    managePromisesAndGetters (db, args) {
+    // if args reference a dsGetter one time, and that
+    // getter has a function referred to by funcName, 
+    // then return that getter so that you can then 
+    // call the function on it instead of on FluentDB.
+    dsGetterIfCallable (db, args, funcName) {
+
+        let datasets = [];
+        
+        for (let arg of args) 
+            if (g.isFunction(arg)) 
+                for (let ds of db.getDatasets(arg, false))
+                    datasets.push(ds);
+
+        return !(datasets.data instanceof dsGetter) ? null 
+            : datasets.length != 1 ? null 
+            : datasets[0].data[funcName] ? datasets[0]
+            : null;
+        
+    }
+
+    managePromisesAndGetters (db, args, funcName) {
 
         // Initializations
 
@@ -68,6 +96,18 @@ class FluentDB extends deferable {
             if (datasets.length == 0)
                 return db;
 
+        /*
+
+            for (let arg of args) 
+                if (g.isFunction(arg)) {
+                    let dss = db.getDatasets(arg, false);
+                    if (dss.length == 1 && dss[0].data instanceof dsGetter) {
+                        console.log({funcName, arg, x: dss[0].data['filter']});
+                    }
+                }
+
+        */
+
         // Resolve dsGetters, identify promises
             
             let keys = [];
@@ -79,7 +119,7 @@ class FluentDB extends deferable {
                 // function, you'll want to resolve any of them
                 // that are in a dsGetter state or else the two
                 // will have trouble working with each other.
-                if (ds.data instanceof dsGetter && datasets.length > 1) 
+                if (ds.data instanceof dsGetter/* && datasets.length > 1*/) 
                     ds.data = ds.data.map(x => x); 
 
                 // If any dataset is a a promise (by means of 
