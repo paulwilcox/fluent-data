@@ -71,10 +71,10 @@ export class dsGetterIdb extends dsGetter {
     }
 
     merge (
-        fluentDBInstance,
         type,
         targetIdentityKey, 
-        sourceIdentityKey
+        sourceIdentityKey,
+        source 
     ) {
 
         let typeIx = ix => (Array.isArray(type) && type[ix]);
@@ -86,10 +86,6 @@ export class dsGetterIdb extends dsGetter {
         let deleteIfNoSource = typeIn('full') || typeIx(3);
 
         return new Promise((resolve, reject) => {
-
-            let source = 
-                fluentDBInstance.getDataset(sourceIdentityKey)
-                .callWithoutModify('map', x => x); // just get the raw data
 
             let incomingBuckets = 
                 new hashBuckets(sourceIdentityKey)

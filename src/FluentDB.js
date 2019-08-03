@@ -15,7 +15,7 @@ class FluentDB extends deferable {
         super(new database())
         this.mpgExtend(
             'addSources, filter, map, join, group, sort, reduce, ' + 
-            'print, merge, mergeExternal'
+            'print, merge'
         );
     }
 
@@ -95,18 +95,6 @@ class FluentDB extends deferable {
 
             if (datasets.length == 0)
                 return db;
-
-        /*
-
-            for (let arg of args) 
-                if (g.isFunction(arg)) {
-                    let dss = db.getDatasets(arg, false);
-                    if (dss.length == 1 && dss[0].data instanceof dsGetter) {
-                        console.log({funcName, arg, x: dss[0].data['filter']});
-                    }
-                }
-
-        */
 
         // Resolve dsGetters, identify promises
             

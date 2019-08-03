@@ -20,15 +20,13 @@
             pc: sample.potentialCustomers,
             s: sample.shoplifters
         })
-        .group(c => c.id)
-        .reduce(c => ({ x: $$.count(c.fullname)}))
         // maybe this syntax for merge external?
-        //.mergeExternal('upsert', sam => 'customers', x => x.id, pc => pc.id)
+        .merge('upsert', sam => 'customers', x => x.id, pc => pc.id)
         //.merge('upsert', c => c.id, pc => pc.id)
         .execute(c => c);
 
     console.log(results);
-/*
+
     let results2 = 
         $$({
             sam: $$.idb('sample'),
@@ -37,6 +35,6 @@
         .execute(c => c);
 
     console.log(results2)
-*/
+
 </script>
 

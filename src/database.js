@@ -70,8 +70,8 @@ export class database {
     // value should be a dataset name (string)
     makeDsGetter(func) {
 
-        let conAlias = parser.parameters(func.val)[0];
-        let dsName = func.val();
+        let conAlias = parser.parameters(func)[0];
+        let dsName = func();
 
         if (!g.isString(dsName))
             throw `
@@ -99,10 +99,10 @@ export class database {
 
         // A function in addSources should only ever have the form:
         //    dbConnectorAlias => 'datasetName';            
-        for (let func of dsFuncs) 
+        for (let dsFunc of dsFuncs) 
             this.addSource(
-                func.key, 
-                this.makeDsGetter(func)
+                dsFunc.key, 
+                this.makeDsGetter(dsFunc.val)
             );
 
         return this;
@@ -148,7 +148,7 @@ export class database {
     group (groupKeySelector) {
     
         let ds = this.getDataset(groupKeySelector);
-console.log({dataset: ds.data})
+
         let buckets = 
             new hashBuckets(groupKeySelector)
             .addItems(ds.data)
@@ -201,34 +201,15 @@ console.log({dataset: ds.data})
         sourceIdentityKey  
     ) {
 
+        // if the second argument is a function that fetches
+        // an external dsGetter, run merge on that, not here.
+        let arg2Alias = parser.parameters(arguments[1])[0];
+        if(Object.keys(this.dbConnectors).includes(arg2Alias)) 
+            return this.mergeExternal(...arguments);    
+
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
-/*
-        // External datasets (dsGetters) have their own 'merge'
-        // method.  So implement it instead.
-        if(target.data instanceof dsGetter) {
-            target.data.merge(this, ...arguments);
-            return this;            
-        }
 
-        // External datasets, as a source, need to be converted
-        // to a promise.  Then merge occurs inside the promise.
-        if(source.data instanceof dsGetter) {
-            target.data = 
-                Promise.all([
-                    target.data, 
-                    source.data.map(x => x)] // convert dsGetter to promise
-                )
-                .then(obj => merger(
-                    type, 
-                    obj[0], 
-                    obj[1], 
-                    targetIdentityKey, 
-                    sourceIdentityKey
-                ));
-            return this;
-        }
-*/
         target.data = merger(
             type, 
             target.data, 
@@ -247,8 +228,16 @@ console.log({dataset: ds.data})
         targetIdentityKey, 
         sourceIdentityKey  
     ) {
-        console.log('here');
+
+        let dsGetter = this.makeDsGetter(dsGetterFunc);
+
+        let source = 
+            this.getDataset(sourceIdentityKey)
+            .callWithoutModify('map', x => x); // just get the raw data
+
+        dsGetter.merge(type, targetIdentityKey, sourceIdentityKey, source);
         return this;
+
     }
 
 }
