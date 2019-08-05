@@ -3,38 +3,22 @@
     import { sample, sampleIdb } from "../dist/FluentDB.sample.client.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
-    // TODO: Merge doesn't REALLY have an effect on the external datasource
-    // I think we really do need to return to a mergeExternal() because
-    // even without FluentDB.mpgExtend a dsGetter at any point in the 
-    // chain can resolve itself into a promise.
-    //
-    // Given this, probably clean up merge() to simplify it, and implement
-    // mergeExternal(dbConnectorAlias => 'dbName') 
-
-    let results = 
+    let joined = 
         $$({
-            sam: $$.idb('sample'),
-            c: sam => 'customers', 
-            //c: sample.customers, 
-            //pc: sam => 'potentialCustomers',
-            pc: sample.potentialCustomers,
-            s: sample.shoplifters
+            o: sample.orders,
+            p: sample.products,
+            c: sample.customers
         })
-        // maybe this syntax for merge external?
-        .merge('upsert', sam => 'customers', x => x.id, pc => pc.id)
-        //.merge('upsert', c => c.id, pc => pc.id)
-        .execute(c => c);
+        .join('inner', (o,p) => o.product == p.id)
+        .join('left', (o,c) => o.customer == c.id, 'loop')
+        .execute(o => ({
+            customerName: o.fullname,
+            productPrice: o.price,
+            orderRating: o.rating
+        }));
 
-    console.log(results);
+    console.log(joined);
 
-    let results2 = 
-        $$({
-            sam: $$.idb('sample'),
-            c: sam => 'customers', 
-        })
-        .execute(c => c);
-
-    console.log(results2)
 
 </script>
 

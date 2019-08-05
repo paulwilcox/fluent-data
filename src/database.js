@@ -128,6 +128,19 @@ export class database {
         algorithm = "default" // "default", "hash", "loop"
     ) {
 
+        // if joinType is a function, then the user called join 
+        // without newKey.  All the parameters are shifted.  So
+        // newKey is really joinType, joinType is really 
+        // matchingLogic, etc.  So we call again and unshift 
+        // the parameters.
+        if (g.isFunction(joinType)) 
+            return this.join(
+                parser.parameters(joinType)[0], 
+                newKey, // really joinType
+                joinType, // really matchingLogic
+                matchingLogic // really algorithm
+            );
+
         let keys = new parser.parameters(matchingLogic);
         let fromDs = this.getDataset(keys[0]);
         let joinDs = this.getDataset(keys[1]);
