@@ -1,9 +1,11 @@
 import * as g from './general.js';
+import { parser } from './parser.js';
 import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
 import { dsGetter } from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
+import { thenRemoveUndefinedKeys } from './mapper.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -22,10 +24,16 @@ class FluentDB extends deferable {
     execute (finalMapper) {
         
         let result = super.execute();
-        
-        return finalMapper === undefined ? result
-            : g.isPromise(result) ? result.then(db => db.getDataset(finalMapper).data.map(finalMapper))
-            : result.getDataset(finalMapper).data.map(finalMapper);
+
+        if (finalMapper === undefined)
+            return result;
+
+        let param = parser.parameters(finalMapper)[0];
+        finalMapper = thenRemoveUndefinedKeys(finalMapper);
+
+        return g.isPromise(result) 
+            ? result.then(db => db.getDataset(param).data.map(finalMapper))
+            : result.getDataset(param).data.map(finalMapper);
         
     }
 

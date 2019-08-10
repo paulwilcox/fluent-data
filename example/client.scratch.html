@@ -9,13 +9,17 @@
             p: sample.products,
             c: sample.customers
         })
-        .join('inner', (o,p) => o.product == p.id)
-        .join('left', (o,c) => o.customer == c.id, 'loop')
-        .execute(o => ({
-            customerName: o.fullname,
-            productPrice: o.price,
-            orderRating: o.rating
-        }));
+        .join('inner hash', 
+            (o,p) => o.product == p.id, 
+            (o,p) => ({ 
+                ...o, ...p, 
+                orderId: o.id, 
+                productId: p.id, 
+                price: undefined 
+            })
+        )
+        .join('left loop', (o,c) => o.customer == c.id)
+        .execute(o => o);
 
     console.log(joined);
 

@@ -1,34 +1,48 @@
 import { parser } from './parser.js';
 import { hashBuckets } from './hashBuckets.js';
+import { thenRemoveUndefinedKeys } from './mapper.js';
 
 export class joiner { 
 
-    constructor (fromDs, joinDs, joinType) {
+    constructor (fromDs, joinDs, options) {
+
+        this.options = options;
         this.fromDs = fromDs;
         this.joinDs = joinDs;
-        this.joinType = joinType;
+        this.joinType = this.extractOption('inner left right full', 'inner');
+        this.algorithm = this.extractOption('hash loop', 'hash');
         this.results = [];
+
     }
             
-    executeJoin(matchingLogic, algorithm) {
+    execute(matchingLogic, mapper) {
 
         if (typeof arguments[0] == null)
             throw "'matchingLogic in 'executeJoin' cannot be null";
-            
-        if (algorithm == 'hash') {
+
+        if (!mapper) 
+            mapper = (fromRow, joinRow) => Object.assign({}, fromRow, joinRow);
+
+        mapper = thenRemoveUndefinedKeys(mapper);
+
+        if (this.algorithm == 'hash') {
                 
             let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
 
             if (parsed) 
-                return this.executeHashJoin(parsed.leftFunc, parsed.rightFunc);
+                return this.executeHashJoin(
+                    parsed.leftFunc, 
+                    parsed.rightFunc,
+                    mapper
+                );
 
         }
 
-        return this.executeLoopJoin(matchingLogic);
+        return this.executeLoopJoin(matchingLogic, mapper);
 
     }
 
-    executeLoopJoin(matchingLogic) {
+    executeLoopJoin(matchingLogic, mapper) {
 
         let fromHits = [];
         let joinHits = [];
@@ -41,7 +55,7 @@ export class joiner {
 
             if (matchingLogic(fromRow, joinRow)) { 
                 this.results.push(
-                    Object.assign({}, fromRow, joinRow)
+                    mapper(fromRow, joinRow)
                 );
                 fromHits[fix] = true;
                 joinHits[jix] = true;
@@ -52,12 +66,16 @@ export class joiner {
         if (["left", "full"].includes(this.joinType))
         for (let fix in this.fromDs.data) 
         if (!fromHits[fix]) 
-            this.results.push(this.fromDs.data[fix]);
+            this.results.push(
+                mapper(this.fromDs.data[fix], {})
+            );
     
         if (["right", "full"].includes(this.joinType))
         for (let fix in this.fromDs.data) 
         if (!joinHits[fix]) 
-            this.results.push(this.joinDs.data[fix]);
+            this.results.push(
+                mapper({}, this.joinDs.data[fix])
+            );
 
         return this.results;
 
@@ -66,6 +84,7 @@ export class joiner {
     executeHashJoin (
         fromEqualitySelector,
         joinEqualitySelector, // optional, coalesces to fromSelector
+        mapper
     ) {
 
         joinEqualitySelector = joinEqualitySelector || fromEqualitySelector;
@@ -85,12 +104,12 @@ export class joiner {
             if (fromBucket)
             for (let fromRow of fromBucket) 
                 this.results.push(
-                    Object.assign({}, fromRow, joinRow)
+                    mapper(fromRow, joinRow)
                 );
                
             // If there were no matches, just add the unmerged right-hand row to the results.
             else if (["right", "full"].includes(this.joinType))
-                this.results.push(joinRow);
+                this.results.push({}, joinRow);
 
         }
 
@@ -98,9 +117,23 @@ export class joiner {
         if (["left", "full"].includes(this.joinType))
         for(let fromBucket of fromBucketsMap.getBuckets()) 
         for(let fromRow of fromBucket) 
-            this.results.push(fromRow);
+            this.results.push(fromRow, {});
 
         return this.results;
+
+    }
+
+    extractOption(searchTerms, defaultTerm) {
+
+        let opts = this.options.split(' ').map(o => o.trim());
+        let terms = searchTerms.split(' ').map(t => t.trim());
+        
+        let option =  opts.filter(o => terms.includes(o))[0]; 
+        
+        if (option == undefined && defaultTerm != undefined)
+            option = defaultTerm;
+
+        return option;
 
     }
 

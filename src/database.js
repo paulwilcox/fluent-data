@@ -3,6 +3,7 @@ import { dataset } from './dataset.js';
 import { parser } from './parser.js';
 import { dbConnector } from './dbConnector.js';
 import { dsGetter } from './dsGetter';
+import { thenRemoveUndefinedKeys } from './mapper.js';
 import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
@@ -117,15 +118,15 @@ export class database {
 
     map (func) {    
         let ds = this.getDataset(func);    
-        ds.call('map', func);
+        ds.call('map', thenRemoveUndefinedKeys(func));
         return this;
     }
 
     join (
         newKey,
-        joinType, // "inner", "left", "right", "full"
-        matchingLogic, // (f,j) => [f.col1 == j.col1, f.col2 < j.col2],
-        algorithm = "default" // "default", "hash", "loop"
+        options, // inner, left, right, full, default, loop, hash
+        matchingLogic, // (f,j) => f.col1 == j.col1 && f.col2 < j.col2
+        mapper
     ) {
 
         // if joinType is a function, then the user called join 
@@ -133,12 +134,12 @@ export class database {
         // newKey is really joinType, joinType is really 
         // matchingLogic, etc.  So we call again and unshift 
         // the parameters.
-        if (g.isFunction(joinType)) 
+        if (g.isFunction(options)) 
             return this.join(
-                parser.parameters(joinType)[0], 
-                newKey, // really joinType
-                joinType, // really matchingLogic
-                matchingLogic // really algorithm
+                parser.parameters(options)[0], 
+                newKey, // really options
+                options, // really matchingLogic
+                matchingLogic // really mapper
             );
 
         let keys = new parser.parameters(matchingLogic);
@@ -146,8 +147,8 @@ export class database {
         let joinDs = this.getDataset(keys[1]);
 
         let joinedRows = 
-            new joiner (fromDs, joinDs, joinType)
-            .executeJoin(matchingLogic, algorithm);
+            new joiner (fromDs, joinDs, options)
+            .execute(matchingLogic, mapper);
 
         if (!this.getDataset(newKey))
             this.addSource(newKey, joinedRows);
