@@ -1,6 +1,7 @@
 import { parser } from './parser.js';
 import { hashBuckets } from './hashBuckets.js';
 import { thenRemoveUndefinedKeys } from './mapper.js';
+import * as g from './general.js';
 
 export class joiner { 
 
@@ -45,7 +46,7 @@ export class joiner {
                 let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
                 if (!parsed)
                     throw   'Could not parse function into object selectors.  ' +
-                            'Use loop join instead';
+                            'Pass object selectors explicitly or use loop join instead';
                 leftFunc = parsed.leftFunc;
                 rightFunc = parsed.rightFunc;
             }
@@ -59,6 +60,16 @@ export class joiner {
     }
 
     executeLoopJoin(matchingLogic, mapper) {
+
+        // if matching logic is array of object selectors, then 
+        // convert it to a boolean function comparing the selected
+        // objects 
+        if(Array.isArray(matchingLogic)) {
+            let ml0 = matchingLogic[0];
+            let ml1 = matchingLogic[1];
+            matchingLogic = (fromRow, joinRow) => 
+                g.stringifyObject(ml0(fromRow)) == g.stringifyObject(ml1(joinRow));
+        }
 
         let fromHits = [];
         let joinHits = [];

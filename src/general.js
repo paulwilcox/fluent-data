@@ -1,22 +1,3 @@
-export let objectKeyValuesAreEqual = (left, right) => {
-
-    let distinctKeys = 
-        Array.from(
-            new Set(
-                Object.keys(left)
-                .concat(
-                    Object.keys(right)
-                )
-            )
-        );
-
-    for (let key of distinctKeys) 
-        if (left[key] !== right[key])
-            return false;
-            
-    return true;
-
-}
 
 export let isSubsetOf = (sub, sup) =>  
     setEquals (
@@ -42,8 +23,7 @@ export let asSet = obj => {
 
 }
 
-// Max Leizerovich: stackoverflow.com/questions/
-//   31128855/comparing-ecma6-sets-for-equality
+// Max Leizerovich: stackoverflow.com/questions/31128855
 export let setEquals = (a, b) =>
     a.size === b.size 
     && [...a].every(value => b.has(value));

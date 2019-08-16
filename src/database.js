@@ -152,7 +152,14 @@ export class database {
                 matchingLogic // really mapper
             );
 
-        let keys = new parser.parameters(matchingLogic);
+        let keys = 
+            g.isFunction(matchingLogic)
+            ? parser.parameters(matchingLogic)
+            : [
+                 parser.parameters(matchingLogic[0]),
+                 parser.parameters(matchingLogic[1])
+              ];
+
         let fromDs = this.getDataset(keys[0]);
         let joinDs = this.getDataset(keys[1]);
 
