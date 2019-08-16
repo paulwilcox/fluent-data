@@ -129,12 +129,22 @@ export class database {
         mapper
     ) {
 
-        // if joinType is a function, then the user called join 
-        // without newKey.  All the parameters are shifted.  So
-        // newKey is really joinType, joinType is really 
-        // matchingLogic, etc.  So we call again and unshift 
-        // the parameters.
-        if (g.isFunction(options)) 
+        // You can tell whether the user desires to bypass newKey or
+        // options based on place of the first parameter that is not
+        // a string.  Shift the arguments accordingly and call 'join' 
+        // again.
+
+        // shift parameters by two
+        if (!g.isString(newKey))
+            return this.join(
+                parser.parameters(newKey)[0], 
+                'inner hash',
+                newKey, // really matchingLogic
+                options // really mapper
+            );        
+
+        // shift parameters by one
+        if (!g.isString(options)) 
             return this.join(
                 parser.parameters(options)[0], 
                 newKey, // really options

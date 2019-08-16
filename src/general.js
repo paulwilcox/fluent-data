@@ -1,5 +1,3 @@
-import { parser } from './parser.js';
-
 export let objectKeyValuesAreEqual = (left, right) => {
 
     let distinctKeys = 

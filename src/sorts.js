@@ -22,9 +22,9 @@ export let quickSort = (unsorted, orderedValuesSelector) => {
                 orderedValuesSelector(pivot)
             );
 
-          orderDecision == -1
-        ? left.push(row) 
-        : right.push(row);
+        orderDecision == -1
+            ? left.push(row) 
+            : right.push(row);
 
     }
 

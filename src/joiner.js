@@ -20,21 +20,37 @@ export class joiner {
         if (typeof arguments[0] == null)
             throw "'matchingLogic in 'executeJoin' cannot be null";
 
-        if (!mapper) 
-            mapper = (fromRow, joinRow) => Object.assign({}, fromRow, joinRow);
+        if (mapper && !Array.isArray(matchingLogic)) {
+            let ml = parser.parameters(matchingLogic);
+            let mp = parser.parameters(mapper);
+            if (ml[0] != mp[0] || ml[1] != mp[1])
+                throw   'Mapper parameters do not match matchingLogic parameters.  ' +
+                        'Cannot execute join.';
+        }
+        else if (!mapper)
+            mapper = (fromRow, joinRow) => Object.assign({}, joinRow, fromRow);
 
         mapper = thenRemoveUndefinedKeys(mapper);
 
         if (this.algorithm == 'hash') {
                 
-            let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
+            let leftFunc;
+            let rightFunc;
 
-            if (parsed) 
-                return this.executeHashJoin(
-                    parsed.leftFunc, 
-                    parsed.rightFunc,
-                    mapper
-                );
+            if (Array.isArray(matchingLogic)) {
+                leftFunc = matchingLogic[0];
+                rightFunc = matchingLogic[1];
+            }
+            else {
+                let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
+                if (!parsed)
+                    throw   'Could not parse function into object selectors.  ' +
+                            'Use loop join instead';
+                leftFunc = parsed.leftFunc;
+                rightFunc = parsed.rightFunc;
+            }
+
+            return this.executeHashJoin(leftFunc, rightFunc, mapper);
 
         }
 
