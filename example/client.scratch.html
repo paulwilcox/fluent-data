@@ -3,22 +3,12 @@
     import { sample, sampleIdb } from "../dist/FluentDB.sample.client.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
-    let joined = 
-        $$({
-            o: sample.orders,
-            p: sample.products,
-            c: sample.customers
-        })
-        .join((o,p) => o.product == p.id)
-        .join(
-            'opc',
-            'left loop', 
-            (o,c) => o.customer == c.id,
-            (o,c) => ({ ...o, ...c, order: o.id, id: undefined })
-        )
-        .execute(opc => opc);
+    let sorted = 
+        $$({ o: sample.orders })
+        .sort(o => [o.customer, -o.rating])
+        .execute(o => ({ customer: o.customer, rating: o.rating }));
 
-    console.log(joined);
+    console.log(sorted);
 
 
 </script>

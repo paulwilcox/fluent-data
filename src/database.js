@@ -192,9 +192,18 @@ export class database {
     }
 
     sort (orderedValuesSelector) {
-        let ds = this.getDataset(orderedValuesSelector);
-        ds.call(quickSort, orderedValuesSelector);
+
+        let ds = this.getDatasets(orderedValuesSelector)[0];
+
+        ds.call(
+            parser.parameters(orderedValuesSelector).length > 1 
+                ? 'sort' 
+                : quickSort, 
+            orderedValuesSelector
+        );
+
         return this;
+
     } 
 
     reduce (outerFunc) {
