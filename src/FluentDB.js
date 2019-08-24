@@ -3,6 +3,7 @@ import { parser } from './parser.js';
 import { deferable } from './deferable.js';
 import { database } from './database.js';
 import { dbConnectorIdb } from './dbConnectorIdb.js';
+import { dbConnector } from './dbConnector.js';
 import { dsGetter } from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
 import { thenRemoveUndefinedKeys } from './mapper.js';
@@ -208,5 +209,6 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 });
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
-  
+$$.dbConnector = dbConnector;
+$$.dsGetter = dsGetter;  
 

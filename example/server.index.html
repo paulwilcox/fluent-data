@@ -1,21 +1,8 @@
-<li><a href='example/client.scratch.html'>scratch</a></li>
-
-The data below was fetched from mongoDb on the server!
-
-<div id='results'>
-
-</div>
-
 <script type='module'>
-
-    import { print } from './src/visualizer/printer.js';
 
     fetch('scratch')
     .then(response => response.json())
-    .then(json => {
-        for(let ds of json.datasets) 
-            print('#results', ds.data, ds.key);
-    })
+    .then(json => console.log(json))
     .catch(e => console.log({e}));
 
 </script>
