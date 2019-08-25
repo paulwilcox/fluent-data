@@ -32,5 +32,11 @@ export default [{
         file: 'dist/FluentDB.sampleMongo.js',
         format: 'cjs'
     }
+}, {
+    input: 'example/tests.js',
+    output: {
+        file: 'example/tests.server.js',
+        format: 'cjs'
+    }
 }];
 
