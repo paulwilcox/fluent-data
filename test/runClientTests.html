@@ -1,0 +1,29 @@
+<script type='module'>
+
+    import { sample, sampleIdb } from './dist/FluentDB.sample.client.js';
+    import $$ from './dist/FluentDB.client.next.js';
+    import tests from './test/tests.js';
+
+    let clientTests = tests('client', () => 
+        $$({ 
+            o: sample.orders 
+        })
+    );
+
+    let idbTests = tests('idb', () => 
+        $$({ 
+            sam: $$.idb('sample'),
+            o: sam => 'orders'
+        })
+    );
+
+    Promise.all([clientTests, idbTests])
+    .then(seri => {
+        for(let series of seri)
+        for(let test of series)
+            console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);
+    })
+    .then(() => console.log('done:client.tests'));
+
+
+</script>
