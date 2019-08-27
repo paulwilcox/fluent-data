@@ -1886,5 +1886,7 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 });
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
+$$.dbConnector = dbConnector;
+$$.dsGetter = dsGetter;
 
 export default $$;

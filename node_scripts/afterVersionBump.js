@@ -1,6 +1,12 @@
 let pjVersion = require('../package.json').version;
 let fs = require('fs');
 
+fs.readdirSync('./dist')
+    .filter(file => 
+        /FluentDB\.\w+\.\d.+\.\js$/.test(file)
+    )
+    .forEach(file => fs.unlinkSync(`.\\dist\\${file}`));
+
 for (let fileType of ['client','server'])
 
     fs.copyFile(

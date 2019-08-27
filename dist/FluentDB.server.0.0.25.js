@@ -1950,6 +1950,8 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 });
 
 $$.idb = dbName => new dbConnectorIdb(dbName);
+$$.dbConnector = dbConnector;
+$$.dsGetter = dsGetter;
 
 $$.mongo = url => new dbConnectorMongo(url);
 
