@@ -334,7 +334,7 @@ else {
 });
 var node_1 = node.open;
 
-var _sample = {
+var sample = {
 
     products: [
         { id: 123456, price: 5 },
@@ -397,22 +397,25 @@ var _sample = {
 
 };
 
-let sample = _sample;
+async function sampleData_idb (dbName, reset) { 
 
-let sampleIdb = 
-    node_1('sampleFDB', 1, db => {            
+    if (reset)
+        await indexedDB.deleteDatabase(dbName);
+
+    let data = reset || sample;
+
+    return node_1(dbName, 1, db => {            
         for (let name of db.objectStoreNames) 
             db.deleteObjectStore(name);
-        for (let name of Object.keys(sample)) 
+        for (let name of Object.keys(data)) 
             db.createObjectStore(name, {keyPath: 'id'});
     })
     .then(db => {
 
-        for (let datasetKvp of Object.entries(sample)) {
+        for (let datasetKvp of Object.entries(data)) {
 
             let store = 
-                db
-                .transaction(datasetKvp[0], "readwrite")
+                db.transaction(datasetKvp[0], "readwrite")
                 .objectStore(datasetKvp[0]);     
 
             store.clear();
@@ -426,4 +429,6 @@ let sampleIdb =
 
     });
 
-export { sample, sampleIdb };
+}
+
+export default sampleData_idb;

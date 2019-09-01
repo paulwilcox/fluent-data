@@ -1,6 +1,4 @@
-'use strict';
-
-var sampleFDB_core = {
+var sampleData_client = {
 
     products: [
         { id: 123456, price: 5 },
@@ -63,4 +61,4 @@ var sampleFDB_core = {
 
 };
 
-module.exports = sampleFDB_core;
+export default sampleData_client;

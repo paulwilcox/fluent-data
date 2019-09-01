@@ -13,23 +13,36 @@ export default [{
         file: 'dist/FluentDB.client.next.js',
         format: 'esm'
     }
-}, {
-    input: 'src/samples/sampleFDB.core.js',
+}, { 
+    // This one just moves the file
+    input: 'src/samples/sampleData.client.js',
     output: {
-        file: 'src/samples/sampleFDB.coreServer.js',
+        file: 'dist/sampleData.client.js',
+        format: 'esm'
+    }
+}, {
+    input: 'src/samples/sampleData.client.js',
+    output: {
+        file: 'src/samples/sampleData.server.js',
         format: 'cjs'
     }
 }, {
-    input: 'src/samples/sampleFDB.client.js',
+    input: 'src/samples/sampleData.client.js',
     output: {
-        file: 'dist/sampleFDB.client.js',
+        file: 'dist/sampleData.server.js',
+        format: 'cjs'
+    }
+}, {
+    input: 'src/samples/sampleData.idb.js',
+    output: {
+        file: 'dist/sampleData.idb.js',
         format: 'esm'
     },
     plugins: [nodeResolve({ jsnext: true }), commonJs({ include: 'node_modules/**' })],    
 }, {
-    input: 'src/samples/sampleFDB.mongo.js',
+    input: 'src/samples/sampleData.mongo.js',
     output: {
-        file: 'dist/sampleFDB.mongo.js',
+        file: 'dist/sampleData.mongo.js',
         format: 'cjs'
     },
     plugins: [commonJs()]

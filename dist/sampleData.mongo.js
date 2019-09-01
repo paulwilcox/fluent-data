@@ -4,11 +4,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var mongodb = _interopDefault(require('mongodb'));
 
-function createCommonjsModule(fn, module) {
-	return module = { exports: {} }, fn(module, module.exports), module.exports;
-}
-
-var sampleFDB_core = {
+var sampleData_client = {
 
     products: [
         { id: 123456, price: 5 },
@@ -71,16 +67,13 @@ var sampleFDB_core = {
 
 };
 
-var sampleFDB_coreServer = sampleFDB_core;
+var sampleData_server = sampleData_client;
 
-var sampleFDB_mongo = createCommonjsModule(function (module) {
 let MongoClient = mongodb.MongoClient;
 
 
-module.sample = sampleFDB_coreServer;
-
-module.exports = (
-    url = 'mongodb://localhost:27017/sampleFDB', 
+var sampleData_mongo = (
+    url = 'mongodb://localhost:27017/sampleData', 
     reset = true
 ) =>
     MongoClient.connect(url, { useNewUrlParser: true})
@@ -89,19 +82,29 @@ module.exports = (
         let db = client.db();
         let collections = await db.collections();
 
-        if (reset)
-        for (let key of Object.keys(sampleFDB_coreServer)) {
-            console.log('processing: ' + key);
-            if (collections.map(c => c.s.name).includes(key))                
+        if (reset) {
+
+            let data = 
+                Object.keys(reset).length > 0 
+                ? reset 
+                : sampleData_server;
+
+            for (let key of collections.map(c => c.s.name)) {                
+                console.log('deleteing: ' + key);
                 await db.dropCollection(key);
-            await db.createCollection(key); 
-            await db.collection(key).insertMany(sampleFDB_coreServer[key]);
+            }
+
+            for (let key of Object.keys(data)) {
+                console.log('creating: ' + key);
+                await db.createCollection(key); 
+                await db.collection(key).insertMany(data[key]);
+            }
+
         }
 
         return db;
 
     })
     .catch(err => console.log(err));
-});
 
-module.exports = sampleFDB_mongo;
+module.exports = sampleData_mongo;

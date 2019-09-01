@@ -1,22 +1,25 @@
 import * as idb from 'idb';
-import _sample from './sampleFDB.core.js';
+import sample from './sampleData.client.js';
 
-export let sample = _sample;
+export default async function (dbName, reset) { 
 
-export let sampleIdb = 
-    idb.open('sampleFDB', 1, db => {            
+    if (reset)
+        await indexedDB.deleteDatabase(dbName);
+
+    let data = reset || sample;
+
+    return idb.open(dbName, 1, db => {            
         for (let name of db.objectStoreNames) 
             db.deleteObjectStore(name);
-        for (let name of Object.keys(sample)) 
+        for (let name of Object.keys(data)) 
             db.createObjectStore(name, {keyPath: 'id'});
     })
     .then(db => {
 
-        for (let datasetKvp of Object.entries(sample)) {
+        for (let datasetKvp of Object.entries(data)) {
 
             let store = 
-                db
-                .transaction(datasetKvp[0], "readwrite")
+                db.transaction(datasetKvp[0], "readwrite")
                 .objectStore(datasetKvp[0]);     
 
             store.clear();
@@ -29,3 +32,5 @@ export let sampleIdb =
         return db;
 
     });
+
+}

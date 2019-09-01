@@ -1,18 +1,13 @@
 let http = require('http');
 let fs = require('fs');
-let sampleMongo = require('./dist/sampleFDB.mongo.js');
-let getJson = require('./example/server.getJson.js');
+let sampleMongo = require('./dist/sampleData.mongo.js');
+let getMongo = require('./example/server.getMongo.js');
 
 /* 
     TODO:
 
     Sample Data:
         
-        Change sampleFDB... to sampleData..., though databases will still be called sampleFDB
-        Output sampleData.server.js, but sampleData.mongo.js will still be independent of that file (after build)
-        Give option for sampleData.mongo.js and IDB of sampleData.client.js to accept user passed sample data,
-            but to default to sample data if none passed.
-        Connsider seperating sampleData.IDB.js from sampleData.client.js
         When all this is done, then of course update the documentation.  Probably giving a specific
             section on working with sample data.
 
@@ -23,10 +18,11 @@ let getJson = require('./example/server.getJson.js');
     Lisencing:
 
         Have license text output in FluentDB... files after bundling.
+        Have license text bubbled up from IDB in sampleData.idb.js
 
 */
 
-module.exports = http.createServer((request, response) => {
+module.exports = http.createServer(async (request, response) => {
 
     console.log('request: ', request.url);
 
@@ -48,14 +44,24 @@ module.exports = http.createServer((request, response) => {
             break;
 
         case '/resetMongo':
-            sampleMongo('mongodb://localhost:27017/sampleFDB', true);
+            await sampleMongo('mongodb://localhost:27017/sampleData', true);
             response.writeHead(200, { 'Content-type': 'text/plain' });
-            response.end('sampleFDB in MongoDB has been reset to its original state.');
+            response.end('sampleData in MongoDB has been reset to its original state.');
             break;
 
-        case '/getJson':
+        case '/resetMongoCustom':
+            let data = { 
+                table1: [{ a: 'ay', b: 'bee' }, { a: 'eigh', b: 'bea' }],
+                table2: [{ x: 'ex', y: 'why' }, { x: 'ecks', y: 'ooaye' }]
+            };
+            sampleMongo('mongodb://localhost:27017/sampleData', data);
+            response.writeHead(200, { 'Content-type': 'text/plain' });
+            response.end('sampleData in MongoDB has been reset with custom data.');
+            break;
+
+        case '/getMongo':
             response.writeHead(200, { 'Content-Type': 'application/json' });
-            getJson()
+            getMongo()
                 .then(json => response.end(json))
                 .catch(e => console.log(e));
             break;
