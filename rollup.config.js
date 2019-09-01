@@ -14,28 +14,29 @@ export default [{
         format: 'esm'
     }
 }, {
-    input: 'src/samples/FluentDB.sample.client.js',
+    input: 'src/samples/sampleFDB.core.js',
     output: {
-        file: 'dist/FluentDB.sample.client.js',
+        file: 'src/samples/sampleFDB.coreServer.js',
+        format: 'cjs'
+    }
+}, {
+    input: 'src/samples/sampleFDB.client.js',
+    output: {
+        file: 'dist/sampleFDB.client.js',
         format: 'esm'
     },
     plugins: [nodeResolve({ jsnext: true }), commonJs({ include: 'node_modules/**' })],    
 }, {
-    input: 'src/samples/FluentDB.sample.core.js',
+    input: 'src/samples/sampleFDB.mongo.js',
     output: {
-        file: 'dist/FluentDB.sample.server.js',
+        file: 'dist/sampleFDB.mongo.js',
         format: 'cjs'
-    }
+    },
+    plugins: [commonJs()]
 }, {
-    input: 'src/samples/FluentDB.sampleMongo.js',
+    input: 'test/tests.js',
     output: {
-        file: 'dist/FluentDB.sampleMongo.js',
-        format: 'cjs'
-    }
-}, {
-    input: 'example/tests.js',
-    output: {
-        file: 'example/tests.server.js',
+        file: 'test/tests.server.js',
         format: 'cjs'
     }
 }];

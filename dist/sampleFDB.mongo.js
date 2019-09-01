@@ -1,6 +1,14 @@
 'use strict';
 
-var FluentDB_sample_core = {
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var mongodb = _interopDefault(require('mongodb'));
+
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+var sampleFDB_core = {
 
     products: [
         { id: 123456, price: 5 },
@@ -63,4 +71,37 @@ var FluentDB_sample_core = {
 
 };
 
-module.exports = FluentDB_sample_core;
+var sampleFDB_coreServer = sampleFDB_core;
+
+var sampleFDB_mongo = createCommonjsModule(function (module) {
+let MongoClient = mongodb.MongoClient;
+
+
+module.sample = sampleFDB_coreServer;
+
+module.exports = (
+    url = 'mongodb://localhost:27017/sampleFDB', 
+    reset = true
+) =>
+    MongoClient.connect(url, { useNewUrlParser: true})
+    .then(async client => {
+
+        let db = client.db();
+        let collections = await db.collections();
+
+        if (reset)
+        for (let key of Object.keys(sampleFDB_coreServer)) {
+            console.log('processing: ' + key);
+            if (collections.map(c => c.s.name).includes(key))                
+                await db.dropCollection(key);
+            await db.createCollection(key); 
+            await db.collection(key).insertMany(sampleFDB_coreServer[key]);
+        }
+
+        return db;
+
+    })
+    .catch(err => console.log(err));
+});
+
+module.exports = sampleFDB_mongo;

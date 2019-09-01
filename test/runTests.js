@@ -14,7 +14,7 @@ require('console.table');
 
     let mongoTests = sTests('mongo', () => 
         $$({ 
-            sam: $$.mongo('mongodb://localhost:27017/sampleMongo'),
+            sam: $$.mongo('mongodb://localhost:27017/sampleFDB'),
             o: sam => 'orders'
         })
     );    

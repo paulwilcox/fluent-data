@@ -400,7 +400,7 @@ var _sample = {
 let sample = _sample;
 
 let sampleIdb = 
-    node_1('sample', 3, db => {            
+    node_1('sampleFDB', 1, db => {            
         for (let name of db.objectStoreNames) 
             db.deleteObjectStore(name);
         for (let name of Object.keys(sample)) 

@@ -1,6 +1,30 @@
 let http = require('http');
 let fs = require('fs');
+let sampleMongo = require('./dist/sampleFDB.mongo.js');
 let getJson = require('./example/server.getJson.js');
+
+/* 
+    TODO:
+
+    Sample Data:
+        
+        Change sampleFDB... to sampleData..., though databases will still be called sampleFDB
+        Output sampleData.server.js, but sampleData.mongo.js will still be independent of that file (after build)
+        Give option for sampleData.mongo.js and IDB of sampleData.client.js to accept user passed sample data,
+            but to default to sample data if none passed.
+        Connsider seperating sampleData.IDB.js from sampleData.client.js
+        When all this is done, then of course update the documentation.  Probably giving a specific
+            section on working with sample data.
+
+    Example Folder:
+    
+        Consider taking it out of gitignore, but then having a folder inside it this is part of gitignore
+
+    Lisencing:
+
+        Have license text output in FluentDB... files after bundling.
+
+*/
 
 module.exports = http.createServer((request, response) => {
 
@@ -21,6 +45,12 @@ module.exports = http.createServer((request, response) => {
                 }
             });
     
+            break;
+
+        case '/resetMongo':
+            sampleMongo('mongodb://localhost:27017/sampleFDB', true);
+            response.writeHead(200, { 'Content-type': 'text/plain' });
+            response.end('sampleFDB in MongoDB has been reset to its original state.');
             break;
 
         case '/getJson':

@@ -1,10 +1,10 @@
 import * as idb from 'idb';
-import _sample from './FluentDB.sample.core.js';
+import _sample from './sampleFDB.core.js';
 
 export let sample = _sample;
 
 export let sampleIdb = 
-    idb.open('sample', 3, db => {            
+    idb.open('sampleFDB', 1, db => {            
         for (let name of db.objectStoreNames) 
             db.deleteObjectStore(name);
         for (let name of Object.keys(sample)) 
