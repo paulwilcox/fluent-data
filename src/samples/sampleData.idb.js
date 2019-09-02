@@ -1,35 +1,34 @@
 import * as idb from 'idb';
 import sample from './sampleData.client.js';
 
-export default async function (dbName, reset) { 
+export default async function (dbName, reset, keyPaths) { 
 
     if (reset)
         await indexedDB.deleteDatabase(dbName);
 
-    let data = reset || sample;
+    return idb.open(dbName, 1, async db => { 
 
-    return idb.open(dbName, 1, db => {            
+        let data = Object.keys(reset).length > 0 ? reset : sample;
+        keyPaths = keyPaths || Object.keys(data).map(key => ({ [key]: 'id' }));
+
         for (let name of db.objectStoreNames) 
-            db.deleteObjectStore(name);
-        for (let name of Object.keys(data)) 
-            db.createObjectStore(name, {keyPath: 'id'});
-    })
-    .then(db => {
+            await db.deleteObjectStore(name);
 
-        for (let datasetKvp of Object.entries(data)) {
+        for (let key of Object.keys(data)) { 
 
-            let store = 
-                db.transaction(datasetKvp[0], "readwrite")
-                .objectStore(datasetKvp[0]);     
+            // if the first row of the store contains the expected key, 
+            // then no autoincrement, otherwise yes.
+            let store = await db.createObjectStore(key, {
+                keyPath: keyPaths[key],
+                autoIncrement: data[key].length > 0 && !Object.keys(data[key][0]).includes(keyPaths[key])
+            });
 
-            store.clear();
-
-            for (let row of datasetKvp[1]) 
+            for (let row of data[key]) 
                 store.put(row);
-                        
-        }          
 
-        return db;
+        }
+
+        return db
 
     });
 
