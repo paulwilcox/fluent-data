@@ -3,25 +3,6 @@ let fs = require('fs');
 let sampleMongo = require('./dist/sampleData.mongo.js');
 let getMongo = require('./example/server.getMongo.js');
 
-/* 
-    TODO:
-
-    Sample Data:
-        
-        When all this is done, then of course update the documentation.  Probably giving a specific
-            section on working with sample data.
-
-    Example Folder:
-    
-        Consider taking it out of gitignore, but then having a folder inside it this is part of gitignore
-
-    Lisencing:
-
-        Have license text output in FluentDB... files after bundling.
-        Have license text bubbled up from IDB in sampleData.idb.js
-
-*/
-
 module.exports = http.createServer(async (request, response) => {
 
     console.log('request: ', request.url);
@@ -54,7 +35,7 @@ module.exports = http.createServer(async (request, response) => {
                 table1: [{ a: 'ay', b: 'bee' }, { a: 'eigh', b: 'bea' }],
                 table2: [{ x: 'ex', y: 'why' }, { x: 'ecks', y: 'ooaye' }]
             };
-            sampleMongo('mongodb://localhost:27017/sampleData', data);
+            await sampleMongo('mongodb://localhost:27017/sampleData', data);
             response.writeHead(200, { 'Content-type': 'text/plain' });
             response.end('sampleData in MongoDB has been reset with custom data.');
             break;
