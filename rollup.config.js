@@ -6,9 +6,9 @@ import license from 'rollup-plugin-license';
 // array.  Otherwise, the third party licence file gets 
 // overwritten, not appended to.
 let licensePlugin = license({
-    banner: { content: { file: 'license' } },
+    banner: { content: { file: 'license.md' } },
     thirdParty: {
-        output: 'license-3rd-party',
+        output: 'xlicense-3rd-party',
         includePrivate: true
     }
 });

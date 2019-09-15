@@ -47,6 +47,32 @@ async function tests (seriesName, createFDB) {
             && !Object.keys(data[0]).includes('id')
         );
 
+    // join 
+
+        data = await createFDB()
+            .join((o,p) => o.product == p.id)
+            .execute(o => o);
+
+        await reg('join', 
+            Object.keys(data[0]).includes('price')
+        );
+
+    // merge
+
+        // TODO: Don't run this until you have reset functionality 
+        // for mongo.
+
+        /*
+        data = await createFDB()
+            .merge('upsert', c => c.id, pc => pc.id)
+            .merge('delete', c => c.id, s => s.id)
+            .execute();    
+
+        await reg('merge', do something)
+        */
+
+    // terminate
+
         return results;
 
 }

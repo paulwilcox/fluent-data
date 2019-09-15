@@ -7,7 +7,7 @@ module.exports = http.createServer(async (request, response) => {
 
     console.log('request: ', request.url);
 
-    switch (request.url) {
+    switch (request.url.toLowerCase()) {
 
         case '/':
 
@@ -24,13 +24,13 @@ module.exports = http.createServer(async (request, response) => {
     
             break;
 
-        case '/resetMongo':
+        case '/resetmongo':
             await sampleMongo('mongodb://localhost:27017/sampleData', true);
             response.writeHead(200, { 'Content-type': 'text/plain' });
             response.end('sampleData in MongoDB has been reset to its original state.');
             break;
 
-        case '/resetMongoCustom':
+        case '/resetmongocustom':
             let data = { 
                 table1: [{ a: 'ay', b: 'bee' }, { a: 'eigh', b: 'bea' }],
                 table2: [{ x: 'ex', y: 'why' }, { x: 'ecks', y: 'ooaye' }]
@@ -40,7 +40,7 @@ module.exports = http.createServer(async (request, response) => {
             response.end('sampleData in MongoDB has been reset with custom data.');
             break;
 
-        case '/getMongo':
+        case '/getmongo':
             response.writeHead(200, { 'Content-Type': 'application/json' });
             getMongo()
                 .then(json => response.end(json))
@@ -48,7 +48,7 @@ module.exports = http.createServer(async (request, response) => {
             break;
 
 
-        case '/runClientTests':
+        case '/runclienttests':
 
             fs.readFile('./test/runClientTests.html', function(error, content) {
                 if (error) {

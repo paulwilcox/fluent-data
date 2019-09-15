@@ -1,6 +1,7 @@
 let puppeteer = require('puppeteer');
 let server = require('../server.js');
 let sTests = require('../test/tests.server.js');
+let sample = require('../dist/sampleData.server.js');
 let $$ = require('../dist/FluentDB.server.next.js');
 require('console.table');
 
@@ -14,12 +15,38 @@ require('console.table');
 
     let mongoTests = sTests('mongo', () => 
         $$({ 
-            sam: $$.mongo('mongodb://localhost:27017/sampleFDB'),
-            o: sam => 'orders'
+            sam: $$.mongo('mongodb://localhost:27017/sampleData'),
+            o: sam => 'orders',
+            p: sam => 'products',
+            c: sam => 'customers',
+            pc: sam => 'potentialCustomers',
+            s: sam => 'shoplifters'
         })
     );    
 
-    await Promise.all([mongoTests])
+    let hybridLeft = sTests('mongoHybridLeft', () => 
+        $$({
+            sam: $$.mongo('mongodb://localhost:27017/sampleData'),
+            o: sample.orders,
+            p: sam => 'products',
+            c: sample.customers,
+            pc: sam => 'potentialCustomers',
+            s: sam => 'shoplifters'  
+        })
+    );
+
+    let hybridRight = sTests('mongoHybridRight', () => 
+        $$({
+            sam: $$.mongo('mongodb://localhost:27017/sampleData'),
+            o: sam => 'orders',
+            p: sample.products,
+            c: sam => 'customers',
+            pc: sample.potentialCustomers,
+            s: sample.shoplifters
+        })
+    );
+
+    await Promise.all([mongoTests, hybridLeft, hybridRight])
     .then(seri => {
         for(let series of seri)
         for(let test of series)
@@ -52,7 +79,7 @@ require('console.table');
                 test_name: logs[1], 
                 status: logs[2] === 'true' ? 'pass' : 'fail'
             });  
-        else 
+        else
             console.log(msg.text());
     });
 
