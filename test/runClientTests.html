@@ -5,57 +5,50 @@
     import $$ from './dist/FluentDB.client.next.js';
     import tests from './test/tests.js';
 
-    let testsFunc = (testName, fdbFunc) => () => tests(testName, fdbFunc);
+    sampleIdb('sampleData', true) // resets sampleData in IndexedDB
+    .then(() => Promise.all([
 
-    let clientTests = testsFunc('client', () => 
-        $$({ 
+        tests('client', () => $$({ 
             o: sample.orders,
             p: sample.products,
             c: sample.customers,
             pc: sample.potentialCustomers,
             s: sample.shoplifters
-        })
-    );
+        })),
 
-    let idbTests = testsFunc('idb', () => 
-        $$({ 
+        tests('idb', () => $$({ 
             sam: $$.idb('sampleData'),
             o: sam => 'orders',
             p: sam => 'products',
             c: sam => 'customers',
             pc: sam => 'potentialCustomers',
             s: sam => 'shoplifters'
-        })
-    );
+        })),
 
-    let hybridLeft = testsFunc('clientHybridLeft', () => 
-        $$({
+        tests('idbHybridLeft', () => $$({
             sam: $$.idb('sampleData'),
             o: sample.orders,
             p: sam => 'products',
             c: sample.customers,
             pc: sam => 'potentialCustomers',
             s: sam => 'shoplifters'
-        })
-    );
+        })),
 
-    let hybridRight = testsFunc('clientHybridRight', () => 
-        $$({
+        tests('idbHybridRight', () => $$({
             sam: $$.idb('sampleData'),
             o: sam => 'orders',
             p: sample.products,
             c: sam => 'customers',
             pc: sample.potentialCustomers,
             s: sample.shoplifters 
-        })
-    );
+        }))
 
-    sampleIdb('sampleData', true) // resets sampleData in IndexedDB
-    .then(() => Promise.all([clientTests(), idbTests(), hybridLeft(), hybridRight()]))
+    ]))
     .then(seri => {
-        for(let series of seri)
-        for(let test of series)
-            console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);
+        console.log(seri)
+        for(let series of seri) 
+            for(let test of series)
+                console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);
     })
     .then(() => console.log('done:client.tests'));
 

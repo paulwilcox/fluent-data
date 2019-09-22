@@ -16,10 +16,13 @@ async function tests (seriesName, createFDB) {
 
     // initializations
         
+        console.log(`running tests for series '${seriesName}'`);
+
         let results = [];
         let data;
         let reg = (name, passStatus) => 
-            register(results, data, seriesName, name, passStatus); 
+            register(results, data, seriesName, name, passStatus);
+        
 
     // filter
         
@@ -56,17 +59,17 @@ async function tests (seriesName, createFDB) {
         await reg('join', 
             Object.keys(data[0]).includes('price')
         );
-
+/*
         data = await createFDB()
             .merge('upsert', c => c.id, pc => pc.id)
-            //.merge('delete', c => c.id, s => s.id)
+            .merge('delete', c => c.id, s => s.id)
             .execute(c => c);    
 
         await reg('merge', 
                data.find(row => row.id == 2).fullName == 'Johnathan Doe'
             && data.filter(row => row.id == 4 || row.id == 5).length == 0
         );
-
+*/
     // terminate
 
         return results;

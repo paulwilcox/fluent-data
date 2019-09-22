@@ -1,35 +1,20 @@
 <script type='module'>
 
-    //import sample from "../dist/sampleData.client.js";
-    import sampleIdb from "../dist/sampleData.idb.js";
+    import sample from "../dist/sampleData.client.js";
+    //import sampleIdb from "../dist/sampleData.idb.js";
     import $$ from "../dist/FluentDB.client.next.js";
-
-    let data = { 
-        table1: [{ a: 'ay', b: 'bee' }, { a: 'eigh', b: 'bea' }],
-        table2: [{ x: 'ex', y: 'why' }, { x: 'ecks', y: 'ooaye' }]
-    };
-
-    //sampleIdb('sampleData', data, { table1: 'a', table2: 'x'})
-    //sampleIdb('sampleData', true).then(db => console.log(db.objectStoreNames));
 
     let result =  
         $$({
-            sam: $$.idb('sampleData'),
-            o: sam => 'orders'
+            c: sample.customers,
+            pc: sample.potentialCustomers,
+            s: sample.shoplifters
         })
-        .filter(o => o.customer == 1)
-        .map(o => ({ 
-            id: o.id, 
-            customer: o.customer, 
-            product: o.product,
-            rating: o.rating 
-        }))
-        .group(o => o.rating <= 10)
-        .reduce(o => ({ avgRating: $$.avg(o.rating) }))
-        .execute(o => o);
+        .merge('upsert', c => c.id, pc => pc.id)
+        .merge('delete', c => c.id, s => s.id)
+        .execute(c => c);
 
-    result.then(res => console.log(JSON.stringify(res)));
-
+    console.log(result);
 
 /*
     fetch('getMongo')
@@ -37,5 +22,6 @@
     .then(json => console.log(JSON.stringify(json)))
     .catch(e => console.log({e}));
 */
+
 </script>
 
