@@ -94,6 +94,7 @@ var sampleData_mongo = (
     url = 'mongodb://localhost:27017/sampleData', 
     reset = true
 ) =>
+
     MongoClient.connect(url, { useNewUrlParser: true})
     .then(async client => {
 

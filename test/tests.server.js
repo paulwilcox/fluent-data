@@ -57,19 +57,15 @@ async function tests (seriesName, createFDB) {
             Object.keys(data[0]).includes('price')
         );
 
-    // merge
-
-        // TODO: Don't run this until you have reset functionality 
-        // for mongo.
-
-        /*
         data = await createFDB()
             .merge('upsert', c => c.id, pc => pc.id)
-            .merge('delete', c => c.id, s => s.id)
-            .execute();    
+            //.merge('delete', c => c.id, s => s.id)
+            .execute(c => c);    
 
-        await reg('merge', do something)
-        */
+        await reg('merge', 
+               data.find(row => row.id == 2).fullName == 'Johnathan Doe'
+            && data.filter(row => row.id == 4 || row.id == 5).length == 0
+        );
 
     // terminate
 
