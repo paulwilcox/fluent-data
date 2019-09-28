@@ -1808,10 +1808,8 @@ class FluentDB extends deferable {
                     .then(db => {
 
                         let dsGetter = this.dsGetterIfCallable(db, args, funcName);
-                        if (dsGetter) 
-                            return dsGetter[funcName](...args);
-
-                        return db[funcName](...args)
+                        
+                        return (dsGetter || db)[funcName](...args);
 
                     })
                     .then(db => this.managePromisesAndGetters(db, args, funcName));
@@ -1863,16 +1861,9 @@ class FluentDB extends deferable {
 
         // Resolve dsGetters
             
-            for(let ds of datasets) {
-
-                // If more than one dataset is referenced in the
-                // function, you'll want to resolve any of them
-                // that are in a dsGetter state or else the two
-                // will have trouble working with each other.
-                if (ds.data instanceof dsGetter/* && datasets.length > 1*/) 
+            for(let ds of datasets) 
+                if (ds.data instanceof dsGetter) 
                     ds.data = ds.data.map(x => x); 
-
-            }
 
         // Merge promises
 
@@ -1882,17 +1873,11 @@ class FluentDB extends deferable {
             let keys = datasets.map(ds => ds.key);
             let datas = datasets.map(ds => ds.data);
 
-            return Promise.all(datas)
-                .then(datas => {
-
-                    for(let i in keys) 
-                        db.getDataset(keys[i]).data = datas[i];
-
-                    console.log('mpg all: ' + JSON.stringify(keys));
-    
-                    return db;
-
-                });
+            return Promise.all(datas).then(datas => {
+                for(let i in keys) 
+                    db.getDataset(keys[i]).data = datas[i];
+                return db;
+            });
 
     };
 

@@ -50,13 +50,8 @@ class FluentDB extends deferable {
                 return this
                     .then(db => this.managePromisesAndGetters(db, args, funcName))
                     .then(db => {
-
                         let dsGetter = this.dsGetterIfCallable(db, args, funcName);
-                        if (dsGetter) 
-                            return dsGetter[funcName](...args);
-
-                        return db[funcName](...args)
-
+                        return (dsGetter || db)[funcName](...args);
                     })
                     .then(db => this.managePromisesAndGetters(db, args, funcName));
             };
@@ -119,17 +114,11 @@ class FluentDB extends deferable {
             let keys = datasets.map(ds => ds.key);
             let datas = datasets.map(ds => ds.data);
 
-            return Promise.all(datas)
-                .then(datas => {
-
-                    for(let i in keys) 
-                        db.getDataset(keys[i]).data = datas[i];
-
-                    console.log('mpg all: ' + JSON.stringify(keys));
-    
-                    return db;
-
-                });
+            return Promise.all(datas).then(datas => {
+                for(let i in keys) 
+                    db.getDataset(keys[i]).data = datas[i];
+                return db;
+            });
 
     };
 
