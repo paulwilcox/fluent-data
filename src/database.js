@@ -250,6 +250,12 @@ export class database {
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
 
+console.log(
+    `merge: ` + 
+    `source is ${g.isPromise(source.data) ? '' : 'not'} a promise.  ` + 
+    `target is ${g.isPromise(target.data) ? '' : 'not'} a promise.`
+);
+
         target.data = merger(
             type, 
             target.data, 

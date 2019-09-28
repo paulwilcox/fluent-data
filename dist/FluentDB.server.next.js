@@ -1551,6 +1551,12 @@ class database {
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
 
+console.log(
+    `merge: ` + 
+    `source is ${isPromise(source.data) ? '' : 'not'} a promise.  ` + 
+    `target is ${isPromise(target.data) ? '' : 'not'} a promise.`
+);
+
         target.data = merger(
             type, 
             target.data, 
@@ -1802,7 +1808,7 @@ class FluentDB extends deferable {
                     .then(db => {
 
                         let dsGetter = this.dsGetterIfCallable(db, args, funcName);
-                        if (dsGetter)
+                        if (dsGetter) 
                             return dsGetter[funcName](...args);
 
                         return db[funcName](...args)
@@ -1833,12 +1839,12 @@ class FluentDB extends deferable {
         
     }
 
-    managePromisesAndGetters (db, args, funcName) {
+    managePromisesAndGetters (db, args) {
 
         // Initializations
 
-            let datasets = []; 
-            
+            let datasets = [];             
+
         // Get related datasets
             
             // For any function passed as an argument, see 
@@ -1855,11 +1861,8 @@ class FluentDB extends deferable {
             if (datasets.length == 0)
                 return db;
 
-        // Resolve dsGetters, identify promises
+        // Resolve dsGetters
             
-            let keys = [];
-            let promises = [];
-
             for(let ds of datasets) {
 
                 // If more than one dataset is referenced in the
@@ -1869,34 +1872,24 @@ class FluentDB extends deferable {
                 if (ds.data instanceof dsGetter/* && datasets.length > 1*/) 
                     ds.data = ds.data.map(x => x); 
 
-                // If any dataset is a a promise (by means of 
-                // resolving the getter or otherwise), then 
-                // store its keys and data.
-                if (isPromise(ds.data)){
-                    keys.push(ds.key);
-                    promises.push(ds.data);
-                }
-
             }
-        
+
         // Merge promises
 
-            if (promises.length == 0)
+            if (datasets.filter(ds => isPromise(ds.data)).length == 0)
                 return db;
 
-            promises.push(keys); // quick add for convenience, you'll extract immediately
-            promises.push(db); // ditto
+            let keys = datasets.map(ds => ds.key);
+            let datas = datasets.map(ds => ds.data);
 
-            return Promise.all(promises)
-                .then(array => {
-
-                    let db = array.pop(); // told you so
-                    let keys = array.pop(); // ditto
-                    let promises = array; // now its just proises again
+            return Promise.all(datas)
+                .then(datas => {
 
                     for(let i in keys) 
-                        db.getDataset(keys[i]).data = promises[i];
+                        db.getDataset(keys[i]).data = datas[i];
 
+                    console.log('mpg all: ' + JSON.stringify(keys));
+    
                     return db;
 
                 });

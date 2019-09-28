@@ -1,20 +1,25 @@
 <script type='module'>
 
     import sample from "../dist/sampleData.client.js";
-    //import sampleIdb from "../dist/sampleData.idb.js";
+    import sampleIdb from "../dist/sampleData.idb.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
-    let result =  
-        $$({
-            c: sample.customers,
-            pc: sample.potentialCustomers,
-            s: sample.shoplifters
-        })
-        .merge('upsert', c => c.id, pc => pc.id)
-        .merge('delete', c => c.id, s => s.id)
-        .execute(c => c);
+    (async () => {
 
-    console.log(result);
+        let result = await
+            $$({
+                sam: $$.idb('sampleData'),
+                c: sample.customers,
+                pc: sam => 'potentialCustomers',
+                s: sam => 'shoplifters'
+            })
+            .merge('upsert', c => c.id, pc => pc.id)
+            .merge('delete', c => c.id, s => s.id)
+            .execute(c => c);
+
+        console.log(result);
+
+    })();
 
 /*
     fetch('getMongo')

@@ -59,12 +59,15 @@ async function tests (seriesName, createFDB) {
         await reg('join', 
             Object.keys(data[0]).includes('price')
         );
-/*
+
+    // merge
+
+        if (seriesName == 'idbHybridLeft')
         data = await createFDB()
             .merge('upsert', c => c.id, pc => pc.id)
             .merge('delete', c => c.id, s => s.id)
-            .execute(c => c);    
-
+            .execute();    
+/*
         await reg('merge', 
                data.find(row => row.id == 2).fullName == 'Johnathan Doe'
             && data.filter(row => row.id == 4 || row.id == 5).length == 0
