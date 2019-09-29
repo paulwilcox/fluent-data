@@ -32,10 +32,12 @@ class FluentDB extends deferable {
         let param = parser.parameters(finalMapper)[0];
         finalMapper = thenRemoveUndefinedKeys(finalMapper);
 
-        return g.isPromise(result) 
+        let outerResult = g.isPromise(result) 
             ? result.then(db => db.getDataset(param).data.map(finalMapper))
             : result.getDataset(param).data.map(finalMapper);
-        
+
+        return outerResult;
+
     }
 
     mpgExtend (funcNamesCsv) {
@@ -46,15 +48,42 @@ class FluentDB extends deferable {
             .map(fn => fn.trim());
 
         for(let funcName of funcNames) 
-            this[funcName] = function(...args) {
-                return this
-                    .then(db => this.managePromisesAndGetters(db, args, funcName))
-                    .then(db => {
-                        let dsGetter = this.dsGetterIfCallable(db, args, funcName);
-                        return (dsGetter || db)[funcName](...args);
-                    })
-                    .then(db => this.managePromisesAndGetters(db, args, funcName));
-            };
+            this[funcName] = function(...args) { return this.then(db => {
+
+                let dsGetters = 
+                    [...new Set(
+                        args
+                        .filter(a => g.isFunction(a))
+                        .map(a => parser.parameters(a))
+                        .flat()
+                    )]
+                    .map(p => db.getDataset(p))
+                    .filter(ds => ds != undefined && ds.data instanceof dsGetter);
+
+                // TODO: check to make sure it's not the first dataset in args
+                // because in that situation we want to run the function on the
+                // getter 
+                for(let dsGetter of dsGetters) 
+                    dsGetter.data = dsGetter.data.map(x => x);
+
+                // TODO: until you implement the todo above, this is useless
+                let dsg = this.dsGetterIfCallable(db, args, funcName);
+                if (dsg)
+                    return dsg[funcName](...args);
+
+                let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
+                if (hasPromises) 
+                    return Promise.all(db.datasets.map(ds => ds.data))
+                    .then(datas => {
+                        for(let i in db.datasets) 
+                            db.datasets[i].data = datas[i];
+                        return db;
+                    })                      
+                    .then(db => db[funcName](...args));
+
+                return db[funcName](...args);
+
+            });};
         
     } 
 
@@ -77,50 +106,6 @@ class FluentDB extends deferable {
             : null;
         
     }
-
-    managePromisesAndGetters (db, args) {
-
-        // Initializations
-
-            let datasets = [];             
-
-        // Get related datasets
-            
-            // For any function passed as an argument, see 
-            // what datasets it may be referring to (via the
-            // parameters)
-            
-            for(let arg of args)
-                if (g.isFunction(arg)) {
-                    let dss = db.getDatasets(arg, false);
-                    if (dss.length > 0)
-                        datasets.push(...dss);
-                }
-
-            if (datasets.length == 0)
-                return db;
-
-        // Resolve dsGetters
-            
-            for(let ds of datasets) 
-                if (ds.data instanceof dsGetter) 
-                    ds.data = ds.data.map(x => x); 
-
-        // Merge promises
-
-            if (datasets.filter(ds => g.isPromise(ds.data)).length == 0)
-                return db;
-
-            let keys = datasets.map(ds => ds.key);
-            let datas = datasets.map(ds => ds.data);
-
-            return Promise.all(datas).then(datas => {
-                for(let i in keys) 
-                    db.getDataset(keys[i]).data = datas[i];
-                return db;
-            });
-
-    };
 
 }
 
