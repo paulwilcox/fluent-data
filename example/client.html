@@ -12,12 +12,14 @@
         o: sample.orders,
         p: sample.products
     })
-    .merge('upsert', c => c.id, pc => pc.id)
-    //.merge('delete', x => x.id, s => s.id)
-    //.join((o,p) => o.product == p.id)
-    //.join((o,c) => o.customer == c.id)
-    .catch(err => 'caught')
-    .test('test', c => c, rows => rows.length > 0); 
+    .filter(o => o.customer == 2)
+    .test(
+        'filter', 
+        o => o,
+        data =>  
+            data.filter(x => x.customer == 2).length > 0 
+            && data.filter(x => x.customer != 2).length == 0
+    );
 
     console.log(result);
 

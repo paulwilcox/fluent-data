@@ -1,28 +1,28 @@
-import * as g from '../src/general.js';
+export default async (seriesName, createFDB) =>
+    
+    Promise.all([
 
-export default async function (seriesName, createFDB) {
-
-    // initializations
-        
-        console.log(`running tests for series '${seriesName}'`);
-
-        let results = [];
-        let data;
-        let reg = (name, passStatus) => 
-            register(results, data, seriesName, name, passStatus);
-        
-
-    // filter
-        
-        await createFDB()
+        createFDB()
             .filter(o => o.customer == 2)
-            .execute(o => o);
+            .test(
+                'filter', 
+                o => o,
+                data =>  
+                    data.filter(x => x.customer == 2).length > 0 
+                    && data.filter(x => x.customer != 2).length == 0
+            )
+            
+    ])
+    .then(res => {
+        for(let row of res) {
+            row.passStatus = row.result;
+            row.seriesName = seriesName;
+            row.name = row.testName;
+        }
+        return res;
+    }); 
 
-        await reg('filter', 
-               data.filter(x => x.customer == 2).length > 0 
-            && data.filter(x => x.customer != 2).length == 0
-        ); 
-
+/*
     // map
 
         data = await createFDB()
@@ -54,27 +54,16 @@ export default async function (seriesName, createFDB) {
         data = await createFDB()
             .merge('upsert', c => c.id, pc => pc.id)
             .merge('delete', c => c.id, s => s.id)
-            .execute();    
-/*
+            .execute();  
+            
         await reg('merge', 
                data.find(row => row.id == 2).fullName == 'Johnathan Doe'
             && data.filter(row => row.id == 4 || row.id == 5).length == 0
         );
-*/
+
     // terminate
 
         return results;
-
-}
-
-async function register (results, data, seriesName, name, passStatus) {
-
-    if (g.isPromise(data)) 
-        await data.then(() => results.push({seriesName, name, passStatus}));
-    else
-        await results.push({seriesName, name, passStatus});
-
-    return results;
-
-}    
+*/
+ 
 

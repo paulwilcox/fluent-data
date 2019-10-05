@@ -1797,7 +1797,15 @@ class FluentDB extends deferable {
         catchFunc = err => err
     ) {
 
-        let data = this.execute(finalMapper);
+        let _catchFunc = err => ({
+            testName,
+            result: false,
+            error: catchFunc(err) 
+        });
+
+        let data;
+        try {data = this.execute(finalMapper);}
+        catch (err) {return _catchFunc(err);}
 
         let process = rows => {
             try {
@@ -1812,11 +1820,7 @@ class FluentDB extends deferable {
 
             }
             catch(err) {
-                return { 
-                    testName, 
-                    result: false, 
-                    error: catchFunc(err)
-                };
+                return _catchFunc(err);
             }
         };
 
