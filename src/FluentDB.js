@@ -22,6 +22,42 @@ class FluentDB extends deferable {
         );
     }
 
+    test (
+        boolFunc, 
+        catchFunc = err => err, 
+        trueForAllRows = true, // if false, true for any row
+        failForNoRows = true
+    ) {
+
+        let data = this.execute(boolFunc);
+
+        let process = rows => {
+            try {
+
+                if (!Array.isArray(rows))
+                    throw rows;
+
+                if (failForNoRows && rows.length == 0)
+                    throw 'There were no rows in the result to test';
+
+                return { result:
+                    trueForAllRows 
+                    ? rows.every(x => x) 
+                    : rows.some(x => x)
+                };
+
+            }
+            catch(err) {
+                return { result: false, error: catchFunc(err)};
+            }
+        }
+
+        return g.isPromise(data) 
+            ? data.then(process)
+            : process(data);
+
+    }
+
     execute (finalMapper) {
         
         let result = super.execute();

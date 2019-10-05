@@ -1,6 +1,5 @@
 import * as g from './general.js';
 
-// TODO: Implement Catch and Finally
 export class deferable {
 
     constructor(initial) {

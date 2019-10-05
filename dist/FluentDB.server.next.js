@@ -248,7 +248,6 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
 
 };
 
-// TODO: Implement Catch and Finally
 class deferable {
 
     constructor(initial) {
@@ -1789,6 +1788,42 @@ class FluentDB extends deferable {
             'addSources, filter, map, join, group, sort, reduce, ' + 
             'print, merge'
         );
+    }
+
+    test (
+        boolFunc, 
+        catchFunc = err => err, 
+        trueForAllRows = true, // if false, true for any row
+        failForNoRows = true
+    ) {
+
+        let data = this.execute(boolFunc);
+
+        let process = rows => {
+            try {
+
+                if (!Array.isArray(rows))
+                    throw rows;
+
+                if (failForNoRows && rows.length == 0)
+                    throw 'There were no rows in the result to test';
+
+                return { result:
+                    trueForAllRows 
+                    ? rows.every(x => x) 
+                    : rows.some(x => x)
+                };
+
+            }
+            catch(err) {
+                return { result: false, error: catchFunc(err)};
+            }
+        };
+
+        return isPromise(data) 
+            ? data.then(process)
+            : process(data);
+
     }
 
     execute (finalMapper) {
