@@ -26,7 +26,8 @@ class FluentDB extends deferable {
         boolFunc, 
         catchFunc = err => err, 
         trueForAllRows = true, // if false, true for any row
-        failForNoRows = true
+        failForNoRows = true,
+        testName = 'test'
     ) {
 
         let data = this.execute(boolFunc);
@@ -40,15 +41,16 @@ class FluentDB extends deferable {
                 if (failForNoRows && rows.length == 0)
                     throw 'There were no rows in the result to test';
 
-                return { result:
-                    trueForAllRows 
-                    ? rows.every(x => x) 
-                    : rows.some(x => x)
+                return { 
+                    testName,
+                    result: trueForAllRows 
+                        ? rows.every(x => x) 
+                        : rows.some(x => x)
                 };
 
             }
             catch(err) {
-                return { result: false, error: catchFunc(err)};
+                return { testName, result: false, error: catchFunc(err)};
             }
         }
 
