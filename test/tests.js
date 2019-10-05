@@ -14,7 +14,7 @@ export default async function (seriesName, createFDB) {
 
     // filter
         
-        data = await createFDB()
+        await createFDB()
             .filter(o => o.customer == 2)
             .execute(o => o);
 

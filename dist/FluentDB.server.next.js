@@ -1791,14 +1791,13 @@ class FluentDB extends deferable {
     }
 
     test (
+        testName = 'test',
+        finalMapper,
         boolFunc, 
-        catchFunc = err => err, 
-        trueForAllRows = true, // if false, true for any row
-        failForNoRows = true,
-        testName = 'test'
+        catchFunc = err => err
     ) {
 
-        let data = this.execute(boolFunc);
+        let data = this.execute(finalMapper);
 
         let process = rows => {
             try {
@@ -1806,19 +1805,18 @@ class FluentDB extends deferable {
                 if (!Array.isArray(rows))
                     throw rows;
 
-                if (failForNoRows && rows.length == 0)
-                    throw 'There were no rows in the result to test';
-
                 return { 
                     testName,
-                    result: trueForAllRows 
-                        ? rows.every(x => x) 
-                        : rows.some(x => x)
+                    result: boolFunc(rows)
                 };
 
             }
             catch(err) {
-                return { testName, result: false, error: catchFunc(err)};
+                return { 
+                    testName, 
+                    result: false, 
+                    error: catchFunc(err)
+                };
             }
         };
 
