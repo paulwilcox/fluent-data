@@ -6,6 +6,7 @@ export class deferable {
     constructor(initial) {
         this.value = initial;
         this.thens = [];
+        this.status = 'pending'
     }
 
     then(func) {
@@ -13,14 +14,32 @@ export class deferable {
         return this;
     }
 
+    catch(func) {
+        this.catchFunc = func;
+        return this;
+    }
+
     execute() {
 
         for(let func of this.thens) 
-            if (g.isPromise(this.value)) 
+            if (g.isPromise(this.value)) {
                 this.value = this.value.then(func);
-            else 
-                this.value = func(this.value);
-                
+                this.status = 'promisified';
+            }
+            else {
+                try {
+                    this.value = func(this.value);
+                    if (g.isPromise(this.value))
+                        this.status = 'promisified';
+                }
+                catch(error) {
+                    this.status = 'rejected';
+                    this.value = this.catchFunc(error);
+                    return this.value;
+                }
+            }
+         
+        this.status = 'resolved'; 
         return this.value;
 
     }

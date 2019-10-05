@@ -173,6 +173,7 @@ class deferable {
     constructor(initial) {
         this.value = initial;
         this.thens = [];
+        this.status = 'pending';
     }
 
     then(func) {
@@ -180,14 +181,32 @@ class deferable {
         return this;
     }
 
+    catch(func) {
+        this.catchFunc = func;
+        return this;
+    }
+
     execute() {
 
         for(let func of this.thens) 
-            if (isPromise(this.value)) 
+            if (isPromise(this.value)) {
                 this.value = this.value.then(func);
-            else 
-                this.value = func(this.value);
-                
+                this.status = 'promisified';
+            }
+            else {
+                try {
+                    this.value = func(this.value);
+                    if (isPromise(this.value))
+                        this.status = 'promisified';
+                }
+                catch(error) {
+                    this.status = 'rejected';
+                    this.value = this.catchFunc(error);
+                    return this.value;
+                }
+            }
+         
+        this.status = 'resolved'; 
         return this.value;
 
     }
@@ -1712,17 +1731,25 @@ class FluentDB extends deferable {
         
         let result = super.execute();
 
+        if (this.status == 'rejected')
+            return result;
+
         if (finalMapper === undefined)
             return result;
 
         let param = parser.parameters(finalMapper)[0];
         finalMapper = thenRemoveUndefinedKeys(finalMapper);
 
-        let outerResult = isPromise(result) 
-            ? result.then(db => db.getDataset(param).data.map(finalMapper))
-            : result.getDataset(param).data.map(finalMapper);
+        if (!isPromise(result))
+            return result.getDataset(param).data.map(finalMapper);
 
-        return outerResult;
+        return result
+            .then(db => db.getDataset(param).data.map(finalMapper))
+            .catch(err => {
+                if (this.catchFunc)
+                    return this.catchFunc(err);
+                throw err;
+            });
 
     }
 
@@ -1734,45 +1761,42 @@ class FluentDB extends deferable {
             .map(fn => fn.trim());
 
         for(let funcName of funcNames) 
-            this[funcName] = function(...args) {
-                return this
-                .then(db => {
+            this[funcName] = function(...args) { return this.then(db => {
 
-                    let dsGetters = 
-                        [...new Set(
-                            args
-                            .filter(a => isFunction(a))
-                            .map(a => parser.parameters(a))
-                            .flat()
-                        )]
-                        .map(p => db.getDataset(p))
-                        .filter(ds => ds != undefined && ds.data instanceof dsGetter);
+                let dsGetters = 
+                    [...new Set(
+                        args
+                        .filter(a => isFunction(a))
+                        .map(a => parser.parameters(a))
+                        .flat()
+                    )]
+                    .map(p => db.getDataset(p))
+                    .filter(ds => ds != undefined && ds.data instanceof dsGetter);
 
-                    // TODO: check to make sure it's not the first dataset in args
-                    // because in that situation we want to run the function on the
-                    // getter 
-                    for(let dsGetter of dsGetters) 
-                        dsGetter.data = dsGetter.data.map(x => x);
+                // TODO: check to make sure it's not the first dataset in args
+                // because in that situation we want to run the function on the
+                // getter 
+                for(let dsGetter of dsGetters) 
+                    dsGetter.data = dsGetter.data.map(x => x);
 
-                    let dsg = this.dsGetterIfCallable(db, args, funcName);
-                    if (dsg)
-                        return dsg[funcName](...args);
+                // TODO: until you implement the todo above, this is useless
+                let dsg = this.dsGetterIfCallable(db, args, funcName);
+                if (dsg)
+                    return dsg[funcName](...args);
 
-                    let hasPromises = db.datasets.filter(ds => isPromise(ds.data)).length > 0; 
-                    if (hasPromises) 
-                        return Promise.all(db.datasets.map(ds => ds.data))
-                        .then(datas => {
-                            for(let i in db.datasets) 
-                                db.datasets[i].data = datas[i];
-                            return db;
-                        })                      
-                        .then(db => db[funcName](...args));
+                let hasPromises = db.datasets.filter(ds => isPromise(ds.data)).length > 0; 
+                if (hasPromises) 
+                    return Promise.all(db.datasets.map(ds => ds.data))
+                    .then(datas => {
+                        for(let i in db.datasets) 
+                            db.datasets[i].data = datas[i];
+                        return db;
+                    })                      
+                    .then(db => db[funcName](...args));
 
-                    return db[funcName](...args);
+                return db[funcName](...args);
 
-                });
-
-            };
+            });};
         
     } 
 

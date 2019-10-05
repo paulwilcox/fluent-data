@@ -26,17 +26,25 @@ class FluentDB extends deferable {
         
         let result = super.execute();
 
+        if (this.status == 'rejected')
+            return result;
+
         if (finalMapper === undefined)
             return result;
 
         let param = parser.parameters(finalMapper)[0];
         finalMapper = thenRemoveUndefinedKeys(finalMapper);
 
-        let outerResult = g.isPromise(result) 
-            ? result.then(db => db.getDataset(param).data.map(finalMapper))
-            : result.getDataset(param).data.map(finalMapper);
+        if (!g.isPromise(result))
+            return result.getDataset(param).data.map(finalMapper);
 
-        return outerResult;
+        return result
+            .then(db => db.getDataset(param).data.map(finalMapper))
+            .catch(err => {
+                if (this.catchFunc)
+                    return this.catchFunc(err);
+                throw err;
+            });
 
     }
 
