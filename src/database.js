@@ -235,6 +235,11 @@ export class database {
 
     }
 
+    // TODO: consider requiring mergeExternal to be explicitly called,
+    // or else user may be confused as to whether he/she is pumping
+    // data into an external detaset or an internal one.  Expecially
+    // because an external one can become an internal one after a 
+    // mapping is performed on it.
     merge (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 

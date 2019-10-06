@@ -36,8 +36,6 @@ export class dsGetterMongo extends dsGetter {
                         if (filterFunc(record))
                             results.push(mapFunc(record));
                     });
-
-                client.close(); // TODO: decide if I want to close here or elsewhere or at all
                 
                 return results;
 

@@ -67,3 +67,14 @@ export let isString = input =>
 export let isFunction = input => 
     typeof input === 'function';
 
+// array.flat not out in all browsers/node
+export let flattenArray = array => {
+    let result = [];
+    for(let element of array) 
+        if (Array.isArray(element))
+            for(let nestedElement of element)
+                result.push(nestedElement);
+        else 
+            result.push(element);
+    return result;
+}

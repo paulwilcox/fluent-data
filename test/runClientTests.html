@@ -5,6 +5,9 @@
     import $$ from './dist/FluentDB.client.next.js';
     import tests from './test/tests.js';
 
+    // TODO: I think I have to rebuild sampleIDB after every
+    // tests because the IDB database changes state after
+    // every merge.
     sampleIdb('sampleData', true) // resets sampleData in IndexedDB
     .then(() => Promise.all([
 

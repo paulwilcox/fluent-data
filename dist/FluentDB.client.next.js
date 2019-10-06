@@ -46,6 +46,18 @@ let isString = input =>
 let isFunction = input => 
     typeof input === 'function';
 
+// array.flat not out in all browsers/node
+let flattenArray = array => {
+    let result = [];
+    for(let element of array) 
+        if (Array.isArray(element))
+            for(let nestedElement of element)
+                result.push(nestedElement);
+        else 
+            result.push(element);
+    return result;
+};
+
 class parser {
 
     // Parse function into argument names and body
@@ -200,7 +212,8 @@ class deferable {
                 }
                 catch(error) {
                     this.status = 'rejected';
-                    this.value = this.catchFunc(error);
+                    if (this.catchFunc)
+                        this.value = this.catchFunc(error);
                     return this.value;
                 }
             }
@@ -1490,6 +1503,11 @@ class database {
 
     }
 
+    // TODO: consider requiring mergeExternal to be explicitly called,
+    // or else user may be confused as to whether he/she is pumping
+    // data into an external detaset or an internal one.  Expecially
+    // because an external one can become an internal one after a 
+    // mapping is performed on it.
     merge (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 
@@ -1766,6 +1784,7 @@ class FluentDB extends deferable {
 
     }
 
+    // TODO: Close all dsConnector connections
     execute (finalMapper) {
         
         let result = super.execute();
@@ -1802,13 +1821,14 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
+                let funcArgs = flattenArray(
+                    args
+                    .filter(a => isFunction(a))
+                    .map(a => parser.parameters(a))
+                );
+
                 let dsGetters = 
-                    [...new Set(
-                        args
-                        .filter(a => isFunction(a))
-                        .map(a => parser.parameters(a))
-                        .flat()
-                    )]
+                    [...new Set(funcArgs)]
                     .map(p => db.getDataset(p))
                     .filter(ds => ds != undefined && ds.data instanceof dsGetter);
 

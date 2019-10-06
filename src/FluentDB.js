@@ -62,6 +62,7 @@ class FluentDB extends deferable {
 
     }
 
+    // TODO: Close all dsConnector connections
     execute (finalMapper) {
         
         let result = super.execute();
@@ -98,13 +99,14 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
+                let funcArgs = g.flattenArray(
+                    args
+                    .filter(a => g.isFunction(a))
+                    .map(a => parser.parameters(a))
+                );
+
                 let dsGetters = 
-                    [...new Set(
-                        args
-                        .filter(a => g.isFunction(a))
-                        .map(a => parser.parameters(a))
-                        .flat()
-                    )]
+                    [...new Set(funcArgs)]
                     .map(p => db.getDataset(p))
                     .filter(ds => ds != undefined && ds.data instanceof dsGetter);
 

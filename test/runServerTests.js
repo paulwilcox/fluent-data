@@ -1,15 +1,18 @@
 let $$ = require('../dist/FluentDB.server.next.js');
-let sTests = require('../test/tests.server.js');
 let sample = require('../dist/sampleData.server.js');
+let sTests = require('../test/tests.server.js');
 let sampleMongo = require('../dist/sampleData.mongo.js');
 
+// TODO: I think I have to rebuild sampleMongo after every 
+// series becasue 'merge' changes the state of the external
+// database.
 module.exports = function () {
 
     let url = 'mongodb://localhost:27017/sampleData';
 
     return sampleMongo(url, true)
     .then(() => Promise.all([
-    
+
         sTests('mongo', () => $$({ 
             sam: $$.mongo(url),
             o: sam => 'orders',

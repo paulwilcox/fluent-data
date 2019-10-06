@@ -41,7 +41,7 @@ var tests = async (seriesName, createFDB) =>
             .merge('upsert', c => c.id, pc => pc.id)
             .merge('delete', c => c.id, s => s.id)
             .test('merge', c => c, data =>  
-                data.find(row => row.id == 2).fullName == 'Johnathan Doe' && 
+                data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
                 data.filter(row => row.id == 4 || row.id == 5).length == 0
             )
             

@@ -33,7 +33,8 @@ export class deferable {
                 }
                 catch(error) {
                     this.status = 'rejected';
-                    this.value = this.catchFunc(error);
+                    if (this.catchFunc)
+                        this.value = this.catchFunc(error);
                     return this.value;
                 }
             }
