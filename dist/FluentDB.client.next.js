@@ -1821,6 +1821,10 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
+                let dsg = this.dsGetterIfCallable(db, args, funcName);
+                if (dsg)
+                    return dsg[funcName](...args);
+
                 let funcArgs = flattenArray(
                     args
                     .filter(a => isFunction(a))
@@ -1828,20 +1832,13 @@ class FluentDB extends deferable {
                 );
 
                 let dsGetters = 
-                    [...new Set(funcArgs)]
+                    funcArgs
+                    .filter((a,i,self) => self.indexOf(a) == i)
                     .map(p => db.getDataset(p))
                     .filter(ds => ds != undefined && ds.data instanceof dsGetter);
 
-                // TODO: check to make sure it's not the first dataset in args
-                // because in that situation we want to run the function on the
-                // getter 
                 for(let dsGetter of dsGetters) 
                     dsGetter.data = dsGetter.data.map(x => x);
-
-                // TODO: until you implement the todo above, this is useless
-                let dsg = this.dsGetterIfCallable(db, args, funcName);
-                if (dsg)
-                    return dsg[funcName](...args);
 
                 let hasPromises = db.datasets.filter(ds => isPromise(ds.data)).length > 0; 
                 if (hasPromises) 

@@ -37,6 +37,10 @@ export class dsGetterMongo extends dsGetter {
                             results.push(mapFunc(record));
                     });
                 
+                // TODO: Add a connection close here in order to 
+                // throw an error that as of this writing is not 
+                // caught by the 'catch' statements of the tests.
+
                 return results;
 
             });

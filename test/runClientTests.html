@@ -10,7 +10,7 @@
     // every merge.
     sampleIdb('sampleData', true) // resets sampleData in IndexedDB
     .then(() => Promise.all([
-
+ 
         tests('client', () => $$({ 
             o: sample.orders,
             p: sample.products,
