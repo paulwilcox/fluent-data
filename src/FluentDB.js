@@ -112,11 +112,13 @@ class FluentDB extends deferable {
                 for(let i = dsInfos.length - 1; i >= 0; i--) {
                     let dsInfo = dsInfos[i];
                     let isGetter = dsInfo.ds.data instanceof dsGetter;
-                    let hasFunc = dsInfo.ds.data[funcName];
+                    let hasFunc = dsInfo.ds.data[funcName] ? true : false;
                     if (dsInfo.ix > 0 && isGetter)
                         dsInfo.ds.data = disInfo.ds.data.map(x => x);
-                    if (dsInfo.ix == 0 && isGetter && hasFunc)
-                        return dsInfo.ds.data[funcName](...args);
+                    if (dsInfo.ix == 0 && isGetter && hasFunc) {
+                        dsInfo.ds.data[funcName](...args);
+                        return db;
+                    }
                 }
 
                 let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
