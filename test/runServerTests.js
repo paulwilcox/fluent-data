@@ -22,7 +22,7 @@ module.exports = function () {
             s: sam => 'shoplifters'
         })),    
 
-        sTests('mongoHybridLeft', () => $$({
+        sTests('node/mongo', () => $$({
             sam: $$.mongo(url),
             o: sample.orders,
             p: sam => 'products',
@@ -31,7 +31,7 @@ module.exports = function () {
             s: sam => 'shoplifters'  
         })),
 
-        sTests('mongoHybridRight', () => $$({
+        sTests('mongo/node', () => $$({
             sam: $$.mongo(url),
             o: sam => 'orders',
             p: sample.products,

@@ -56,8 +56,7 @@ class FluentDB extends deferable {
             }
         }
 
-        return g.isPromise(data) 
-            ? data.then(process)
+        return g.isPromise(data) ? data.then(process).catch(_catchFunc)
             : process(data);
 
     }
@@ -99,24 +98,26 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
-                let dsg = this.dsGetterIfCallable(db, args, funcName);
-                if (dsg)
-                    return dsg[funcName](...args);
-
                 let funcArgs = g.flattenArray(
                     args
                     .filter(a => g.isFunction(a))
                     .map(a => parser.parameters(a))
                 );
 
-                let dsGetters = 
+                let dsInfos = 
                     funcArgs
                     .filter((a,i,self) => self.indexOf(a) == i) // distinct
-                    .map(p => db.getDataset(p))
-                    .filter(ds => ds != undefined && ds.data instanceof dsGetter);
+                    .map((p,ix) => ({ ix, ds: db.getDataset(p)}));
 
-                for(let dsGetter of dsGetters) 
-                    dsGetter.data = dsGetter.data.map(x => x);
+                for(let i = dsInfos.length - 1; i >= 0; i--) {
+                    let dsInfo = dsInfos[i];
+                    let isGetter = dsInfo.ds.data instanceof dsGetter;
+                    let hasFunc = dsInfo.ds.data[funcName];
+                    if (dsInfo.ix > 0 && isGetter)
+                        dsInfo.ds.data = disInfo.ds.data.map(x => x);
+                    if (dsInfo.ix == 0 && isGetter && hasFunc)
+                        return dsInfo.ds.data[funcName](...args);
+                }
 
                 let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
                 if (hasPromises) 
@@ -133,26 +134,6 @@ class FluentDB extends deferable {
             });};
         
     } 
-
-    // if args reference a dsGetter one time, and that
-    // getter has a function referred to by funcName, 
-    // then return that getter so that you can then 
-    // call the function on it instead of on FluentDB.
-    dsGetterIfCallable (db, args, funcName) {
-
-        let datasets = [];
-        
-        for (let arg of args) 
-            if (g.isFunction(arg)) 
-                for (let ds of db.getDatasets(arg, false))
-                    datasets.push(ds);
-
-        return !(datasets.data instanceof dsGetter) ? null 
-            : datasets.length != 1 ? null 
-            : datasets[0].data[funcName] ? datasets[0]
-            : null;
-        
-    }
 
 }
 

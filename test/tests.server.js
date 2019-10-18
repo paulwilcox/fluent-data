@@ -30,7 +30,7 @@ var tests = async (seriesName, createFDB) =>
                 Object.keys(data[0]).includes('customer') && 
                 !Object.keys(data[0]).includes('id')
             ),
-            
+
         createFDB()
             .join((o,p) => o.product == p.id)
             .test('join', o => o, data => 
@@ -44,7 +44,7 @@ var tests = async (seriesName, createFDB) =>
                 data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
                 data.filter(row => row.id == 4 || row.id == 5).length == 0
             )
-            
+
     ])
     .then(res => {
         for(let row of res) {

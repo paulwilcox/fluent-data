@@ -28,7 +28,7 @@
             s: sam => 'shoplifters'
         })),
 
-        tests('idbHybridLeft', () => $$({
+        tests('client/idb', () => $$({
             sam: $$.idb('sampleData'),
             o: sample.orders,
             p: sam => 'products',
@@ -37,7 +37,7 @@
             s: sam => 'shoplifters'
         })),
 
-        tests('idbHybridRight', () => $$({
+        tests('idb/client', () => $$({
             sam: $$.idb('sampleData'),
             o: sam => 'orders',
             p: sample.products,

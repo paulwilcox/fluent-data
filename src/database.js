@@ -245,13 +245,13 @@ export class database {
         targetIdentityKey, 
         sourceIdentityKey  
     ) {
-
+/*
         // if the second argument is a function that fetches
         // an external dsGetter, run merge on that, not here.
         let arg2Alias = parser.parameters(arguments[1])[0];
         if(Object.keys(this.dbConnectors).includes(arg2Alias)) 
             return this.mergeExternal(...arguments);    
-
+*/
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
 
@@ -266,7 +266,7 @@ export class database {
         return this;
 
     }
-    
+/*    
     mergeExternal (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         dsGetterFunc,
@@ -284,5 +284,5 @@ export class database {
         return this;
 
     }
-
+*/
 }
