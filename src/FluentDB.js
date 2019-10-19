@@ -8,6 +8,8 @@ import { dsGetter } from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
 import { thenRemoveUndefinedKeys } from './mapper.js';
 
+// TODO: Try-Catch logic is bad
+
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
 }
@@ -20,6 +22,32 @@ class FluentDB extends deferable {
             'addSources, filter, map, join, group, sort, reduce, ' + 
             'print, merge'
         );
+    }
+ 
+    mergeExternal (
+        type, // update, insert, delete, upsert, full, or [] of 4 bools
+        targetIdentityKey, 
+        sourceIdentityKey  
+    ) {
+
+        this.then(db => {
+
+            let target = db.getDataset(targetIdentityKey).data;
+
+            if (!(target instanceof dsGetter))
+                throw 'target dataset is not a dsGetter.  Use "merge" instead.'
+
+            let source = 
+                db.getDataset(sourceIdentityKey)
+                .callWithoutModify('map', x => x); // just get the raw data
+
+            target.merge(type, targetIdentityKey, sourceIdentityKey, source);
+            return db;
+
+        });
+
+        return this;
+
     }
 
     test (
@@ -42,6 +70,7 @@ class FluentDB extends deferable {
         let process = rows => {
             try {
 
+                // if it's not an array, it's the result of a catch
                 if (!Array.isArray(rows))
                     throw rows;
 
@@ -56,35 +85,41 @@ class FluentDB extends deferable {
             }
         }
 
-        return g.isPromise(data) ? data.then(process).catch(_catchFunc)
+        return g.isPromise(data) 
+            ? data.then(process).catch(_catchFunc)
             : process(data);
 
     }
 
     // TODO: Close all dsConnector connections
     execute (finalMapper) {
+
+        let catcher = err => { 
+            if (this.catchFunc)
+                return this.catchFunc(err);
+            throw err;
+        }
         
-        let result = super.execute();
+        try {        
+            
+            let db = super.execute();
+            let param = parser.parameters(finalMapper)[0];
+            finalMapper = thenRemoveUndefinedKeys(finalMapper);
 
-        if (this.status == 'rejected')
-            return result;
+            if (this.status == 'rejected' || finalMapper === undefined)
+                return db;
+    
+            db = this.promisifyDbIfNecessary(db);
 
-        if (finalMapper === undefined)
-            return result;
+            return g.isPromise(db) 
+                ? db.then(db => db.getDataset(param).data.map(finalMapper)).catch(catcher)
+                : db.getDataset(param).data.map(finalMapper);
 
-        let param = parser.parameters(finalMapper)[0];
-        finalMapper = thenRemoveUndefinedKeys(finalMapper);
+        }
 
-        if (!g.isPromise(result))
-            return result.getDataset(param).data.map(finalMapper);
-
-        return result
-            .then(db => db.getDataset(param).data.map(finalMapper))
-            .catch(err => {
-                if (this.catchFunc)
-                    return this.catchFunc(err);
-                throw err;
-            });
+        catch(err) {
+            return catcher(err);
+        }
 
     }
 
@@ -98,44 +133,73 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
-                let funcArgs = g.flattenArray(
-                    args
-                    .filter(a => g.isFunction(a))
-                    .map(a => parser.parameters(a))
-                );
+                let argDatasets = this.argumentDatasets(db, args);
+                let foundGetters = 0;
 
-                let dsInfos = 
-                    funcArgs
-                    .filter((a,i,self) => self.indexOf(a) == i) // distinct
-                    .map((p,ix) => ({ ix, ds: db.getDataset(p)}));
+                for(let i = argDatasets.length - 1; i >= 0; i--) {
 
-                for(let i = dsInfos.length - 1; i >= 0; i--) {
-                    let dsInfo = dsInfos[i];
-                    let isGetter = dsInfo.ds.data instanceof dsGetter;
-                    let hasFunc = dsInfo.ds.data[funcName] ? true : false;
-                    if (dsInfo.ix > 0 && isGetter)
-                        dsInfo.ds.data = disInfo.ds.data.map(x => x);
-                    if (dsInfo.ix == 0 && isGetter && hasFunc) {
-                        dsInfo.ds.data[funcName](...args);
+                    let argDs = argDatasets[i];
+                    let hasFunc = argDs.data[funcName] ? true : false;
+                    let isGetter = argDs.data instanceof dsGetter;
+                    if (isGetter)
+                        foundGetters++;
+
+                    // - If the first dataset arg is a dsGetter, and it is the only dsGetter,
+                    //   and the dsGetter has the function being called, then use the function
+                    //   on that getter.    
+                    if (i == 0 && foundGetters == 1 && hasFunc && funcName != 'merge') {
+                        argDs.data = argDs.data[funcName](...args);
                         return db;
                     }
+
+                    if (isGetter)
+                        argDs.data = argDs.data.map(x => x);
+
                 }
 
-                let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
-                if (hasPromises) 
-                    return Promise.all(db.datasets.map(ds => ds.data))
-                    .then(datas => {
-                        for(let i in db.datasets) 
-                            db.datasets[i].data = datas[i];
-                        return db;
-                    })                      
-                    .then(db => db[funcName](...args));
+                db = this.promisifyDbIfNecessary(db);
 
-                return db[funcName](...args);
+                return (g.isPromise(db)) 
+                    ? db.then(db => db[funcName](...args))
+                    : db[funcName](...args);
 
             });};
         
     } 
+
+    promisifyDbIfNecessary (db) {
+        
+        if (g.isPromise(db))
+            return db;
+
+        let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
+
+        if (!hasPromises)
+            return db;
+
+        return Promise.all(db.datasets.map(ds => ds.data))
+            .then(datas => {
+                for(let i in db.datasets) 
+                    db.datasets[i].data = datas[i];
+                return db;
+            });
+
+    }
+
+    // Get datasets from passed arguments
+    argumentDatasets (db, args) {
+
+        let funcArgs = g.flattenArray(
+            args
+            .filter(a => g.isFunction(a))
+            .map(a => parser.parameters(a))
+        );
+
+        return funcArgs
+            .filter((a,i,self) => self.indexOf(a) == i) // distinct
+            .map(p => db.getDataset(p));
+
+    }
 
 }
 

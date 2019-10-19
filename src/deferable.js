@@ -20,27 +20,30 @@ export class deferable {
 
     execute() {
 
-        for(let func of this.thens) 
-            if (g.isPromise(this.value)) {
-                this.value = this.value.then(func);
-                this.status = 'promisified';
-            }
-            else {
-                try {
-                    this.value = func(this.value);
-                    if (g.isPromise(this.value))
-                        this.status = 'promisified';
-                }
-                catch(error) {
-                    this.status = 'rejected';
-                    if (this.catchFunc)
-                        this.value = this.catchFunc(error);
-                    return this.value;
-                }
-            }
-         
-        this.status = 'resolved'; 
-        return this.value;
+        try {
+                
+            for(let func of this.thens) 
+                this.value = g.isPromise(this.value) 
+                    ? this.value.then(func)
+                    : func(this.value);
+
+            this.status = g.isPromise(this.value) 
+                ? 'promisified' 
+                : 'resolved'; 
+            
+            if (g.isPromise(this.value) && this.catchFunc)
+                this.value = this.value.catch(this.catchFunc);
+
+            return this.value;
+
+        }
+
+        catch(error) {
+            this.status = 'rejected';
+            if (this.catchFunc)
+                this.value = this.catchFunc(error);
+            return error;
+        }
 
     }
 

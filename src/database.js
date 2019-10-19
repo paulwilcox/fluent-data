@@ -235,23 +235,12 @@ export class database {
 
     }
 
-    // TODO: consider requiring mergeExternal to be explicitly called,
-    // or else user may be confused as to whether he/she is pumping
-    // data into an external detaset or an internal one.  Expecially
-    // because an external one can become an internal one after a 
-    // mapping is performed on it.
     merge (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 
         sourceIdentityKey  
     ) {
-/*
-        // if the second argument is a function that fetches
-        // an external dsGetter, run merge on that, not here.
-        let arg2Alias = parser.parameters(arguments[1])[0];
-        if(Object.keys(this.dbConnectors).includes(arg2Alias)) 
-            return this.mergeExternal(...arguments);    
-*/
+
         let target = this.getDataset(targetIdentityKey);
         let source = this.getDataset(sourceIdentityKey); 
 
@@ -266,23 +255,5 @@ export class database {
         return this;
 
     }
-/*    
-    mergeExternal (
-        type, // update, insert, delete, upsert, full, or [] of 4 bools
-        dsGetterFunc,
-        targetIdentityKey, 
-        sourceIdentityKey  
-    ) {
 
-        let dsGetter = this.makeDsGetter(dsGetterFunc);
-
-        let source = 
-            this.getDataset(sourceIdentityKey)
-            .callWithoutModify('map', x => x); // just get the raw data
-
-        dsGetter.merge(type, targetIdentityKey, sourceIdentityKey, source);
-        return this;
-
-    }
-*/
 }
