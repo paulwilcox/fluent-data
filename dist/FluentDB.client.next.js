@@ -1756,6 +1756,9 @@ class FluentDB extends deferable {
         catchFunc = err => err
     ) {
 
+        if (testName == 'notest')
+            return undefined;
+
         let _catchFunc = err => ({
             testName,
             result: false,

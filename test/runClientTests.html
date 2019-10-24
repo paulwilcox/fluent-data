@@ -48,7 +48,6 @@
 
     ]))
     .then(seri => {
-        console.log(seri)
         for(let series of seri) 
             for(let test of series)
                 console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);

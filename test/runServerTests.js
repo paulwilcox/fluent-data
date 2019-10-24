@@ -1,6 +1,6 @@
 let $$ = require('../dist/FluentDB.server.next.js');
 let sample = require('../dist/sampleData.server.js');
-let sTests = require('../test/tests.server.js');
+let tests = require('../test/tests.server.js');
 let sampleMongo = require('../dist/sampleData.mongo.js');
 
 // TODO: I think I have to rebuild sampleMongo after every 
@@ -13,7 +13,7 @@ module.exports = function () {
     return sampleMongo(url, true)
     .then(() => Promise.all([
 
-        sTests('mongo', () => $$({ 
+        tests('mongo', () => $$({ 
             sam: $$.mongo(url),
             o: sam => 'orders',
             p: sam => 'products',
@@ -22,7 +22,7 @@ module.exports = function () {
             s: sam => 'shoplifters'
         })),    
 
-        sTests('node/mongo', () => $$({
+        tests('node/mongo', () => $$({
             sam: $$.mongo(url),
             o: sample.orders,
             p: sam => 'products',
@@ -31,7 +31,7 @@ module.exports = function () {
             s: sam => 'shoplifters'  
         })),
 
-        sTests('mongo/node', () => $$({
+        tests('mongo/node', () => $$({
             sam: $$.mongo(url),
             o: sam => 'orders',
             p: sample.products,
