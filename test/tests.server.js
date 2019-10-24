@@ -9,7 +9,7 @@
 
 'use strict';
 
-// TODO: Create a way to only run certain tests or a single
+// TODO: Try to make it so that seriToRun and testsToRun are 
 
 function name (testName, seriesName) {
     return testName;
@@ -38,6 +38,22 @@ async function tests(seriesName, createFDB) {
                 Object.keys(data[0]).includes('customer') && 
                 !Object.keys(data[0]).includes('id')
             ),
+
+        createFDB() 
+            .sort((o,o2) => // 'o2' is free, in that it doesn't matter what you name it
+                o.customer > o2.customer ? 1
+                : o.customer < o2.customer ? -1  
+                : o.rating > o2.rating ? -1 
+                : o.rating < o2.rating ? 1
+                : 0
+            )
+            .test(n('sort'), o => o, data => {
+                for(let i = 1; i < data.length; i++) {
+                    let prv = data[i-1];
+                    let cur = data[i];
+                    return prv.customer <= cur.customer && prv.rating >= cur.rating;
+                }
+            }),
 
         createFDB()
             .join((o,p) => o.product == p.id)

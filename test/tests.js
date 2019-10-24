@@ -1,6 +1,11 @@
-// TODO: Create a way to only run certain tests or a single
-// test if you want.  This should be both for the tests
-// here as well as running certain createFDBs.
+// TODO: Try to make it so that seriToRun and testsToRun are 
+// set from the user in the console.  Most likely by using 
+// process.argv (remember that args start at index 2 so use 
+// process.argv[2] and process.argv[3]) inside runTests.js and 
+// then accepting the variables as parameters in this file.
+
+// TODO: Implement testing structure for FluentDB.mergeExternal,
+// or just do direct tests, because it is not really covered here.
 
 let seriToRun = null;
 let testsToRun = null;
@@ -36,6 +41,22 @@ export default async function(seriesName, createFDB) {
                 Object.keys(data[0]).includes('customer') && 
                 !Object.keys(data[0]).includes('id')
             ),
+
+        createFDB() 
+            .sort((o,o2) => // 'o2' is free, in that it doesn't matter what you name it
+                o.customer > o2.customer ? 1
+                : o.customer < o2.customer ? -1  
+                : o.rating > o2.rating ? -1 
+                : o.rating < o2.rating ? 1
+                : 0
+            )
+            .test(n('sort'), o => o, data => {
+                for(let i = 1; i < data.length; i++) {
+                    let prv = data[i-1];
+                    let cur = data[i];
+                    return prv.customer <= cur.customer && prv.rating >= cur.rating;
+                }
+            }),
 
         createFDB()
             .join((o,p) => o.product == p.id)

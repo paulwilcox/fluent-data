@@ -12,8 +12,13 @@
         pc: sam => 'potentialCustomers',
         s: sam => 'shoplifters' 
     })
-    .join((o,p) => o.product == p.id)
-    //.map(p => p) 
+    .sort((o,o2) => // 'o2' is free, in that it doesn't matter what you name it
+        o.customer > o2.customer ? 1
+        : o.customer < o2.customer ? -1  
+        : o.rating > o2.rating ? -1 
+        : o.rating < o2.rating ? 1
+        : 0
+    )
     .execute(o => o) 
 
     console.log(result);

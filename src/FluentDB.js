@@ -135,7 +135,6 @@ class FluentDB extends deferable {
 
                 db = this.resolveGetters(db, funcName, args);
                 db = this.promisifyDbIfNecessary(db);
-
                 
                 return (g.isPromise(db)) 
                     ? db.then(db => db[funcName](...args))
@@ -202,7 +201,8 @@ class FluentDB extends deferable {
 
         return funcArgs
             .filter((a,i,self) => self.indexOf(a) == i) // distinct
-            .map(p => db.getDataset(p));
+            .map(p => db.getDataset(p))
+            .filter(p => p); // some function params don't represent datasets
 
     }
 
