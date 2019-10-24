@@ -128,7 +128,7 @@ export class database {
         matchingLogic, // (f,j) => f.col1 == j.col1 && f.col2 < j.col2
         mapper
     ) {
-
+        
         // You can tell whether the user desires to bypass newKey or
         // options based on place of the first parameter that is not
         // a string.  Shift the arguments accordingly and call 'join' 

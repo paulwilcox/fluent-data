@@ -219,9 +219,11 @@ class deferable {
 
         catch(error) {
             this.status = 'rejected';
-            if (this.catchFunc)
+            if (this.catchFunc) {
                 this.value = this.catchFunc(error);
-            return error;
+                return;
+            }
+            throw error;
         }
 
     }
@@ -1399,7 +1401,7 @@ class database {
         matchingLogic, // (f,j) => f.col1 == j.col1 && f.col2 < j.col2
         mapper
     ) {
-
+        
         // You can tell whether the user desires to bypass newKey or
         // options based on place of the first parameter that is not
         // a string.  Shift the arguments accordingly and call 'join' 
@@ -1714,9 +1716,10 @@ class FluentDB extends deferable {
 
     constructor() {
         super(new database());
-        this.mpgExtend(
-            'addSources, filter, map, join, group, sort, reduce, ' + 
-            'print, merge'
+        this.attachDbFuncs(
+            'addSources', 'filter', 'map', 
+            'join', 'group', 'sort', 
+            'reduce', 'print', 'merge'
         );
     }
  
@@ -1797,8 +1800,9 @@ class FluentDB extends deferable {
         };
         
         try {        
-            
+
             let db = super.execute();
+
             let param = parser.parameters(finalMapper)[0];
             finalMapper = thenRemoveUndefinedKeys(finalMapper);
 
@@ -1819,42 +1823,15 @@ class FluentDB extends deferable {
 
     }
 
-    mpgExtend (funcNamesCsv) {
-
-        let funcNames = 
-            funcNamesCsv
-            .split(',')
-            .map(fn => fn.trim());
+    attachDbFuncs (...funcNames) {
 
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
-                let argDatasets = this.argumentDatasets(db, args);
-                let foundGetters = 0;
-
-                for(let i = argDatasets.length - 1; i >= 0; i--) {
-
-                    let argDs = argDatasets[i];
-                    let hasFunc = argDs.data[funcName] ? true : false;
-                    let isGetter = argDs.data instanceof dsGetter;
-                    if (isGetter)
-                        foundGetters++;
-
-                    // - If the first dataset arg is a dsGetter, and it is the only dsGetter,
-                    //   and the dsGetter has the function being called, then use the function
-                    //   on that getter.    
-                    if (i == 0 && foundGetters == 1 && hasFunc && funcName != 'merge') {
-                        argDs.data = argDs.data[funcName](...args);
-                        return db;
-                    }
-
-                    if (isGetter)
-                        argDs.data = argDs.data.map(x => x);
-
-                }
-
+                db = this.resolveGetters(db, funcName, args);
                 db = this.promisifyDbIfNecessary(db);
 
+                
                 return (isPromise(db)) 
                     ? db.then(db => db[funcName](...args))
                     : db[funcName](...args);
@@ -1862,6 +1839,33 @@ class FluentDB extends deferable {
             });};
         
     } 
+
+    resolveGetters(db, funcName, args) {
+
+        let argDatasets = this.argumentDatasets(db, args);
+        let foundGetters = 0;
+
+        for(let i = argDatasets.length - 1; i >= 0; i--) {
+
+            let argDs = argDatasets[i];
+            let hasFunc = argDs.data[funcName] ? true : false;
+            let isGetter = argDs.data instanceof dsGetter;
+            if (isGetter)
+                foundGetters++;
+
+            // - If the first dataset arg is a dsGetter, and it is the only dsGetter,
+            //   and the dsGetter has the function being called, then use the function
+            //   on that getter.    
+            if (i == 0 && isGetter && foundGetters == 1 && hasFunc && funcName != 'merge') 
+                argDs.data = argDs.data[funcName](...args);
+            else if (isGetter) 
+                argDs.data = argDs.data.map(x => x);
+
+        }
+
+        return db;
+
+    }
 
     promisifyDbIfNecessary (db) {
         

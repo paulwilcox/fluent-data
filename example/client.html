@@ -6,22 +6,15 @@
 
     let result = $$({
         sam: $$.idb('sampleData'),
-        o: sam => 'orders',
-        p: sample.products,
-        c: sam => 'customers',
-        pc: sample.potentialCustomers,
-        s: sample.shoplifters 
+        o: sample.orders,
+        p: sam => 'products',
+        c: sample.customers,
+        pc: sam => 'potentialCustomers',
+        s: sam => 'shoplifters' 
     })
-    //.join('inner', (o,c) => o.customer == c.id)
-    .merge('upsert', c => c.id, pc => pc.id)
-    .merge('delete', c => c.id, s => s.id)
-    //.catch(err => err)
-    .execute(c => c) /*
-    .test('merge', c => c, data =>  
-        data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
-        data.filter(row => row.id == 4 || row.id == 5).length == 0,
-        err => err
-    ) */
+    .join((o,p) => o.product == p.id)
+    //.map(p => p) 
+    .execute(o => o) 
 
     console.log(result);
 

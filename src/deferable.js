@@ -40,9 +40,11 @@ export class deferable {
 
         catch(error) {
             this.status = 'rejected';
-            if (this.catchFunc)
+            if (this.catchFunc) {
                 this.value = this.catchFunc(error);
-            return error;
+                return;
+            }
+            throw error;
         }
 
     }
