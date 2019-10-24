@@ -12,14 +12,20 @@
         pc: sam => 'potentialCustomers',
         s: sam => 'shoplifters' 
     })
-    .sort((o,o2) => // 'o2' is free, in that it doesn't matter what you name it
-        o.customer > o2.customer ? 1
-        : o.customer < o2.customer ? -1  
-        : o.rating > o2.rating ? -1 
-        : o.rating < o2.rating ? 1
-        : 0
-    )
-    .execute(o => o) 
+    .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
+    .reduce(o => ({
+        customer: $$.first(o.customer), 
+        speed: $$.avg(o.speed),
+        rating: $$.avg(o.rating),
+        speed_cor: $$.cor(o.speed, o.rating)
+    }))
+    .test('groupReduce', o => o, data => {
+        let row0 = prop => Math.round(data[0][prop] * 100) / 100;
+        return data.length == 3
+            && row0('rating') == 58.29
+            && row0('speed') == 4.57
+            && row0('speed_cor') == 0.74;
+    });
 
     console.log(result);
 

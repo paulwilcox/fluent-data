@@ -1,3 +1,5 @@
+import $$ from "../dist/FluentDB.client.next.js";
+
 // TODO: Try to make it so that seriToRun and testsToRun are 
 // set from the user in the console.  Most likely by using 
 // process.argv (remember that args start at index 2 so use 
@@ -63,6 +65,22 @@ export default async function(seriesName, createFDB) {
             .test(n('join'), o => o, data => 
                 Object.keys(data[0]).includes('price')
             ),
+
+        createFDB()
+            .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
+            .reduce(o => ({
+                customer: $$.first(o.customer), 
+                speed: $$.avg(o.speed),
+                rating: $$.avg(o.rating),
+                speed_cor: $$.cor(o.speed, o.rating)
+            }))
+            .test(n('groupReduce'), o => o, data => {
+                let row0 = prop => Math.round(data[0][prop] * 100) / 100;
+                return data.length == 3
+                    && row0('rating') == 58.29
+                    && row0('speed') == 4.57
+                    && row0('speed_cor') == 0.74;
+            }),
 
         createFDB()
             .merge('upsert', c => c.id, pc => pc.id)
