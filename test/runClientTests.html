@@ -5,6 +5,10 @@
     import $$ from './dist/FluentDB.client.next.js';
     import tests from './test/tests.js';
 
+    // TODO: Just got this to fill in from the user passed url.  
+    // Now I need to pass it to 'tests' ('./test/test.js') 
+    let seriToRun = __seriToRun;
+
     sampleIdb('sampleData', true) // resets sampleData in IndexedDB
     .then(() => Promise.all([
 

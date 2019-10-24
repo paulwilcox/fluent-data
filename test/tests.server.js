@@ -1974,11 +1974,7 @@ $$.idb = dbName => new dbConnectorIdb(dbName);
 $$.dbConnector = dbConnector;
 $$.dsGetter = dsGetter;
 
-let testsToRun = 'groupReduce';
-
 function name (testName, seriesName) {
-    if(!testsToRun.includes(testName) && testsToRun != testName)
-        return 'notest';
     return testName;
 }
 

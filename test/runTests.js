@@ -3,6 +3,8 @@ let server = require('../server.js');
 let getServerResults = require('./runServerTests.js');
 require('console.table');
 
+let seriToRun = 'client';
+
 (async () => {
 
     let headless = true;
@@ -45,7 +47,7 @@ require('console.table');
         close();
     });
 
-    await page.goto('http://127.0.0.1:8081/runClientTests');
+    await page.goto(`http://127.0.0.1:8081/runClientTests?seriToRun=${seriToRun}`);
 
 })();
 

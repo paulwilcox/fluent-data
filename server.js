@@ -3,11 +3,30 @@ let fs = require('fs');
 let sampleMongo = require('./dist/sampleData.mongo.js');
 let getMongo = require('./example/server.getMongo.js');
 
+// Note that because this isnt really supposed to be a produciton site,
+// I'm (psw) taking advantage and writing it from 'scratch' just to 
+// keep up a good feel for the nuts and bolts.
+
 module.exports = http.createServer(async (request, response) => {
 
     console.log('request: ', request.url);
+    let str = request.url.split(/\?|\&/);
+    let url = str[0].toLowerCase();
+    
+    let params = {};
+    for(let s of str.slice(1)) {
+        let terms = s.split('=').map(t => decodeURIComponent(t));
+        params[terms[0]] = terms[1];
+    };
 
-    switch (request.url.toLowerCase()) {
+    let fillTemplate = content => {
+        content = content.toString()
+        for(let param of Object.entries(params)) 
+            content = content.replace(`__${param[0]}`, param[1]);
+        return content;
+    }
+    
+    switch (url) {
 
         case '/':
 
@@ -56,6 +75,7 @@ module.exports = http.createServer(async (request, response) => {
                     response.end(error.message);
                 }
                 else {
+                    content = fillTemplate(content)
                     response.writeHead(200, { 'Content-Type': 'text/html' });
                     response.end(content, 'utf-8');
                 }
@@ -71,12 +91,12 @@ module.exports = http.createServer(async (request, response) => {
         default:
 
             let cType =
-                request.url.endsWith('.css') ? 'text/css'
-                : request.url.endsWith('.js') ? 'text/javascript'
-                : request.url.endsWith('.html') ? 'text/html'
+                url.endsWith('.css') ? 'text/css'
+                : url.endsWith('.js') ? 'text/javascript'
+                : url.endsWith('.html') ? 'text/html'
                 : null;
 
-            fs.readFile('.' + request.url, function(error, content) {
+            fs.readFile('.' + url, function(error, content) {
                 if (error) {
                     response.writeHead(500);
                     response.end(error.message);
