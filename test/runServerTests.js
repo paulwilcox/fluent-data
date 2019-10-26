@@ -20,8 +20,8 @@ module.exports = function (seriToRun, testsToRun) {
         tests('mongo', () => $$({ 
             sam: $$.mongo(url),
             o: sam => 'orders',
-            p: sam => 'products',
             c: sam => 'customers',
+            p: sam => 'products',
             pc: sam => 'potentialCustomers',
             s: sam => 'shoplifters'
         })),    
@@ -29,8 +29,8 @@ module.exports = function (seriToRun, testsToRun) {
         tests('node/mongo', () => $$({
             sam: $$.mongo(url),
             o: sample.orders,
-            p: sam => 'products',
             c: sample.customers,
+            p: sam => 'products',
             pc: sam => 'potentialCustomers',
             s: sam => 'shoplifters'  
         })),
@@ -38,8 +38,8 @@ module.exports = function (seriToRun, testsToRun) {
         tests('mongo/node', () => $$({
             sam: $$.mongo(url),
             o: sam => 'orders',
-            p: sample.products,
             c: sam => 'customers',
+            p: sample.products,
             pc: sample.potentialCustomers,
             s: sample.shoplifters
         }))

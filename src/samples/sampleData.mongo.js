@@ -3,7 +3,7 @@ let sampleDataSets = require('./sampleData.server.js');
 
 module.exports = (
     url = 'mongodb://localhost:27017/sampleData', 
-    reset = true
+    reset = true // omit to ignore, 'true' to reset from sampleData, or pass a dataset 
 ) =>
 
     MongoClient.connect(url, { useNewUrlParser: true})

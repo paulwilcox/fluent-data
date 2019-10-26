@@ -6,7 +6,10 @@ require('console.table');
 let seriToRun = process.argv[2];
 let testsToRun = process.argv[3];
 
-console.log({seriToRun, testsToRun});
+let clientUrl = 'http://127.0.0.1:8081/runClientTests'
+if (seriToRun) clientUrl += `&seriToRun='${seriToRun}'`;
+if (testsToRun) clientUrl += `&testsToRun='${testsToRun}'`; 
+clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is actually what we want
 
 (async () => {
 
@@ -50,9 +53,7 @@ console.log({seriToRun, testsToRun});
         close();
     });
 
-    await page.goto(
-        `http://127.0.0.1:8081/runClientTests?seriToRun='${seriToRun}'&testsToRun='${testsToRun}'`
-    );
+    await page.goto(clientUrl);
 
 })();
 

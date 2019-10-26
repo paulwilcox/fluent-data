@@ -92,7 +92,7 @@ let MongoClient = mongodb.MongoClient;
 
 var sampleData_mongo = (
     url = 'mongodb://localhost:27017/sampleData', 
-    reset = true
+    reset = true // omit to ignore, 'true' to reset from sampleData, or pass a dataset 
 ) =>
 
     MongoClient.connect(url, { useNewUrlParser: true})

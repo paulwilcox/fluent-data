@@ -1974,12 +1974,6 @@ $$.idb = dbName => new dbConnectorIdb(dbName);
 $$.dbConnector = dbConnector;
 $$.dsGetter = dsGetter;
 
-// TODO: Try to make it so that seriToRun and testsToRun are 
-// set from the user in the console.  Most likely by using 
-// process.argv (remember that args start at index 2 so use 
-// process.argv[2] and process.argv[3]) inside runTests.js and 
-// then accepting the variables as parameters in this file.
-
 // TODO: Implement testing structure for FluentDB.mergeExternal,
 // or just do direct tests, because it is not really covered here.
 
@@ -1991,11 +1985,10 @@ class tests {
     }
 
     name (testName, seriesName) {
-        if(this.testsToRun && !this.testsToRun.includes(testName) && this.testsToRun != testName)
-            return 'notest';
-        if(this.seriToRun && !this.seriToRun.includes(seriesName) && this.seriToRun != seriesName)
-            return 'notest';
-        return testName;
+        let compare = (x,y) => x !== undefined && !x.includes(y) && x != y;
+        return compare(this.testsToRun, testName) ? 'notest'
+            : compare(this.seriToRun, seriesName) ? 'notest'
+            : testName;
     }
 
     async run (seriesName, createFDB) { 
