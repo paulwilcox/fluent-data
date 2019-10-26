@@ -1,6 +1,10 @@
 import * as idb from 'idb';
 import sample from './sampleData.client.js';
 
+// TODO: try to create better reset behavior that matches
+// what now exists in sampleData.mongo.js.  Then make sure
+// it doesn't break runTests.js.  Then write tests for 
+// FluentDB.mergeExternal() on IDB and Mongo as targets.
 export default async function (dbName, reset, keyPaths) { 
 
     if (reset)
