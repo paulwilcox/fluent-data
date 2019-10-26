@@ -22,7 +22,7 @@ module.exports = http.createServer(async (request, response) => {
     let fillTemplate = content => {
         content = content.toString()
         for(let param of Object.entries(params)) 
-            content = content.replace(`__${param[0]}`, param[1]);
+            content = content.replace(`__${param[0]}__`, param[1]);
         return content;
     }
     
