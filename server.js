@@ -4,9 +4,9 @@ let sampleMongo = require('./dist/sampleData.mongo.js');
 let getMongo = require('./example/server.getMongo.js');
 
 // Note that because this isnt really supposed to be a produciton site,
-// I'm (psw) taking advantage and writing it from 'scratch' just to 
-// keep up a good feel for the nuts and bolts.
-
+// I'm (psw) taking advantage and writing it only using 'http' (and not
+// using express or hapi) so that I can come closer to the nuts and
+// bolts of it all.
 module.exports = http.createServer(async (request, response) => {
 
     console.log('request: ', request.url);
@@ -22,7 +22,8 @@ module.exports = http.createServer(async (request, response) => {
     let fillTemplate = content => {
         content = content.toString()
         for(let param of Object.entries(params)) 
-            content = content.replace(`__${param[0]}__`, param[1]);
+            content = content.replace(new RegExp(`__${param[0]}__`, 'g'), param[1]);
+        content = content.replace(/__\w+__/g, 'undefined');
         return content;
     }
     
