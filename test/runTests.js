@@ -3,7 +3,10 @@ let server = require('../server.js');
 let getServerResults = require('./runServerTests.js');
 require('console.table');
 
-let seriToRun = 'client';
+let seriToRun = process.argv[2];
+let testsToRun = process.argv[3];
+
+console.log({seriToRun, testsToRun});
 
 (async () => {
 
@@ -27,7 +30,7 @@ let seriToRun = 'client';
         let logs = msg.text().split(' ');
         if (logs[0] == 'done:client.tests') {
             close();
-            let serverResults = await getServerResults();
+            let serverResults = await getServerResults(seriToRun, testsToRun);
             results.push(...serverResults);             
             console.log('\nRESULTS: client.tests:\n');
             console.table(results);
@@ -47,7 +50,9 @@ let seriToRun = 'client';
         close();
     });
 
-    await page.goto(`http://127.0.0.1:8081/runClientTests?seriToRun=${seriToRun}`);
+    await page.goto(
+        `http://127.0.0.1:8081/runClientTests?seriToRun='${seriToRun}'&testsToRun='${testsToRun}'`
+    );
 
 })();
 

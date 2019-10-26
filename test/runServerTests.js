@@ -1,12 +1,16 @@
 let $$ = require('../dist/FluentDB.server.next.js');
 let sample = require('../dist/sampleData.server.js');
-let tests = require('../test/tests.server.js');
+let _tests = require('../test/tests.server.js');
 let sampleMongo = require('../dist/sampleData.mongo.js');
 
 // TODO: I think I have to rebuild sampleMongo after every 
 // series becasue 'merge' changes the state of the external
 // database.
-module.exports = function () {
+module.exports = function (seriToRun, testsToRun) {
+
+    let tests = (testName, fdbCreator) =>
+        new _tests(seriToRun, testsToRun)
+        .run(testName, fdbCreator);
 
     let url = 'mongodb://localhost:27017/sampleData';
 
