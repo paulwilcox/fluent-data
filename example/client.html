@@ -41,7 +41,7 @@
             if ([...db.objectStoreNames].indexOf(key) == -1)
                 continue;
             console.log(`deleting ${key}`);
-            await db.deleteObjectStore(name);
+            await db.deleteObjectStore(key);
         }
 
         for (let key of Object.keys(datasets)) { 
