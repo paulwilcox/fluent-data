@@ -7,6 +7,89 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+'use strict';
+
+var mongodb = require('mongodb');
+
+class dsGetter {
+
+    constructor(dbConnector) {
+        this.dbConnector = dbConnector;
+    }
+
+    map() { throw "Please override 'map'." }
+    filter() { throw "Please override 'filter'." }
+    merge() { throw "Please override 'merge'." }
+
+}
+
+class dsGetterMongo extends dsGetter {
+
+    constructor (collectionName, connector) {
+        super();
+        this.collectionName = collectionName;
+        this.connector = connector;
+        this.filterFunc;
+    }
+
+    filter(filterFunc) {
+
+        if (!this.filterFunc) 
+            this.filterFunc = filterFunc;
+        else 
+            this.filterFunc = this.filterFunc && filterFunc;
+
+        return this;
+
+    }
+
+    map(mapFunc) {
+            
+        return this.connector
+            .then(async client => {
+                
+                let db = client.db();
+                let filterFunc = this.filterFunc || (x => true);
+                    
+                let results = [];
+
+                await db.collection(this.collectionName)
+                    .find()
+                    .forEach(record => {
+                        if (filterFunc(record))
+                            results.push(mapFunc(record));
+                    });
+                
+                // TODO: Add a connection close here in order to 
+                // throw an error that as of this writing is not 
+                // caught by the 'catch' statements of the tests.
+
+                return results;
+
+            });
+
+    }
+
+}
+
+class dbConnector {
+    open() { throw "Please override 'open'." }
+    dsGetter() { throw "Please override 'dsGetter'."}
+}
+
+class dbConnectorMongo extends dbConnector {
+
+    constructor (url) {
+        super();
+        this.client = mongodb.MongoClient.connect(url, {useNewUrlParser: true});
+    }
+
+    dsGetter(collectionName) {
+        return new dsGetterMongo(collectionName, this.client);
+    }
+
+}
+
 let isPromise = obj => 
     Promise.resolve(obj) == obj;
 
@@ -230,18 +313,6 @@ class deferable {
 
 }
 
-class dsGetter {
-
-    constructor(dbConnector) {
-        this.dbConnector = dbConnector;
-    }
-
-    map() { throw "Please override 'map'." }
-    filter() { throw "Please override 'filter'." }
-    merge() { throw "Please override 'merge'." }
-
-}
-
 class dataset {
 
     constructor(key, data) {
@@ -296,11 +367,6 @@ class dataset {
     
     }
 
-}
-
-class dbConnector {
-    open() { throw "Please override 'open'." }
-    dsGetter() { throw "Please override 'dsGetter'."}
 }
 
 let thenRemoveUndefinedKeys = mapper =>
@@ -1756,6 +1822,9 @@ class FluentDB extends deferable {
         catchFunc = err => err
     ) {
 
+        if (testName == 'notest')
+            return undefined;
+
         let _catchFunc = err => ({
             testName,
             result: false,
@@ -1830,7 +1899,6 @@ class FluentDB extends deferable {
 
                 db = this.resolveGetters(db, funcName, args);
                 db = this.promisifyDbIfNecessary(db);
-
                 
                 return (isPromise(db)) 
                     ? db.then(db => db[funcName](...args))
@@ -1897,7 +1965,8 @@ class FluentDB extends deferable {
 
         return funcArgs
             .filter((a,i,self) => self.indexOf(a) == i) // distinct
-            .map(p => db.getDataset(p));
+            .map(p => db.getDataset(p))
+            .filter(p => p); // some function params don't represent datasets
 
     }
 
@@ -1960,4 +2029,6 @@ $$.idb = dbName => new dbConnectorIdb(dbName);
 $$.dbConnector = dbConnector;
 $$.dsGetter = dsGetter;
 
-export default $$;
+$$.mongo = url => new dbConnectorMongo(url);
+
+module.exports = $$;
