@@ -1,6 +1,6 @@
 {
   "name": "fluentdb",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, mongoDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
   "main": ".dist/FluentDB.server.next.js",
   "directories": {
