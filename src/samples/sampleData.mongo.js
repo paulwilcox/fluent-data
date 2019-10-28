@@ -20,7 +20,8 @@ module.exports = (
     .then(async client => {
 
         let db = client.db();
-        let collectionNames = await db.collections().map(c => c.s.name);
+        let collections = await db.collections();
+        let collectionNames = await collections.map(c => c.s.name);
 
         if (!reset)
             return db;
