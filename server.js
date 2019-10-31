@@ -1,6 +1,7 @@
 let http = require('http');
 let fs = require('fs');
-let sampleMongo = require('./dist/sampleData.mongo.js');
+//let sampleMongo = require('./dist/sampleData.mongo.js');
+let sampleMongo = require('./node_modules/sampledb/dist/sampleData.mongo.js');
 let getMongo = require('./example/server.getMongo.js');
 
 // Note that because this isnt really supposed to be a produciton site,
@@ -44,6 +45,9 @@ module.exports = http.createServer(async (request, response) => {
     
             break;
 
+        // TODO: response.end returns that message even when connection 
+        // refuse dfor await sampleMongo.
+        // TODO: rename databae from sampleData to SampleDB
         case '/resetmongo':
             await sampleMongo('mongodb://localhost:27017/sampleData', true);
             response.writeHead(200, { 'Content-type': 'text/plain' });
