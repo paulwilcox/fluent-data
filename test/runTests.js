@@ -3,6 +3,10 @@ let server = require('../server.js');
 let getServerResults = require('./runServerTests.js');
 require('console.table');
 
+// TODO: Separate server code from puppeteer code.  
+// TODO: Allow output for when all tests pass.  Use this
+// in a "tests" script in package.json
+
 let seriToRun = process.argv[2];
 let testsToRun = process.argv[3];
 
@@ -19,12 +23,12 @@ clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is ac
     let closed = false;
     let results = [];
 
-    let close = () => {
+    let close = async () => {
         if (closed)
             return;
-        browser.close();
+        await browser.close();
         console.log('headless browser closed');
-        server.close();
+        await new Promise((res,rej) => res(server.close()));
         console.log('server closed');
         closed = true;
     }
@@ -32,12 +36,12 @@ clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is ac
     page.on('console', async msg => {
         let logs = msg.text().split(' ');
         if (logs[0] == 'done:client.tests') {
-            close();
+            await close();
             let serverResults = await getServerResults(seriToRun, testsToRun);
             results.push(...serverResults);             
-            console.log('\nRESULTS: client.tests:\n');
             console.table(results);
             console.log();
+            process.exit(0);
         }
         else if (logs[0] == 'test')
             results.push({
