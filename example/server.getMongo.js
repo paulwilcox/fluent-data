@@ -1,4 +1,4 @@
-let $$ = require('../dist/FluentDB.server.next.js');
+let $$ = require('../dist/FluentDB.server.js');
 
 module.exports = async function () {
 /*

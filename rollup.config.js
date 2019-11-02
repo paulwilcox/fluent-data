@@ -16,14 +16,14 @@ let licensePlugin = license({
 export default [{
     input: 'src/FluentDB.server.js',
     output: {
-        file: 'dist/FluentDB.server.next.js',
+        file: 'dist/FluentDB.server.js',
         format: 'cjs'
     },
     plugins: licensePlugin
 }, {
     input: 'src/FluentDB.js',
     output: {
-        file: 'dist/FluentDB.client.next.js',
+        file: 'dist/FluentDB.client.js',
         format: 'esm'
     },
     plugins: licensePlugin

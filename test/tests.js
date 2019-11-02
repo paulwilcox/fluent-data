@@ -1,4 +1,4 @@
-import $$ from "../dist/FluentDB.client.next.js";
+import $$ from "../dist/FluentDB.client.js";
 
 // TODO: Implement testing structure for FluentDB.mergeExternal,
 // or just do direct tests, because it is not really covered here.
