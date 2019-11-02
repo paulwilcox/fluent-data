@@ -3,7 +3,7 @@ let $$ = require('../dist/FluentDB.server.next.js');
 module.exports = async function () {
 /*
     return $$({
-            sam: $$.mongo('mongodb://localhost:27017/sampleData'),
+            sam: $$.mongo('mongodb://localhost:27017/SampleDB'),
             o: sam => 'orders'
         })
         .filter(o => o.customer == 1)
@@ -21,7 +21,7 @@ module.exports = async function () {
 */
 
         return $$({
-                sam: $$.mongo('mongodb://localhost:27017/sampleData'),
+                sam: $$.mongo('mongodb://localhost:27017/SampleDB'),
                 c: sam => 'customers',
                 pc: sam => 'potentialCustomers',
                 s: sam => 'shoplifters'

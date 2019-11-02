@@ -12,7 +12,7 @@ module.exports = function (seriToRun, testsToRun) {
         new _tests(seriToRun, testsToRun)
         .run(testName, fdbCreator);
 
-    let url = 'mongodb://localhost:27017/sampleData';
+    let url = 'mongodb://localhost:27017/SampleDB';
 
     return sampleMongo(url, true)
     .then(() => Promise.all([

@@ -46,11 +46,11 @@ module.exports = http.createServer(async (request, response) => {
 
         // TODO: response.end returns that message even when connection 
         // refuse dfor await sampleMongo.
-        // TODO: rename databae from sampleData to SampleDB
+        // TODO: rename databae from SampleDB to SampleDB
         case '/resetmongo':
-            await sampleMongo('mongodb://localhost:27017/sampleData', true);
+            await sampleMongo('mongodb://localhost:27017/SampleDB', true);
             response.writeHead(200, { 'Content-type': 'text/plain' });
-            response.end('sampleData in MongoDB has been reset to its original state.');
+            response.end('SampleDB in MongoDB has been reset to its original state.');
             break;
 
         case '/resetmongocustom':
@@ -58,9 +58,9 @@ module.exports = http.createServer(async (request, response) => {
                 table1: [{ a: 'ay', b: 'bee' }, { a: 'eigh', b: 'bea' }],
                 table2: [{ x: 'ex', y: 'why' }, { x: 'ecks', y: 'ooaye' }]
             };
-            await sampleMongo('mongodb://localhost:27017/sampleData', data);
+            await sampleMongo('mongodb://localhost:27017/SampleDB', data);
             response.writeHead(200, { 'Content-type': 'text/plain' });
-            response.end('sampleData in MongoDB has been reset with custom data.');
+            response.end('SampleDB in MongoDB has been reset with custom data.');
             break;
 
         case '/getmongo':

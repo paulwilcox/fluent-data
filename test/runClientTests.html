@@ -9,7 +9,7 @@
         new _tests(__seriToRun__, __testsToRun__)
         .run(testName, fdbCreator);
 
-    sampleIdb('sampleData', true) // resets sampleData in IndexedDB
+    sampleIdb('SampleDB', true) // resets sampleData in IndexedDB
     .then(() => Promise.all([
 
         tests('client', () => $$({ 
@@ -21,7 +21,7 @@
         })),
 
         tests('idb', () => $$({ 
-            sam: $$.idb('sampleData'),
+            sam: $$.idb('SampleDB'),
             o: sam => 'orders',
             c: sam => 'customers',
             p: sam => 'products',
@@ -30,7 +30,7 @@
         })),
 
         tests('client/idb', () => $$({
-            sam: $$.idb('sampleData'),
+            sam: $$.idb('SampleDB'),
             o: sample.orders,
             c: sample.customers,
             p: sam => 'products',
@@ -39,7 +39,7 @@
         })),
 
         tests('idb/client', () => $$({
-            sam: $$.idb('sampleData'),
+            sam: $$.idb('SampleDB'),
             o: sam => 'orders',
             c: sam => 'customers',
             p: sample.products,

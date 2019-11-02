@@ -1,15 +1,16 @@
 <script type='module'>
 
     import $$ from "../dist/FluentDB.client.next.js";
-    //import sampleIdb from "../dist/sampleData.idb.js";
     import sampleIdb from "../node_modules/sampledb/dist/sampledb.idb.js";
 
+  
+    /*
     (async () => {
 
-        await sampleIdb('sampleData', { new: [{a: 'eigh', b: 'bee', c: 'sea'}] });
+        await sampleIdb('SampleDB', { new: [{a: 'eigh', b: 'bee', c: 'sea'}] });
 
         let result = $$({
-            sam: $$.idb('sampleData'),
+            sam: $$.idb('SampleDB'),
             c: sam => 'customers',
             n: sam => 'new'
         })
@@ -18,14 +19,15 @@
         console.log(result);
 
     })();
+*/
 
 /*
-    import sample from "../dist/sampleData.client.js";
-    import sampleIdb from "../dist/sampleData.idb.js";
+    import sample from "../dist/SampleDB.client.js";
+    import sampleIdb from "../dist/SampleDB.idb.js";
     import $$ from "../dist/FluentDB.client.next.js";
 
     let result = $$({
-        sam: $$.idb('sampleData'),
+        sam: $$.idb('SampleDB'),
         o: sample.orders,
         p: sam => 'products',
         c: sample.customers,
