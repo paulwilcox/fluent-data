@@ -1076,6 +1076,11 @@ function currentPage (table) {
     );
 }
 
+// TODO: See about populating defaultCss variable below
+// automatically from printer.css as an npm run task and
+// as a prerequisite to rollup, with rollup probably being
+// part of that npm run task.  
+
 // Christoph at https://stackoverflow.com/questions/
 //   524696/how-to-create-a-style-tag-with-javascript
 function addDefaultCss () {

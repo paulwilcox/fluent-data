@@ -1,7 +1,7 @@
 let $$ = require('../dist/FluentDB.server.next.js');
-let sample = require('../dist/sampleData.server.js');
+let sample = require('../node_modules/sampledb/dist/sampledb.server.js');
+let sampleMongo = require('../node_modules/sampledb/dist/sampledb.mongo.js');
 let _tests = require('../test/tests.server.js');
-let sampleMongo = require('../dist/sampleData.mongo.js');
 
 // TODO: I think I have to rebuild sampleMongo after every 
 // series becasue 'merge' changes the state of the external

@@ -1,7 +1,6 @@
 let http = require('http');
 let fs = require('fs');
-//let sampleMongo = require('./dist/sampleData.mongo.js');
-let sampleMongo = require('./node_modules/sampledb/dist/sampleData.mongo.js');
+let sampleMongo = require('./node_modules/sampledb/dist/sampledb.mongo.js');
 let getMongo = require('./example/server.getMongo.js');
 
 // Note that because this isnt really supposed to be a produciton site,
