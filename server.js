@@ -70,10 +70,10 @@ module.exports = http.createServer(async (request, response) => {
                 .catch(e => console.log(e));
             break;
 
+        case '/test/externalidb':
+        case '/test/doclient':
 
-        case '/runclienttests':
-
-            fs.readFile('./test/runClientTests.html', function(error, content) {
+            fs.readFile(`.${url}.html`, function(error, content) {
                 if (error) {
                     response.writeHead(500);
                     response.end(error.message);

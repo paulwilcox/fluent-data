@@ -1,6 +1,6 @@
 let puppeteer = require('puppeteer');
 let server = require('../server.js');
-let getServerResults = require('./runServerTests.js');
+let getServerResults = require('./doServer.js');
 require('console.table');
 
 // TODO: Allow output for when all tests pass.  Use this
@@ -10,7 +10,7 @@ let seriToRun = process.argv[2];
 let testsToRun = process.argv[3];
 let results = [];
 
-let clientUrl = 'http://127.0.0.1:8081/runClientTests'
+let clientUrl = 'http://127.0.0.1:8081/test/doClient'
 if (seriToRun) clientUrl += `&seriToRun='${seriToRun}'`;
 if (testsToRun) clientUrl += `&testsToRun='${testsToRun}'`; 
 clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is actually what we want

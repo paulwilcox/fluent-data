@@ -1,9 +1,9 @@
 <script type='module'>
 
-    import sample from './node_modules/sampledb/dist/sampledb.client.js';
-    import sampleIdb from './node_modules/sampledb/dist/sampledb.idb.js';
-    import $$ from './dist/FluentDB.client.js';
-    import _tests from './test/tests.js';
+    import sample from '../node_modules/sampledb/dist/sampledb.client.js';
+    import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
+    import $$ from '../dist/FluentDB.client.js';
+    import _tests from './tests.js';
 
     let tests = (testName, fdbCreator) =>
         new _tests(__seriToRun__, __testsToRun__)

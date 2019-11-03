@@ -1,0 +1,31 @@
+<script type='module'>
+
+    import sample from './node_modules/sampledb/dist/sampledb.client.js';
+    import sampleIdb from './node_modules/sampledb/dist/sampledb.idb.js';
+    import $$ from './dist/FluentDB.client.js';
+ 
+    sampleIdb('SampleDB', 'customers') // TODO: will have to reset this every time, not once before all
+    .then(() => Promise.all([
+
+        $$({
+            sam: $$.idb('SampleDB'),
+            c: sam => 'customers',
+            pc: sample.potentialCustomers,
+            s: sample.shoplifters 
+        })
+        .mergeExternal('upsert', c => c.id, pc => pc.id)
+        .mergeExternal('delete', c => c.id, s => s.id)
+        .test('idb/client.mergeExternal', c => c, data => {
+            data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
+            data.filter(row => row.id == 4 || row.id == 5).length == 0
+        })
+
+    ]))
+    .then(tests => {
+        for (let test of tests)
+            console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);
+    })
+    .then(() => sampleIdb('SampleDB', 'customers')) // clean up
+    .then(() => console.log('done:client.mergeExternal.tests'));        
+
+</script>
