@@ -1,31 +1,57 @@
 <script type='module'>
 
-    import sample from './node_modules/sampledb/dist/sampledb.client.js';
-    import sampleIdb from './node_modules/sampledb/dist/sampledb.idb.js';
-    import $$ from './dist/FluentDB.client.js';
- 
-    sampleIdb('SampleDB', 'customers') // TODO: will have to reset this every time, not once before all
-    .then(() => Promise.all([
+    // TODO: idb.mergeExternal passess on run.js but fails when 
+    // going to the url directly.  Why?
 
-        $$({
+    import sample from '../node_modules/sampledb/dist/sampledb.client.js';
+    import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
+    import $$ from '../dist/FluentDB.client.js';
+
+    let allowRun = (testName, seriesName) => {
+        let block = (x,y) => x !== undefined && !x.includes(y) && x != y;
+        return !block(__testsToRun__, testName) && !block(__seriToRun__, seriesName);
+    }
+
+    let test = async (seriesName, fdb) => {
+
+        if (!allowRun('mergeExternal', seriesName)) {
+            console.log(`Blocked: ${seriesName}`)
+            return;
+        }
+
+        await sampleIdb('SampleDB', 'customers');
+
+        let result = await fdb
+            .mergeExternal('upsert', c => c.id, pc => pc.id)
+            .mergeExternal('delete', c => c.id, s => s.id)
+            .test('mergeExternal', c => c, data => 
+                data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
+                data.filter(row => row.id == 4 || row.id == 5).length == 0
+            )
+            .then(test => console.log(
+                `test ${seriesName}.${test.testName} ${test.result}`
+            ));
+
+    }
+
+    Promise.all([
+
+        test('idb/client', $$({
             sam: $$.idb('SampleDB'),
             c: sam => 'customers',
             pc: sample.potentialCustomers,
             s: sample.shoplifters 
-        })
-        .mergeExternal('upsert', c => c.id, pc => pc.id)
-        .mergeExternal('delete', c => c.id, s => s.id)
-        .test('idb/client.mergeExternal', c => c, data => {
-            data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
-            data.filter(row => row.id == 4 || row.id == 5).length == 0
-        })
+        })),
 
-    ]))
-    .then(tests => {
-        for (let test of tests)
-            console.log(`test ${test.seriesName}.${test.name} ${test.passStatus}`);
-    })
-    .then(() => sampleIdb('SampleDB', 'customers')) // clean up
-    .then(() => console.log('done:client.mergeExternal.tests'));        
+        test('idb', $$({
+            sam: $$.idb('SampleDB'),
+            c: sam => 'customers',
+            pc: sam => 'potentialCustomers',
+            s: sam => 'shoplifters' 
+        }))
+
+    ])
+    .then(() => sampleIdb('SampleDB', true)) // clean up
+    .then(() => console.log('done'));        
 
 </script>

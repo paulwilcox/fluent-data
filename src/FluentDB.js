@@ -31,18 +31,20 @@ class FluentDB extends deferable {
         sourceIdentityKey  
     ) {
 
-        this.then(db => {
+        this.then(async db => {
 
             let target = db.getDataset(targetIdentityKey).data;
 
             if (!(target instanceof dsGetter))
                 throw 'target dataset is not a dsGetter.  Use "merge" instead.'
 
-            let source = 
+            let source = await 
                 db.getDataset(sourceIdentityKey)
                 .callWithoutModify('map', x => x); // just get the raw data
 
+            // TODO: decide wether we want to await the merge or not, or give the option
             target.merge(type, targetIdentityKey, sourceIdentityKey, source);
+
             return db;
 
         });

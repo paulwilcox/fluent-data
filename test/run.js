@@ -10,19 +10,19 @@ let seriToRun = process.argv[2];
 let testsToRun = process.argv[3];
 let results = [];
 
-let clientUrl = 'http://127.0.0.1:8081/test/doClient'
-if (seriToRun) clientUrl += `&seriToRun='${seriToRun}'`;
-if (testsToRun) clientUrl += `&testsToRun='${testsToRun}'`; 
-clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is actually what we want
+async function getClientResults (type, headless = true) {
 
-async function getClientResults (headless = true) {
+    let clientUrl = `http://127.0.0.1:8081/test/${type}`
+    if (seriToRun) clientUrl += `&seriToRun='${seriToRun}'`;
+    if (testsToRun) clientUrl += `&testsToRun='${testsToRun}'`; 
+    clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is actually what we want    
 
     let browser = await puppeteer.launch({headless: headless});
     let page = await browser.newPage();
 
     page.on('console', async msg => {
 
-        if (msg.text() == 'done:client.tests') {
+        if (msg.text() == 'done') {
             await browser.close();
             console.log('headless browser closed');    
             return;
@@ -32,7 +32,7 @@ async function getClientResults (headless = true) {
             console.log(msg.text());
             return;
         }
-
+        
         let parts = msg.text().split(' ');
         results.push({
             test_name: parts[1], 
@@ -47,10 +47,12 @@ async function getClientResults (headless = true) {
 
 (async () => {
 
-    getClientResults();
+    getClientResults('doClient');
+    getClientResults('doExternalIdb');
     let serverResults = await getServerResults(seriToRun, testsToRun);
     results.push(...serverResults);    
     server.close(() => console.log('server closed'));
+    results.sort((a,b) => a.test_name > b.test_name ? 1 : a.test_name < b.test_name ? -1 : 0);
     console.log();
     console.table(results); 
     process.exit(0);    
