@@ -8,14 +8,21 @@
     import $$ from '../dist/FluentDB.client.js';
 
     let allowRun = (testName, seriesName) => {
-        let block = (x,y) => x !== undefined && !x.includes(y) && x != y;
-        return !block(__testsToRun__, testName) && !block(__seriToRun__, seriesName);
+
+        let block = (x,y) => 
+               x !== undefined 
+            && (!Array.isArray(x) || !x.includes(y)) 
+            && x != y;
+
+        return !block(__testsToRun__, testName) 
+            && !block(__seriToRun__, seriesName);
+
     }
 
     let test = async (seriesName, fdb) => {
 
         if (!allowRun('mergeExternal', seriesName)) {
-            console.log(`Blocked: ${seriesName}`)
+            console.log(`Blocked: ${seriesName}.mergeExternal`)
             return;
         }
 
