@@ -1966,6 +1966,8 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
     
 });
 
+$$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+
 $$.idb = dbName => new dbConnectorIdb(dbName);
 $$.dbConnector = dbConnector;
 $$.dsGetter = dsGetter;

@@ -1,56 +1,46 @@
+<div id='printDiv'></div>
+
 <script type='module'>
 
     import $$ from "../dist/FluentDB.client.js";
     import sampleIdb from "../node_modules/sampledb/dist/sampledb.idb.js";
-
-  
-    /*
-    (async () => {
-
-        await sampleIdb('SampleDB', { new: [{a: 'eigh', b: 'bee', c: 'sea'}] });
-
-        let result = $$({
-            sam: $$.idb('SampleDB'),
-            c: sam => 'customers',
-            n: sam => 'new'
-        })
-        .execute(n => n);
-
-        console.log(result);
-
-    })();
-*/
-
-/*
-    import sample from "../dist/SampleDB.client.js";
-    import sampleIdb from "../dist/SampleDB.idb.js";
-    import $$ from "../dist/FluentDB.client.next.js";
+    import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
 
     let result = $$({
-        sam: $$.idb('SampleDB'),
         o: sample.orders,
-        p: sam => 'products',
+        p: sample.products,
         c: sample.customers,
-        pc: sam => 'potentialCustomers',
-        s: sam => 'shoplifters' 
+        pc: sample.potentialCustomers,
+        s: sample.shoplifters 
     })
-    .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
+    .join((o,p) => o.product == p.id)
+    .join('left hash', (o,c) => o.customer == c.id)
+    .merge('delete', o => o.customer, s => s.id)
+    .group(o => o.customer) 
     .reduce(o => ({
-        customer: $$.first(o.customer), 
+        customerId: $$.first(o.customer || 'n/a'), 
+        customer: $$.first(o.fullname || 'No Name'),
+        orders: $$.count(o.id), 
+        price: $$.avg(o.price),
         speed: $$.avg(o.speed),
         rating: $$.avg(o.rating),
         speed_cor: $$.cor(o.speed, o.rating)
     }))
-    .test('groupReduce', o => o, data => {
-        let row0 = prop => Math.round(data[0][prop] * 100) / 100;
-        return data.length == 3
-            && row0('rating') == 58.29
-            && row0('speed') == 4.57
-            && row0('speed_cor') == 0.74;
-    });
+    .catch(err => console.log(err))
+    .execute(o => o);
 
     console.log(result);
-*/
+
+    $$({ r: result })
+    .map(r => ({
+        ...r,
+        price: $$.round(r.price, 2) || '',
+        speed: $$.round(r.speed, 2) || '',
+        rating: $$.round(r.rating, 2) || '',
+        speed_cor: $$.round(r.speed_cor, 2) || ''
+    }))
+    .print(r => r, '#printDiv', 'result')
+    .execute();
 
 /*
     fetch('getMongo')
