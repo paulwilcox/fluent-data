@@ -9,7 +9,8 @@
   "scripts": {
     "gitPublish": "node_scripts\\gitPublish.cmd",
     "gitPublishWiki": "node_scripts\\gitPublishWiki.cmd",
-    "gitCommitWiki": "node_scripts\\gitCommitWiki.cmd"
+    "gitCommitWiki": "node_scripts\\gitCommitWiki.cmd",
+    "home2readme": "node node_scripts\\home2readme.js"
   },
   "repository": {
     "type": "git",
