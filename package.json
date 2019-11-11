@@ -8,7 +8,8 @@
   },
   "scripts": {
     "gitPublish": "node_scripts\\gitPublish.cmd",
-    "afterVersionBump": "node node_scripts\\afterVersionBump.js"
+    "gitPublishWiki": "node_scripts\\gitPublishWiki.cmd",
+    "gitCommitWiki": "node_scripts\\gitCommitWiki.cmd"
   },
   "repository": {
     "type": "git",
