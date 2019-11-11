@@ -1,4 +1,5 @@
 (
     cd .\wiki
-    git commit -a
+    git add .
+    git commit -m %1
 )
