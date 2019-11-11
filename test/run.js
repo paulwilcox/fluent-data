@@ -41,6 +41,22 @@ async function getClientResults (type, headless = true) {
         
     });
 
+    page.on('pageerror', async err => {
+
+        results.push({
+            test_name: '_browserError',
+            status: 'fail'
+        });
+
+        await browser.close();
+        console.log('Error from browser when running tests: ');
+        console.log(err.name);
+        console.log(err.message);
+        console.log(err.stack);    
+        return;
+
+    })
+
     await page.goto(clientUrl);
 
 }
@@ -52,7 +68,13 @@ async function getClientResults (type, headless = true) {
     let serverResults = await getServerResults(seriToRun, testsToRun);
     results.push(...serverResults);    
     server.close(() => console.log('server closed'));
+
+    // sort results and remove duplicate browser errors
     results.sort((a,b) => a.test_name > b.test_name ? 1 : a.test_name < b.test_name ? -1 : 0);
+    let browserErrors = results.filter(r => r.test_name == '_browserError').length;
+    if (browserErrors > 0)
+        results = results.slice(browserErrors - 1);
+
     console.log();
     console.table(results); 
     process.exit(0);    
