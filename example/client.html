@@ -24,7 +24,7 @@
         price: $$.avg(o.price),
         speed: $$.avg(o.speed),
         rating: $$.avg(o.rating),
-        speed_cor: $$.cor(o.speed, o.rating)
+        correlation: $$.cor(o.speed, o.rating)
     }))
     .catch(err => console.log(err))
     .execute(o => o);
@@ -37,9 +37,10 @@
         price: $$.round(r.price, 2) || '',
         speed: $$.round(r.speed, 2) || '',
         rating: $$.round(r.rating, 2) || '',
-        speed_cor: $$.round(r.speed_cor, 2) || ''
+        ['correlation (s:r)']: $$.round(r.correlation, 2) || '',
+        correlation: undefined
     }))
-    .print(r => r, '#printDiv', 'result')
+    .print(r => r, '#printDiv', 'Analysis of Customer Orders')
     .execute();
 
 /*
