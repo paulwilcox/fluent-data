@@ -21,7 +21,7 @@ class FluentDB extends deferable {
         this.attachDbFuncs(
             'addSources', 'filter', 'map', 
             'join', 'group', 'sort', 
-            'reduce', 'print', 'merge'
+            'reduce', 'print', 'merge', 'merge2'
         );
     }
  

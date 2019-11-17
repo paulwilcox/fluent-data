@@ -10,3 +10,5 @@ let pattern = /(?<=\[.+)\]\((?=.+\))(?!http[s]*:)/g;
 contents = contents.replace(pattern, `](${url}/`);
 fs.writeFileSync('.\\readMe.md', contents);
 console.log('Done transfering home.md to readMe.md');
+
+

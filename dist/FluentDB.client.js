@@ -1289,6 +1289,208 @@ function htmlEncode (str) {
         .replace(/\n/g, '<br/>');
 }
 
+// This is written to allow two or more co-buckets.  But 
+// I think most usages will only require a pair.  So 
+// if it's too complicated and usage only ever requires
+// a pair, not a big deal to refactor to pair specific
+// implementation if it would simplify things.
+class cobuckets extends Map {
+    
+    constructor ( stringify = true ) {
+        super();
+        this.stringify = stringify;
+        this.cobucketIndicies = new Set();
+    }
+
+    add(cobucketIX, hashFunc, distinctBehavior, ...items) {
+
+        this.cobucketIndicies.add(cobucketIX);
+
+        for (let item of items) {
+             
+            let key = this.hashify(hashFunc, item);
+
+            if (!this.has(key)) {
+                let cobucket = [];
+                cobucket[cobucketIX] = [item];
+                this.set(key, cobucket);
+                continue;
+            }
+
+            if (!this.get(key)[cobucketIX])
+                this.get(key)[cobucketIX] = [];
+
+            switch(distinctBehavior) {
+                case 'first': break;
+                case 'last': this.get(key)[cobucketIX][0] = item; break;
+                case 'distinct': throw 'distinct option passed but more than one records match.'
+                default: this.get(key)[cobucketIX].push(item);
+            }
+
+        }
+
+        return this;
+
+    }
+
+    * crossMap(func) {
+
+        for (let bucketSet of this.values())  
+        for (let item of this.crossMapBucketSet(bucketSet, func))
+            yield item;
+    }
+
+    * crossMapBucketSet(bucketSet, func) {
+
+        let cbIXs = [...this.cobucketIndicies];
+        let crosses = [];
+        let working = [];
+    
+        for (let row of bucketSet[cbIXs.shift()])
+            crosses.push([row]);
+    
+        for (let cbIX of cbIXs) {
+            let bucket = bucketSet[cbIX];
+            for (let row of bucket)
+            for (let cross of crosses) 
+                working.push([...cross, row]);
+            crosses = working;
+            working = [];
+        }
+    
+        for (let cross of crosses) {
+
+            console.log({bucketSet});
+
+            // FIX: mapped is a function, not an object as expected
+            let mapped = func(...cross);
+
+            console.log({
+                func: func.toString(),
+                mapped: mapped.toString(),
+                cross,
+                bucketSet
+            });
+            throw 'early exit';
+
+            if (mapped === undefined)
+                continue;
+            if (!Array.isArray(mapped)) {
+                yield mapped;
+                continue;
+            }
+            for(entry of mapped)
+                if (entry !== undefined)
+                    yield entry;
+        }
+
+    }
+
+    hashify (hashFunc, obj) {
+        return this.stringify 
+            ? stringifyObject(hashFunc(obj))
+            : hashFunc(obj);
+    }
+
+}
+
+function merger2 (leftData, rightData, matchingLogic, mapper, onDuplicate) {
+
+    let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
+
+    if (onDuplicate == 'distinct')
+        onDuplicate = 'dist';
+
+    if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
+        throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
+
+    mapper = normalizeMapper(mapper);
+
+    return [...new cobuckets(leftFunc)
+        .add(0, leftFunc, onDuplicate, ...leftData)
+        .add(1, rightFunc, onDuplicate, ...rightData)
+        .crossMap(mapper)
+    ];
+
+}
+
+function normalizeMapper (mapper) {
+
+    if (!mapper)
+        mapper = 'both null'; // inner join by default
+
+    if (isString(mapper)) {
+
+        let keywords = mapper.split(' ');
+        let onMatched = keywords[0];
+        let onUnmatched = keywords[1];
+        let allowedTerms = ['both', 'left', 'right', 'null', 'stack'];
+
+        if (!allowedTerms.includes(onMatched) || !allowedTerms.includes(onUnmatched))
+            throw 'mapper must be one of: both, left, right, null, stack';
+
+        return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
+
+    }
+
+    if (!parametersAreEqual(matchingLogic, mapper))
+        throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
+
+    return mapper;
+
+}
+
+function mergeByKeywords (left, right, onMatched, onUnmatched) {
+
+    if(left && right)
+        switch(onMatched) {
+            case 'both': return thenRemoveUndefinedKeys(Object.assign({}, right, left));
+            case 'left': return left;
+            case 'right': return right;
+            case 'null': return undefined;
+            case 'stack': return [left, right]; 
+        }
+
+    switch(onUnmatched) {
+        case 'both': return right || left;
+        case 'left': return left;
+        case 'right': return right;
+        case 'null': return undefined;
+    }
+
+}
+
+function parseMatchingLogic (matchingLogic) {
+
+    let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
+
+    if (!parsed)
+        throw   'Could not parse function into object selectors.  ' +
+                'Pass object selectors explicitly or use loop join instead';
+
+    return {
+        leftFunc: parsed.leftFunc,
+        rightFunc: parsed.rightFunc || parsed.leftFunc
+    }; 
+
+}
+
+function parametersAreEqual (a,b) {
+
+    a = parser.parameters(a);
+    b = parser.parameters(b);
+
+    if (a.length != b.length)
+        return false;
+
+    for(let i in a)
+        if (a[i] != b[i])
+            return false;
+
+    return true;
+
+}
+
 class database {
 
     constructor() {
@@ -1534,6 +1736,34 @@ class database {
 
     }
 
+    merge2 (...args) {
+        
+        // user did not pass a 'newKey'.  So make it the function parameter.
+        if (isFunction(args[0]))
+            args.unshift(parser.parameters(args[0]));
+
+        let [ newKey, matchingLogic, mapper, onDuplicate ] = args;
+
+        let keys = parser.parameters(matchingLogic);
+        let leftData = this.getDataset(keys[0]).data;
+        let rightData = this.getDataset(keys[1]).data;
+
+        let merged = merger2(
+            leftData, 
+            rightData, 
+            matchingLogic, 
+            mapper, 
+            onDuplicate
+        );
+console.log({merged});
+        !this.getDataset(newKey)
+            ? this.addSource(newKey, merged)
+            : this.getDataset(newKey).data = merged;
+
+        return this;
+
+    }
+
 }
 
 class dsGetterIdb extends dsGetter {
@@ -1724,7 +1954,7 @@ class FluentDB extends deferable {
         this.attachDbFuncs(
             'addSources', 'filter', 'map', 
             'join', 'group', 'sort', 
-            'reduce', 'print', 'merge'
+            'reduce', 'print', 'merge', 'merge2'
         );
     }
  

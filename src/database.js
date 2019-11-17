@@ -10,6 +10,7 @@ import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
 import { merger } from './merger.js';
 import { print as prn } from './visualizer/printer.js';
+import merger2 from './merger2.js';
 
 export class database {
 
@@ -251,6 +252,34 @@ export class database {
             targetIdentityKey, 
             sourceIdentityKey
         );
+
+        return this;
+
+    }
+
+    merge2 (...args) {
+        
+        // user did not pass a 'newKey'.  So make it the function parameter.
+        if (g.isFunction(args[0]))
+            args.unshift(parser.parameters(args[0]));
+
+        let [ newKey, matchingLogic, mapper, onDuplicate ] = args;
+
+        let keys = parser.parameters(matchingLogic);
+        let leftData = this.getDataset(keys[0]).data;
+        let rightData = this.getDataset(keys[1]).data;
+
+        let merged = merger2(
+            leftData, 
+            rightData, 
+            matchingLogic, 
+            mapper, 
+            onDuplicate
+        );
+console.log({merged})
+        !this.getDataset(newKey)
+            ? this.addSource(newKey, merged)
+            : this.getDataset(newKey).data = merged;
 
         return this;
 
