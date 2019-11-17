@@ -1,9 +1,9 @@
 import { parser } from './parser.js';
 import cobuckets from './cobuckets.js';
-import { thenRemoveUndefinedKeys } from './mapper.js';
+import { removeUndefinedKeys } from './mapper.js';
 import * as g from './general.js';
 
-export default function (leftData, rightData, matchingLogic, mapper, onDuplicate) {
+export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
 
     let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
 
@@ -13,24 +13,24 @@ export default function (leftData, rightData, matchingLogic, mapper, onDuplicate
     if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
         throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
 
-    mapper = normalizeMapper(mapper);
+    mapFunc = normalizeMapper(mapFunc);
 
     return [...new cobuckets(leftFunc)
         .add(0, leftFunc, onDuplicate, ...leftData)
         .add(1, rightFunc, onDuplicate, ...rightData)
-        .crossMap(mapper)
+        .crossMap(mapFunc)
     ];
 
 }
 
-function normalizeMapper (mapper) {
+function normalizeMapper (mapFunc) {
 
-    if (!mapper)
-        mapper = 'both null'; // inner join by default
+    if (!mapFunc)
+    mapFunc = 'both null'; // inner join by default
 
-    if (g.isString(mapper)) {
+    if (g.isString(mapFunc)) {
 
-        let keywords = mapper.split(' ');
+        let keywords = mapFunc.split(' ');
         let onMatched = keywords[0];
         let onUnmatched = keywords[1];
         let allowedTerms = ['both', 'left', 'right', 'null', 'stack'];
@@ -42,10 +42,10 @@ function normalizeMapper (mapper) {
 
     }
 
-    if (!parametersAreEqual(matchingLogic, mapper))
+    if (!parametersAreEqual(matchingLogic, mapFunc))
         throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
 
-    return mapper;
+    return mapFunc;
 
 }
 
@@ -53,7 +53,7 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
 
     if(left && right)
         switch(onMatched) {
-            case 'both': return thenRemoveUndefinedKeys(Object.assign({}, right, left));
+            case 'both': return removeUndefinedKeys(Object.assign({}, right, left));
             case 'left': return left;
             case 'right': return right;
             case 'null': return undefined;

@@ -261,7 +261,7 @@ export class database {
         
         // user did not pass a 'newKey'.  So make it the function parameter.
         if (g.isFunction(args[0]))
-            args.unshift(parser.parameters(args[0]));
+            args.unshift(parser.parameters(args[0])[0]);
 
         let [ newKey, matchingLogic, mapper, onDuplicate ] = args;
 
@@ -276,7 +276,7 @@ export class database {
             mapper, 
             onDuplicate
         );
-console.log({merged})
+
         !this.getDataset(newKey)
             ? this.addSource(newKey, merged)
             : this.getDataset(newKey).data = merged;

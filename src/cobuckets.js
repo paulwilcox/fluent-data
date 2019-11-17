@@ -70,20 +70,7 @@ export default class extends Map {
         }
     
         for (let cross of crosses) {
-
-            console.log({bucketSet});
-
-            // FIX: mapped is a function, not an object as expected
             let mapped = func(...cross);
-
-            console.log({
-                func: func.toString(),
-                mapped: mapped.toString(),
-                cross,
-                bucketSet
-            })
-            throw 'early exit';
-
             if (mapped === undefined)
                 continue;
             if (!Array.isArray(mapped)) {
