@@ -1345,29 +1345,28 @@ class cobuckets extends Map {
 
     * crossMapBucketSet(bucketSet, func) {
 
-        let cbIXs = [...this.cobucketIndicies];
-        let crosses = [];
+        let isFirstBucket = true;
+        let crosses = [[]]; // but when overwriting, just do [].
         let working = [];
-     
-        for (let row of bucketSet[cbIXs.shift()]) {
-            if (row === undefined)
-                continue;
-            crosses.push([row]);
-        }
-    
-        for (let cbIX of cbIXs) {
-            let bucket = bucketSet[cbIX];
-            // in outer joins some bucket indicies won't be represented in a bucket
-            if (!bucket) 
-                continue;
+                  
+        for (let cbIX of [...this.cobucketIndicies]) {
+
+            // TODO: or should I do [undefined] when bucket doesn't exist?
+            let bucket = bucketSet[cbIX] || [];
+
             for (let cross of crosses) 
             for (let row of bucket) {
                 if (row === undefined)
                     continue;
-                working.push([...cross, row]);
+                isFirstBucket
+                    ? working.push([row]) // at this point cross is just a dummy '[]'
+                    : working.push([...cross, row]);
             }
+
             crosses = working;
             working = [];
+            isFirstBucket = false;
+
         }
     
         for (let cross of crosses) {
