@@ -65,7 +65,7 @@ throw 'early';
         s: sample.shoplifters 
     })
     .merge2((o,p) => o.product == p.id, 'both null') // inner join
-    //.merge2((o,c) => o.customer == c.id, 'both left') // left join
+    .merge2((o,c) => o.customer == c.id, 'both left') // left join
     //.merge2((o,s) => o.customer == s.id, 'null left') // not exists, or delete
     /*.group(o => o.customer) 
     .reduce(o => ({

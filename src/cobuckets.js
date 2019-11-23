@@ -60,16 +60,13 @@ export default class extends Map {
         for (let cbIX of [...this.cobucketIndicies]) {
 
             // TODO: or should I do [undefined] when bucket doesn't exist?
-            let bucket = bucketSet[cbIX] || [];
+            let bucket = bucketSet[cbIX] || [[]];
 
             for (let cross of crosses) 
-            for (let row of bucket) {
-                if (row === undefined)
-                    continue;
-                isFirstBucket
+            for (let row of bucket) 
+                isFirstBucket 
                     ? working.push([row]) // at this point cross is just a dummy '[]'
                     : working.push([...cross, row]);
-            }
 
             crosses = working;
             working = [];
