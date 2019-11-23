@@ -75,42 +75,40 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
     let parsed = new parser(func);
     let leftParam = parsed.parameters[0];
     let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
 
-        let splitBodyByAnds = parsed.body.split(/&&|&/);
+    for (let aix in splitBodyByAnds) {
 
-        let leftEqualities = [];
-        let rightEqualities = [];
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
 
-        for (let aix in splitBodyByAnds) {
+        if (eqParts.length != 2)
+            return;
 
-            let andPart = splitBodyByAnds[aix];
-            let eqParts = andPart.split(/==|=/);
-            let leftEq;
-            let rightEq;
+        for (let eix in eqParts) {
 
-            if (eqParts.length != 2)
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
                 return;
 
-            for (let eix in eqParts) {
+            if (ep.startsWith(`${leftParam}.`))
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`))
+                rightEq = ep;
+            else
+                return; 
 
-                let ep = eqParts[eix].trim();
+        }	    
 
-                if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                        return null;
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
 
-                if (ep.indexOf(`${leftParam}.`) > -1)
-                    leftEq = ep;
-                else if (ep.indexOf(`${rightParam}.`) > -1)
-                    rightEq = ep;
-                else
-                    return null; 
-
-            }	    
-            
-            leftEqualities[aix] = `x${aix}: ${leftEq}`;
-            rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-        }
+    }
 
     return {
         leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
