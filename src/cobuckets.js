@@ -7,7 +7,7 @@ import * as g from "./general.js";
 // implementation if it would simplify things.
 export default class extends Map {
     
-    constructor ( stringify = true ) {
+    constructor (stringify = true) {
         super();
         this.stringify = stringify;
         this.cobucketIndicies = new Set();
@@ -56,15 +56,24 @@ export default class extends Map {
         let cbIXs = [...this.cobucketIndicies];
         let crosses = [];
         let working = [];
-    
-        for (let row of bucketSet[cbIXs.shift()])
+     
+        for (let row of bucketSet[cbIXs.shift()]) {
+            if (row === undefined)
+                continue;
             crosses.push([row]);
+        }
     
         for (let cbIX of cbIXs) {
             let bucket = bucketSet[cbIX];
-            for (let row of bucket)
+            // in outer joins some bucket indicies won't be represented in a bucket
+            if (!bucket) 
+                continue;
             for (let cross of crosses) 
+            for (let row of bucket) {
+                if (row === undefined)
+                    continue;
                 working.push([...cross, row]);
+            }
             crosses = working;
             working = [];
         }

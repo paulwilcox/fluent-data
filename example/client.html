@@ -10,20 +10,31 @@
     let working = [];
     let func = (x,y,z) => ({x,y,z});
     let cbIXs = [0,1,2];
+    
+    let b = [];
+    b[0] = { x: 'x', y: 'y' };
+    //b[1] = { x: 'ex', y: 'why' };
+    
     let bucketSet = [
-        [ { a: 'a', b: 'b' }, { a: 'eight', b: 'bee' } ],
-        [ { o: 1, t: 2 }, { o: 0, t: 10 } ],
-        [ { x: 'x', y: 'y' }, { x: 'ex', y: 'why' } ]
+        b,
+        [ { a: 'a', b: 'b' }, { a: 'eigh', b: 'bee' }],
+        [ { o: 1, t: 2 }, { o: 0, t: 10 } ]
     ];
 
-    for (let row of bucketSet[cbIXs.shift()])
+    for (let row of bucketSet[cbIXs.shift()]) {
+        if (row === undefined)
+            continue;
         crosses.push([row]);
+    }
 
     for (let cbIX of cbIXs) {
         let bucket = bucketSet[cbIX];
-        for (let row of bucket)
         for (let cross of crosses) 
+        for (let row of bucket) {
+            if(row === undefined) 
+                continue;
             working.push([...cross, row]);
+        }
         crosses = working;
         working = [];
     }
@@ -42,6 +53,8 @@
     }
 
     console.log({results})
+
+throw 'early';
 */
 
     let result = $$({
@@ -53,8 +66,8 @@
     })
     .merge2((o,p) => o.product == p.id, 'both null') // inner join
     .merge2((o,c) => o.customer == c.id, 'both left') // left join
-    /*.merge2((o,s) => o.customer == s.id, 'null left') // not exists, or delete
-    .group(o => o.customer) 
+    .merge2((o,s) => o.customer == s.id, 'null left') // not exists, or delete
+    /*.group(o => o.customer) 
     .reduce(o => ({
         customerId: $$.first(o.customer || 'n/a'), 
         customer: $$.first(o.fullname || 'No Name'),
