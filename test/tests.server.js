@@ -146,42 +146,40 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
     let parsed = new parser(func);
     let leftParam = parsed.parameters[0];
     let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
 
-        let splitBodyByAnds = parsed.body.split(/&&|&/);
+    for (let aix in splitBodyByAnds) {
 
-        let leftEqualities = [];
-        let rightEqualities = [];
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
 
-        for (let aix in splitBodyByAnds) {
+        if (eqParts.length != 2)
+            return;
 
-            let andPart = splitBodyByAnds[aix];
-            let eqParts = andPart.split(/==|=/);
-            let leftEq;
-            let rightEq;
+        for (let eix in eqParts) {
 
-            if (eqParts.length != 2)
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
                 return;
 
-            for (let eix in eqParts) {
+            if (ep.startsWith(`${leftParam}.`))
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`))
+                rightEq = ep;
+            else
+                return; 
 
-                let ep = eqParts[eix].trim();
+        }	    
 
-                if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                        return null;
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
 
-                if (ep.indexOf(`${leftParam}.`) > -1)
-                    leftEq = ep;
-                else if (ep.indexOf(`${rightParam}.`) > -1)
-                    rightEq = ep;
-                else
-                    return null; 
-
-            }	    
-            
-            leftEqualities[aix] = `x${aix}: ${leftEq}`;
-            rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-        }
+    }
 
     return {
         leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
@@ -1362,8 +1360,7 @@ class cobuckets extends Map {
                   
         for (let cbIX of [...this.cobucketIndicies]) {
 
-            // TODO: or should I do [undefined] when bucket doesn't exist?
-            let bucket = bucketSet[cbIX] || [[]];
+            let bucket = bucketSet[cbIX] || [undefined];
 
             for (let cross of crosses) 
             for (let row of bucket) 
@@ -1376,7 +1373,7 @@ class cobuckets extends Map {
             isFirstBucket = false;
 
         }
-    
+
         for (let cross of crosses) {
             let mapped = func(...cross);
             if (mapped === undefined)
@@ -1410,7 +1407,7 @@ function merger2 (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
     if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
         throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
 
-    mapFunc = normalizeMapper(mapFunc);
+    mapFunc = normalizeMapper(mapFunc, matchingLogic);
 
     return [...new cobuckets(leftFunc)
         .add(0, leftFunc, onDuplicate, ...leftData)
@@ -1420,7 +1417,7 @@ function merger2 (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
 
 }
 
-function normalizeMapper (mapFunc) {
+function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
     mapFunc = 'both null'; // inner join by default
@@ -1438,6 +1435,7 @@ function normalizeMapper (mapFunc) {
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
     }
+
 
     if (!parametersAreEqual(matchingLogic, mapFunc))
         throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';

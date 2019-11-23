@@ -64,9 +64,9 @@ throw 'early';
         pc: sample.potentialCustomers,
         s: sample.shoplifters 
     })
-    .merge2((o,p) => o.product == p.id, 'both null') // inner join
-    .merge2((o,c) => o.customer == c.id, 'both left') // left join
-    //.merge2((o,s) => o.customer == s.id, 'null left') // not exists, or delete
+    //.merge2((c,o) => c.id == o.customer, 'both left') // inner join
+    //.merge2((c,pc) => c.id == pc.id, 'both left') // left join
+    .merge2((pc,s) => pc.id == s.id, 'null left') // not exists, or delete
     /*.group(o => o.customer) 
     .reduce(o => ({
         customerId: $$.first(o.customer || 'n/a'), 
@@ -78,7 +78,7 @@ throw 'early';
         correlation: $$.cor(o.speed, o.rating)
     }))
     .catch(err => console.log(err))*/
-    .execute(o => o);
+    .execute(pc => pc);
 
     console.log(result);
     

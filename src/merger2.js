@@ -13,7 +13,7 @@ export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicat
     if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
         throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
 
-    mapFunc = normalizeMapper(mapFunc);
+    mapFunc = normalizeMapper(mapFunc, matchingLogic);
 
     return [...new cobuckets(leftFunc)
         .add(0, leftFunc, onDuplicate, ...leftData)
@@ -23,7 +23,7 @@ export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicat
 
 }
 
-function normalizeMapper (mapFunc) {
+function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
     mapFunc = 'both null'; // inner join by default
@@ -41,6 +41,7 @@ function normalizeMapper (mapFunc) {
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
     }
+
 
     if (!parametersAreEqual(matchingLogic, mapFunc))
         throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
