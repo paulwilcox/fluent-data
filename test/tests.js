@@ -1,3 +1,6 @@
+// TODO: Merge tests are basically all failing, though I know
+// the real thing is working fine in quite a few of those cases.
+// So look into it.
 import $$ from "../dist/FluentDB.client.js";
 
 export default class {
