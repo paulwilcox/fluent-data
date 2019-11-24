@@ -12,6 +12,7 @@
         pc: sample.potentialCustomers,
         s: sample.shoplifters 
     })
+    .print(o => o, 'o: before')
     .merge((c,pc) => c.id == pc.id, 'both left') // left join
     .merge((c,s) => c.id == s.id, 'null left') // not exists
     .merge((o,c) => o.customer == c.id, 'both both') // full join
@@ -25,10 +26,10 @@
         rating: $$.avg(o.rating),
         correlation: $$.cor(o.speed, o.rating)
     }))
+    .print(o => o, 'o: after')
     .catch(err => console.log(err))
     .execute(o => o);
 
-    console.log(result);
     
 /*
     fetch('getMongo')

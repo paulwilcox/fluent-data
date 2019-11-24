@@ -161,20 +161,25 @@ export default class {
         return this;
     }
 
-    print (func, target, caption) {
+    // TODO: Document new parameter order and console.log capability
+    print (func, caption, target) {
 
         let ds = this.getDataset(func);
+        
+        let printer = rows => 
+              target ? prn(target, rows, caption)
+            : caption ? console.log(caption, rows) 
+            : console.log(rows); 
 
         // if dataset is an external dataset (is a dsGetter),
         // then it is a promise, so print inside 'then'.
         if (ds.data instanceof dsGetter) {
-            ds.callWithoutModify('map', func)
-                .then(rows => prn(target, rows, caption));
+            ds.callWithoutModify('map', func).then(rows => printer(rows));
             return this;
         }
 
         let rows = ds.callWithoutModify('map', func);
-        prn(target, rows, caption);
+        printer(rows);
         return this;
 
     }

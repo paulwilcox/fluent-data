@@ -1530,20 +1530,24 @@ class database {
         return this;
     }
 
-    print (func, target, caption) {
+    print (func, caption, target) {
 
         let ds = this.getDataset(func);
+        
+        let printer = rows => 
+              target ? print(target, rows, caption)
+            : caption ? console.log(caption, rows) 
+            : console.log(rows); 
 
         // if dataset is an external dataset (is a dsGetter),
         // then it is a promise, so print inside 'then'.
         if (ds.data instanceof dsGetter) {
-            ds.callWithoutModify('map', func)
-                .then(rows => print(target, rows, caption));
+            ds.callWithoutModify('map', func).then(rows => printer(rows));
             return this;
         }
 
         let rows = ds.callWithoutModify('map', func);
-        print(target, rows, caption);
+        printer(rows);
         return this;
 
     }
