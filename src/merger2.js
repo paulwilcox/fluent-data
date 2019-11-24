@@ -33,10 +33,10 @@ function normalizeMapper (mapFunc, matchingLogic) {
         let keywords = mapFunc.split(' ');
         let onMatched = keywords[0];
         let onUnmatched = keywords[1];
-        let allowedTerms = ['both', 'left', 'right', 'null', 'stack'];
+        let allowedTerms = ['both', 'thob', 'left', 'right', 'null', 'stack'];
 
         if (!allowedTerms.includes(onMatched) || !allowedTerms.includes(onUnmatched))
-            throw 'mapper must be one of: both, left, right, null, stack';
+            throw `mapper must be one of: ${allowedTerms.join(',')}}`;
 
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
@@ -55,6 +55,7 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
     if(left && right)
         switch(onMatched) {
             case 'both': return removeUndefinedKeys(Object.assign({}, right, left));
+            case 'thob': return removeUndefinedKeys(Object.assign({}, left, right));
             case 'left': return left;
             case 'right': return right;
             case 'null': return undefined;
@@ -62,7 +63,8 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
         }
 
     switch(onUnmatched) {
-        case 'both': return right || left;
+        case 'both': return left || right;
+        case 'thob': return left || right; 
         case 'left': return left;
         case 'right': return right;
         case 'null': return undefined;
