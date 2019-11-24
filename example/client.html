@@ -4,58 +4,6 @@
 
     import $$ from "../dist/FluentDB.client.js";
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
-/*
-    let results = [];
-    let crosses = [];    
-    let working = [];
-    let func = (x,y,z) => ({x,y,z});
-    let cbIXs = [0,1,2];
-    
-    let b = [];
-    b[0] = { x: 'x', y: 'y' };
-    //b[1] = { x: 'ex', y: 'why' };
-    
-    let bucketSet = [
-        b,
-        [ { a: 'a', b: 'b' }, { a: 'eigh', b: 'bee' }],
-        [ { o: 1, t: 2 }, { o: 0, t: 10 } ]
-    ];
-
-    for (let row of bucketSet[cbIXs.shift()]) {
-        if (row === undefined)
-            continue;
-        crosses.push([row]);
-    }
-
-    for (let cbIX of cbIXs) {
-        let bucket = bucketSet[cbIX];
-        for (let cross of crosses) 
-        for (let row of bucket) {
-            if(row === undefined) 
-                continue;
-            working.push([...cross, row]);
-        }
-        crosses = working;
-        working = [];
-    }
-
-    for (let cross of crosses) {
-        let mapped = func(...cross);
-        if (mapped === undefined)
-            continue;
-        if (!Array.isArray(mapped)) {
-            results.push(mapped);
-            continue;
-        }
-        for(entry of mapped)
-            if (entry !== undefined)
-                results.push(entry);
-    }
-
-    console.log({results})
-
-throw 'early';
-*/
 
     let result = $$({
         o: sample.orders,
