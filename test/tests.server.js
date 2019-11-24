@@ -1335,7 +1335,7 @@ class cobuckets extends Map {
             switch(distinctBehavior) {
                 case 'first': break;
                 case 'last': this.get(key)[cobucketIX][0] = item; break;
-                case 'distinct': throw 'distinct option passed but more than one records match.'
+                case 'dist': throw 'distinct option passed but more than one records match.'
                 default: this.get(key)[cobucketIX].push(item);
             }
 
@@ -1374,6 +1374,8 @@ class cobuckets extends Map {
 
         }
 
+        // TODO: Can this be worked into a function  
+        // in place of the last run of above?
         for (let cross of crosses) {
             let mapped = func(...cross);
             if (mapped === undefined)
@@ -1427,10 +1429,10 @@ function normalizeMapper (mapFunc, matchingLogic) {
         let keywords = mapFunc.split(' ');
         let onMatched = keywords[0];
         let onUnmatched = keywords[1];
-        let allowedTerms = ['both', 'left', 'right', 'null', 'stack'];
+        let allowedTerms = ['both', 'thob', 'left', 'right', 'null', 'stack'];
 
         if (!allowedTerms.includes(onMatched) || !allowedTerms.includes(onUnmatched))
-            throw 'mapper must be one of: both, left, right, null, stack';
+            throw `mapper must be one of: ${allowedTerms.join(',')}}`;
 
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
@@ -1449,6 +1451,7 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
     if(left && right)
         switch(onMatched) {
             case 'both': return removeUndefinedKeys(Object.assign({}, right, left));
+            case 'thob': return removeUndefinedKeys(Object.assign({}, left, right));
             case 'left': return left;
             case 'right': return right;
             case 'null': return undefined;
@@ -1456,7 +1459,8 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
         }
 
     switch(onUnmatched) {
-        case 'both': return right || left;
+        case 'both': return left || right;
+        case 'thob': return left || right; 
         case 'left': return left;
         case 'right': return right;
         case 'null': return undefined;
@@ -2206,9 +2210,6 @@ $$.idb = dbName => new dbConnectorIdb(dbName);
 $$.dbConnector = dbConnector;
 $$.dsGetter = dsGetter;
 
-// TODO: Implement testing structure for FluentDB.mergeExternal,
-// or just do direct tests, because it is not really covered here.
-
 class tests {
 
     constructor (seriToRun, testsToRun) {
@@ -2226,8 +2227,8 @@ class tests {
     async run (seriesName, createFDB) { 
         
         let n = testName => this.name(testName, seriesName);
-
-        return Promise.all([
+        
+        let promises = [
 
             createFDB()
                 .filter(o => o.customer == 2)
@@ -2264,12 +2265,6 @@ class tests {
                 }),
 
             createFDB()
-                .join((o,p) => o.product == p.id)
-                .test(n('join'), o => o, data => 
-                    Object.keys(data[0]).includes('price')
-                ),
-
-            createFDB()
                 .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
                 .reduce(o => ({
                     customer: $$.first(o.customer), 
@@ -2283,18 +2278,45 @@ class tests {
                         && row0('rating') == 58.29
                         && row0('speed') == 4.57
                         && row0('speed_cor') == 0.74;
-                }),
+                })
 
-            createFDB()
-                .merge('upsert', c => c.id, pc => pc.id)
-                .merge('delete', c => c.id, s => s.id)
-                .test(n('merge'), c => c, data =>  
-                    data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
-                    data.filter(row => row.id == 4 || row.id == 5).length == 0
-                )
+        ];
 
-        ])
-        .then(res => 
+        let mergeTypes = ['both','thob','left','right','null'];
+
+        for (let matchedType of mergeTypes)
+        for (let unmatchedType of mergeTypes)
+            promises.push(
+                createFDB()
+                .merge2(`${matchedType} ${unmatchedType}`, c => c.id, pc => pc.id)
+                .test(n(`merge.${matchedType}_${unmatchedType}`), c => c, data => {
+                    
+                    let matched = data.find(row => row.id == 2);
+                    let left = data.find(row => row.id == 1);
+                    let right = data.find(row => row.id == 3);
+                    
+                    switch (matchedType) {
+                        case 'both': 
+                        case 'right': if(matched.fullname != 'Johnathan Doe') return false;  
+                        case 'thob':
+                        case 'left': if(matched.fullname != 'John Doe') return false;
+                        case 'null': if(matched != undefined) return false;
+                    }
+                    
+                    switch (unmatchedType) {
+                        case 'both':
+                        case 'thob': if(!left || !right) return false;
+                        case 'left': if(right || !left) return false;
+                        case 'right': if(left || !right) return false;  
+                        case 'null': if(left || right) return false;
+                    }
+
+                    return true;
+
+                })
+            );
+
+        return Promise.all(promises).then(res => 
             res
             .filter(row => row !== undefined)
             .map(row => ({

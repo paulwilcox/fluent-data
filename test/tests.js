@@ -17,8 +17,8 @@ export default class {
     async run (seriesName, createFDB) { 
         
         let n = testName => this.name(testName, seriesName);
-
-        return Promise.all([
+        
+        let promises = [
 
             createFDB()
                 .filter(o => o.customer == 2)
@@ -55,12 +55,6 @@ export default class {
                 }),
 
             createFDB()
-                .join((o,p) => o.product == p.id)
-                .test(n('join'), o => o, data => 
-                    Object.keys(data[0]).includes('price')
-                ),
-
-            createFDB()
                 .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
                 .reduce(o => ({
                     customer: $$.first(o.customer), 
@@ -74,18 +68,45 @@ export default class {
                         && row0('rating') == 58.29
                         && row0('speed') == 4.57
                         && row0('speed_cor') == 0.74;
-                }),
+                })
 
-            createFDB()
-                .merge('upsert', c => c.id, pc => pc.id)
-                .merge('delete', c => c.id, s => s.id)
-                .test(n('merge'), c => c, data =>  
-                    data.find(row => row.id == 2).fullname == 'Johnathan Doe' && 
-                    data.filter(row => row.id == 4 || row.id == 5).length == 0
-                )
+        ];
 
-        ])
-        .then(res => 
+        let mergeTypes = ['both','thob','left','right','null'];
+
+        for (let matchedType of mergeTypes)
+        for (let unmatchedType of mergeTypes)
+            promises.push(
+                createFDB()
+                .merge2(`${matchedType} ${unmatchedType}`, c => c.id, pc => pc.id)
+                .test(n(`merge.${matchedType}_${unmatchedType}`), c => c, data => {
+                    
+                    let matched = data.find(row => row.id == 2);
+                    let left = data.find(row => row.id == 1);
+                    let right = data.find(row => row.id == 3);
+                    
+                    switch (matchedType) {
+                        case 'both': 
+                        case 'right': if(matched.fullname != 'Johnathan Doe') return false;  
+                        case 'thob':
+                        case 'left': if(matched.fullname != 'John Doe') return false;
+                        case 'null': if(matched != undefined) return false;
+                    }
+                    
+                    switch (unmatchedType) {
+                        case 'both':
+                        case 'thob': if(!left || !right) return false;
+                        case 'left': if(right || !left) return false;
+                        case 'right': if(left || !right) return false;  
+                        case 'null': if(left || right) return false;
+                    }
+
+                    return true;
+
+                })
+            );
+
+        return Promise.all(promises).then(res => 
             res
             .filter(row => row !== undefined)
             .map(row => ({
