@@ -3,7 +3,6 @@ import dataset from './dataset.js';
 import parser from './parser.js';
 import dbConnector from './dbConnector.js';
 import dsGetter from './dsGetter';
-import { thenRemoveUndefinedKeys } from './mapper.js';
 import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
@@ -117,7 +116,7 @@ export default class {
 
     map (func) {    
         let ds = this.getDataset(func);    
-        ds.call('map', thenRemoveUndefinedKeys(func));
+        ds.call('map', g.noUndefinedForFunc(func));
         return this;
     }
 

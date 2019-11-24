@@ -69,6 +69,23 @@ let flattenArray = array => {
     return result;
 };
 
+let noUndefinedForFunc = mapper =>
+
+    (...args) => {
+        let result = mapper(...args);
+        return noUndefined(result);
+    };
+
+let noUndefined = obj => {
+    
+    for(let key of Object.keys(obj))
+        if (obj[key] === undefined) 
+            delete result[key];
+
+    return obj;
+
+};
+
 class parser {
 
     // Parse function into argument names and body
@@ -311,23 +328,6 @@ class dbConnector {
     open() { throw "Please override 'open'." }
     dsGetter() { throw "Please override 'dsGetter'."}
 }
-
-let thenRemoveUndefinedKeys = mapper =>
-
-    (...args) => {
-        let result = mapper(...args);
-        return removeUndefinedKeys(result);
-    };
-
-let removeUndefinedKeys = obj => {
-    
-    for(let key of Object.keys(obj))
-        if (obj[key] === undefined) 
-            delete result[key];
-
-    return obj;
-
-};
 
 class hashBuckets {
     
@@ -700,8 +700,8 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
 
     if(left && right)
         switch(onMatched) {
-            case 'both': return removeUndefinedKeys(Object.assign({}, right, left));
-            case 'thob': return removeUndefinedKeys(Object.assign({}, left, right));
+            case 'both': return noUndefined(Object.assign({}, right, left));
+            case 'thob': return noUndefined(Object.assign({}, left, right));
             case 'left': return left;
             case 'right': return right;
             case 'null': return undefined;
@@ -1388,7 +1388,7 @@ class database {
 
     map (func) {    
         let ds = this.getDataset(func);    
-        ds.call('map', thenRemoveUndefinedKeys(func));
+        ds.call('map', noUndefinedForFunc(func));
         return this;
     }
 
@@ -1656,8 +1656,6 @@ class dbConnectorIdb extends dbConnector {
 
 }
 
-// TODO: Try-Catch logic is bad
-
 function $$(obj) { 
     return new FluentDB().addSources(obj); 
 }
@@ -1759,7 +1757,7 @@ class FluentDB extends deferable {
             let db = super.execute();
 
             let param = parser.parameters(finalMapper)[0];
-            finalMapper = thenRemoveUndefinedKeys(finalMapper);
+            finalMapper = noUndefinedForFunc(finalMapper);
 
             if (this.status == 'rejected' || finalMapper === undefined)
                 return db;

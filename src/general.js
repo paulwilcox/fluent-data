@@ -78,3 +78,20 @@ export let flattenArray = array => {
             result.push(element);
     return result;
 }
+
+export let noUndefinedForFunc = mapper =>
+
+    (...args) => {
+        let result = mapper(...args);
+        return noUndefined(result);
+    };
+
+export let noUndefined = obj => {
+    
+    for(let key of Object.keys(obj))
+        if (obj[key] === undefined) 
+            delete result[key];
+
+    return obj;
+
+}

@@ -6,9 +6,6 @@ import dbConnectorIdb from './dbConnectorIdb.js';
 import dbConnector from './dbConnector.js';
 import dsGetter from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
-import { thenRemoveUndefinedKeys } from './mapper.js';
-
-// TODO: Try-Catch logic is bad
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -111,7 +108,7 @@ class FluentDB extends deferable {
             let db = super.execute();
 
             let param = parser.parameters(finalMapper)[0];
-            finalMapper = thenRemoveUndefinedKeys(finalMapper);
+            finalMapper = g.noUndefinedForFunc(finalMapper);
 
             if (this.status == 'rejected' || finalMapper === undefined)
                 return db;

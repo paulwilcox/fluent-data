@@ -1,6 +1,5 @@
 import parser from './parser.js';
 import buckles from './buckles.js';
-import { removeUndefinedKeys } from './mapper.js';
 import * as g from './general.js';
 
 export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
@@ -54,8 +53,8 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
 
     if(left && right)
         switch(onMatched) {
-            case 'both': return removeUndefinedKeys(Object.assign({}, right, left));
-            case 'thob': return removeUndefinedKeys(Object.assign({}, left, right));
+            case 'both': return g.noUndefined(Object.assign({}, right, left));
+            case 'thob': return g.noUndefined(Object.assign({}, left, right));
             case 'left': return left;
             case 'right': return right;
             case 'null': return undefined;
