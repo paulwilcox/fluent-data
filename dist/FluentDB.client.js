@@ -1371,7 +1371,7 @@ class cobuckets extends Map {
                 yield mapped;
                 continue;
             }
-            for(entry of mapped)
+            for(let entry of mapped)
                 if (entry !== undefined)
                     yield entry;
         }
