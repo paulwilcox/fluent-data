@@ -20,8 +20,8 @@ class FluentDB extends deferable {
         super(new database());
         this.attachDbFuncs(
             'addSources', 'filter', 'map', 
-            'join', 'group', 'sort', 
-            'reduce', 'print', 'merge', 'merge2'
+            'group', 'sort', 
+            'reduce', 'print', 'merge'
         );
     }
  

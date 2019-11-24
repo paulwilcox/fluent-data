@@ -4,13 +4,11 @@ import { parser } from './parser.js';
 import { dbConnector } from './dbConnector.js';
 import { dsGetter } from './dsGetter';
 import { thenRemoveUndefinedKeys } from './mapper.js';
-import { joiner } from './joiner.js';
 import { hashBuckets } from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
-import { merger } from './merger.js';
+import merger from './merger.js';
 import { print as prn } from './visualizer/printer.js';
-import merger2 from './merger2.js';
 
 export class database {
 
@@ -123,60 +121,6 @@ export class database {
         return this;
     }
 
-    join (
-        newKey,
-        options, // inner, left, right, full, default, loop, hash
-        matchingLogic, // (f,j) => f.col1 == j.col1 && f.col2 < j.col2
-        mapper
-    ) {
-        
-        // You can tell whether the user desires to bypass newKey or
-        // options based on place of the first parameter that is not
-        // a string.  Shift the arguments accordingly and call 'join' 
-        // again.
-
-        // shift parameters by two
-        if (!g.isString(newKey))
-            return this.join(
-                parser.parameters(newKey)[0], 
-                'inner hash',
-                newKey, // really matchingLogic
-                options // really mapper
-            );        
-
-        // shift parameters by one
-        if (!g.isString(options)) 
-            return this.join(
-                parser.parameters(options)[0], 
-                newKey, // really options
-                options, // really matchingLogic
-                matchingLogic // really mapper
-            );
-
-        let keys = 
-            g.isFunction(matchingLogic)
-            ? parser.parameters(matchingLogic)
-            : [
-                 parser.parameters(matchingLogic[0]),
-                 parser.parameters(matchingLogic[1])
-              ];
-
-        let fromDs = this.getDataset(keys[0]);
-        let joinDs = this.getDataset(keys[1]);
-
-        let joinedRows = 
-            new joiner (fromDs, joinDs, options)
-            .execute(matchingLogic, mapper);
-
-        if (!this.getDataset(newKey))
-            this.addSource(newKey, joinedRows);
-        else 
-            this.getDataset(newKey).data = joinedRows;
-
-        return this;
-
-    }
-
     group (groupKeySelector) {
     
         let ds = this.getDataset(groupKeySelector);
@@ -236,28 +180,7 @@ export class database {
 
     }
 
-    merge (
-        type, // update, insert, delete, upsert, full, or [] of 4 bools
-        targetIdentityKey, 
-        sourceIdentityKey  
-    ) {
-
-        let target = this.getDataset(targetIdentityKey);
-        let source = this.getDataset(sourceIdentityKey); 
-
-        target.data = merger(
-            type, 
-            target.data, 
-            source.data, 
-            targetIdentityKey, 
-            sourceIdentityKey
-        );
-
-        return this;
-
-    }
-
-    merge2 (...args) {
+    merge (...args) {
         
         // user did not pass a 'newKey'.  So make it the function parameter.
         if (g.isFunction(args[0]))
@@ -269,7 +192,7 @@ export class database {
         let leftData = this.getDataset(keys[0]).data;
         let rightData = this.getDataset(keys[1]).data;
 
-        let merged = merger2(
+        let merged = merger(
             leftData, 
             rightData, 
             matchingLogic, 

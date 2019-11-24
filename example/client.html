@@ -12,9 +12,9 @@
         pc: sample.potentialCustomers,
         s: sample.shoplifters 
     })
-    .merge2((c,pc) => c.id == pc.id, 'both left') // left join
-    .merge2((c,s) => c.id == s.id, 'null left') // not exists
-    .merge2((o,c) => o.customer == c.id, 'both both') // full join
+    .merge((c,pc) => c.id == pc.id, 'both left') // left join
+    .merge((c,s) => c.id == s.id, 'null left') // not exists
+    .merge((o,c) => o.customer == c.id, 'both both') // full join
     .group(o => o.customer) 
     .reduce(o => ({
         customerId: $$.first(o.customer || 'n/a'), 
