@@ -34,7 +34,7 @@ export default class extends Map {
             switch(distinctBehavior) {
                 case 'first': break;
                 case 'last': this.get(key)[cobucketIX][0] = item; break;
-                case 'distinct': throw 'distinct option passed but more than one records match.'
+                case 'dist': throw 'distinct option passed but more than one records match.'
                 default: this.get(key)[cobucketIX].push(item);
             }
 
@@ -73,6 +73,8 @@ export default class extends Map {
 
         }
 
+        // TODO: Can this be worked into a function  
+        // in place of the last run of above?
         for (let cross of crosses) {
             let mapped = func(...cross);
             if (mapped === undefined)
