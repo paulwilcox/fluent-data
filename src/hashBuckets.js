@@ -1,7 +1,7 @@
-import * as general from "./general.js";
+import * as g from "./general.js";
 
 
-export class hashBuckets {
+export default class {
     
     constructor (
         hashKeySelector
@@ -19,7 +19,7 @@ export class hashBuckets {
     addItem(item) {
 
         let objectKey = this.hashKeySelector(item);
-        let stringKey = general.stringifyObject(objectKey);
+        let stringKey = g.stringifyObject(objectKey);
 
         if (!this.mapper.has(stringKey)) 
             this.mapper.set(stringKey, [item]);
@@ -37,7 +37,7 @@ export class hashBuckets {
     ) {
 
         let objectKey = hashKeySelector(objectToHash);
-        let stringKey = general.stringifyObject(objectKey);
+        let stringKey = g.stringifyObject(objectKey);
 
         let value = this.mapper.get(stringKey);
 

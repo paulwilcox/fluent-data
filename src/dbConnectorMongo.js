@@ -1,8 +1,8 @@
-import { dsGetterMongo } from './dsGetterMongo.js';
-import { dbConnector } from './dbConnector.js';
+import dsGetterMongo from './dsGetterMongo.js';
+import dbConnector from './dbConnector.js';
 import { MongoClient } from 'mongodb';
 
-export class dbConnectorMongo extends dbConnector {
+export default class extends dbConnector {
 
     constructor (url) {
         super();

@@ -1,4 +1,4 @@
-export class dsGetter {
+export default class {
 
     constructor(dbConnector) {
         this.dbConnector = dbConnector;

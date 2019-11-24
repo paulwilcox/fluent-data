@@ -1,7 +1,7 @@
 import * as g from './general.js';
-import { dsGetter } from './dsGetter.js';
+import dsGetter from './dsGetter.js';
 
-export class dataset {
+export default class {
 
     constructor(key, data) {
         this.key = key;

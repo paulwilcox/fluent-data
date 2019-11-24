@@ -1,7 +1,7 @@
-import { dbConnector } from './dbConnector.js';
-import { dsGetterIdb } from './dsGetterIdb.js';
+import dbConnector from './dbConnector.js';
+import dsGetterIdb from './dsGetterIdb.js';
 
-export class dbConnectorIdb extends dbConnector {
+export default class extends dbConnector {
 
     constructor (dbName) {
         super();

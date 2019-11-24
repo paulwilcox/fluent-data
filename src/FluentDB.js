@@ -1,10 +1,10 @@
 import * as g from './general.js';
-import { parser } from './parser.js';
-import { deferable } from './deferable.js';
-import { database } from './database.js';
-import { dbConnectorIdb } from './dbConnectorIdb.js';
-import { dbConnector } from './dbConnector.js';
-import { dsGetter } from './dsGetter.js';
+import parser from './parser.js';
+import deferable from './deferable.js';
+import database from './database.js';
+import dbConnectorIdb from './dbConnectorIdb.js';
+import dbConnector from './dbConnector.js';
+import dsGetter from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
 import { thenRemoveUndefinedKeys } from './mapper.js';
 

@@ -1,4 +1,4 @@
-export class parser {
+class parser {
 
     // Parse function into argument names and body
     constructor (func) {
@@ -116,3 +116,5 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
     };
 
 }
+
+export default parser;

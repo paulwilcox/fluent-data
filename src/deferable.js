@@ -1,6 +1,6 @@
 import * as g from './general.js';
 
-export class deferable {
+export default class {
 
     constructor(initial) {
         this.value = initial;

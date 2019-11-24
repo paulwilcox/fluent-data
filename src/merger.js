@@ -1,4 +1,4 @@
-import { parser } from './parser.js';
+import parser from './parser.js';
 import buckles from './buckles.js';
 import { removeUndefinedKeys } from './mapper.js';
 import * as g from './general.js';

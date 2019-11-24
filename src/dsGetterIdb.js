@@ -1,7 +1,7 @@
-import { dsGetter } from './dsGetter.js';
-import { hashBuckets } from './hashBuckets.js';
+import dsGetter from './dsGetter.js';
+import hashBuckets from './hashBuckets.js';
 
-export class dsGetterIdb extends dsGetter {
+export default class extends dsGetter {
 
     constructor (storeName, idbConnector) {
         super(idbConnector);

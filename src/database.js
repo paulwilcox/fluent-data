@@ -1,16 +1,16 @@
 import * as g from './general.js';
-import { dataset } from './dataset.js';
-import { parser } from './parser.js';
-import { dbConnector } from './dbConnector.js';
-import { dsGetter } from './dsGetter';
+import dataset from './dataset.js';
+import parser from './parser.js';
+import dbConnector from './dbConnector.js';
+import dsGetter from './dsGetter';
 import { thenRemoveUndefinedKeys } from './mapper.js';
-import { hashBuckets } from './hashBuckets.js';
+import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
 import merger from './merger.js';
 import { print as prn } from './visualizer/printer.js';
 
-export class database {
+export default class {
 
     constructor() {
         this.datasets = []; 

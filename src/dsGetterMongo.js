@@ -1,6 +1,6 @@
-import { dsGetter } from './dsGetter.js';
+import dsGetter from './dsGetter.js';
 
-export class dsGetterMongo extends dsGetter {
+export default class extends dsGetter {
 
     constructor (collectionName, connector) {
         super();
