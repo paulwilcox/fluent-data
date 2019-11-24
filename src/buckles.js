@@ -1,41 +1,39 @@
-import * as g from "./general.js";
+import * as g from './general.js';
 
-// This is written to allow two or more co-buckets.  But 
-// I think most usages will only require a pair.  So 
-// if it's too complicated and usage only ever requires
-// a pair, not a big deal to refactor to pair specific
-// implementation if it would simplify things.
+// 'buckle' signifies tuple with buckets as items.  Usage will 
+// probably only be pairs though, so in the future if desired 
+// you can simplify to simply allow pairs, not more than that.
 export default class extends Map {
     
     constructor (stringify = true) {
         super();
         this.stringify = stringify;
-        this.cobucketIndicies = new Set();
+        this.bucketIndicies = new Set();
     }
 
-    add(cobucketIX, hashFunc, distinctBehavior, ...items) {
+    add(bucketIndex, hashFunc, distinctBehavior, ...items) {
 
-        this.cobucketIndicies.add(cobucketIX);
+        this.bucketIndicies.add(bucketIndex);
 
         for (let item of items) {
              
             let key = this.hashify(hashFunc, item);
 
             if (!this.has(key)) {
-                let cobucket = [];
-                cobucket[cobucketIX] = [item];
-                this.set(key, cobucket);
+                let buckle = [];
+                buckle[bucketIndex] = [item];
+                this.set(key, buckle);
                 continue;
             }
 
-            if (!this.get(key)[cobucketIX])
-                this.get(key)[cobucketIX] = [];
+            if (!this.get(key)[bucketIndex])
+                this.get(key)[bucketIndex] = [];
 
             switch(distinctBehavior) {
                 case 'first': break;
-                case 'last': this.get(key)[cobucketIX][0] = item; break;
+                case 'last': this.get(key)[bucketIndex][0] = item; break;
                 case 'dist': throw 'distinct option passed but more than one records match.'
-                default: this.get(key)[cobucketIX].push(item);
+                default: this.get(key)[bucketIndex].push(item);
             }
 
         }
@@ -47,19 +45,19 @@ export default class extends Map {
     * crossMap(func) {
 
         for (let bucketSet of this.values())  
-        for (let item of this.crossMapBucketSet(bucketSet, func))
+        for (let item of this.crossMapBuckle(bucketSet, func))
             yield item;
     }
 
-    * crossMapBucketSet(bucketSet, func) {
+    * crossMapBuckle(bucketSet, func) {
 
         let isFirstBucket = true;
         let crosses = [[]]; // but when overwriting, just do [].
         let working = [];
                   
-        for (let cbIX of [...this.cobucketIndicies]) {
+        for (let bucketIX of [...this.bucketIndicies]) {
 
-            let bucket = bucketSet[cbIX] || [undefined];
+            let bucket = bucketSet[bucketIX] || [undefined];
 
             for (let cross of crosses) 
             for (let row of bucket) 

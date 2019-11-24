@@ -1,5 +1,5 @@
 import { parser } from './parser.js';
-import cobuckets from './cobuckets.js';
+import buckles from './buckles.js';
 import { removeUndefinedKeys } from './mapper.js';
 import * as g from './general.js';
 
@@ -15,7 +15,7 @@ export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicat
 
     mapFunc = normalizeMapper(mapFunc, matchingLogic);
 
-    return [...new cobuckets(leftFunc)
+    return [...new buckles(leftFunc)
         .add(0, leftFunc, onDuplicate, ...leftData)
         .add(1, rightFunc, onDuplicate, ...rightData)
         .crossMap(mapFunc)
