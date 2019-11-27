@@ -10,7 +10,7 @@
         p: sample.products,
         c: sample.customers,
         pc: sample.potentialCustomers,
-        s: sample.shoplifters 
+        s: sample.shoplifters
     })
     .print(o => o, 'o: before')
     .merge((c,pc) => c.id == pc.id, 'both left') // left join
