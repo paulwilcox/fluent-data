@@ -132,7 +132,6 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
-                db = this.resolveGetters(db, funcName, args);
                 db = this.promisifyDbIfNecessary(db);
                 
                 return (g.isPromise(db)) 
@@ -142,33 +141,6 @@ class FluentDB extends deferable {
             });};
         
     } 
-
-    resolveGetters(db, funcName, args) {
-
-        let argDatasets = this.argumentDatasets(db, args);
-        let foundGetters = 0;
-
-        for(let i = argDatasets.length - 1; i >= 0; i--) {
-
-            let argDs = argDatasets[i];
-            let hasFunc = argDs.data[funcName] ? true : false;
-            let isGetter = argDs.data instanceof dsGetter;
-            if (isGetter)
-                foundGetters++;
-
-            // - If the first dataset arg is a dsGetter, and it is the only dsGetter,
-            //   and the dsGetter has the function being called, then use the function
-            //   on that getter.    
-            if (i == 0 && isGetter && foundGetters == 1 && hasFunc && funcName != 'merge') 
-                argDs.data = argDs.data[funcName](...args);
-            else if (isGetter) 
-                argDs.data = argDs.data.map(x => x);
-
-        }
-
-        return db;
-
-    }
 
     promisifyDbIfNecessary (db) {
         
@@ -186,22 +158,6 @@ class FluentDB extends deferable {
                     db.datasets[i].data = datas[i];
                 return db;
             });
-
-    }
-
-    // Get datasets from passed arguments
-    argumentDatasets (db, args) {
-
-        let funcArgs = g.flattenArray(
-            args
-            .filter(a => g.isFunction(a))
-            .map(a => parser.parameters(a))
-        );
-
-        return funcArgs
-            .filter((a,i,self) => self.indexOf(a) == i) // distinct
-            .map(p => db.getDataset(p))
-            .filter(p => p); // some function params don't represent datasets
 
     }
 
