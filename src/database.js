@@ -1,8 +1,7 @@
 import * as g from './general.js';
 import dataset from './dataset.js';
 import parser from './parser.js';
-import dbConnector from './dbConnector.js';
-import dsGetter from './dsGetter';
+import connector from './connector.js';
 import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import { runEmulators } from './reducer.js';
@@ -13,7 +12,6 @@ export default class {
 
     constructor() {
         this.datasets = []; 
-        this.dbConnectors = {};
     }
 
     getDataset(key) {
@@ -48,64 +46,10 @@ export default class {
         return this;
     }    
 
-    removeSource (key) {
-
-        for (let i in this.datasets) {
-            
-            let ds = this.datasets[i];
-            
-            if (ds.key == key) {
-                this.datasets.splice(i, 1);
-                return this;
-            }
-
-        }
-
-        return this;
-
-    }
-
-    // parameter should be a dsConnector alias
-    // value should be a dataset name (string)
-    makeDsGetter(func) {
-
-        let conAlias = parser.parameters(func)[0];
-        let dsName = func();
-
-        if (!g.isString(dsName))
-            throw `
-                ${ds.key} did not return a string.  It should 
-                return the name of a dataset in ${conAlias}.
-            `;
-                 
-        return this.dbConnectors[conAlias]
-            .dsGetter(dsName);
-
-    }
-
     addSources (obj) { 
-
-        let items = Object.keys(obj).map(k => ({ key: k, val: obj[k]}));
-        let dbCons = items.filter(i => i.val instanceof dbConnector);
-        let dsFuncs = items.filter(i => g.isFunction(i.val));
-        let datasets = items.filter(i => !(i.val instanceof dbConnector) && !g.isFunction(i.val));
-
-        for (let con of dbCons)
-            this.dbConnectors[con.key] = con.val;
-
-        for (let ds of datasets) 
-            this.addSource(ds.key, ds.val);
-
-        // A function in addSources should only ever have the form:
-        //    dbConnectorAlias => 'datasetName';            
-        for (let dsFunc of dsFuncs) 
-            this.addSource(
-                dsFunc.key, 
-                this.makeDsGetter(dsFunc.val)
-            );
-
+        for (let entry of Object.entries(obj)) 
+            this.addSource(entry[0], entry[1]);
         return this;
-
     }
 
     filter (func) { 
@@ -171,14 +115,14 @@ export default class {
             : caption ? console.log(caption, rows) 
             : console.log(rows); 
 
-        // if dataset is an external dataset (is a dsGetter),
-        // then it is a promise, so print inside 'then'.
-        if (ds.data instanceof dsGetter) {
+        // if dataset is a connector, then it is a 
+        // promise, so print inside 'then'.
+        if (ds.data instanceof connector) {
             ds.callWithoutModify('map', func)
             .then(rows => { 
                 if (!target && !caption) 
                     console.log(
-                        `${ds.key} is a dsGetter that has not been ` +
+                        `${ds.key} is a connector that has not been ` +
                         `imported into the FluentDB instance`
                     ); 
                 printer(rows);

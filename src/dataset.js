@@ -1,5 +1,5 @@
 import * as g from './general.js';
-import dsGetter from './dsGetter.js';
+import connector from './connector.js';
 
 export default class {
 
@@ -14,7 +14,7 @@ export default class {
 
     callWithoutModify (arrayOperation, ...args) {
 
-        if (this.data instanceof dsGetter) 
+        if (this.data instanceof connector) 
             return this.data[arrayOperation](...args);
 
         let fromArrayProto = g.isString(arrayOperation);

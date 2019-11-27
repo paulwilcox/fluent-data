@@ -57,18 +57,6 @@ let isString = input =>
 let isFunction = input => 
     typeof input === 'function';
 
-// array.flat not out in all browsers/node
-let flattenArray = array => {
-    let result = [];
-    for(let element of array) 
-        if (Array.isArray(element))
-            for(let nestedElement of element)
-                result.push(nestedElement);
-        else 
-            result.push(element);
-    return result;
-};
-
 let noUndefinedForFunc = mapper =>
 
     (...args) => {
@@ -256,14 +244,9 @@ class deferable {
 
 }
 
-class dsGetter {
+class connector {
 
-    constructor(dbConnector) {
-        this.dbConnector = dbConnector;
-    }
-
-    map() { throw "Please override 'map'." }
-    filter() { throw "Please override 'filter'." }
+    import() { throw "Please override 'import'." }
     merge() { throw "Please override 'merge'." }
 
 }
@@ -281,7 +264,7 @@ class dataset {
 
     callWithoutModify (arrayOperation, ...args) {
 
-        if (this.data instanceof dsGetter) 
+        if (this.data instanceof connector) 
             return this.data[arrayOperation](...args);
 
         let fromArrayProto = isString(arrayOperation);
@@ -322,11 +305,6 @@ class dataset {
     
     }
 
-}
-
-class dbConnector {
-    open() { throw "Please override 'open'." }
-    dsGetter() { throw "Please override 'dsGetter'."}
 }
 
 class hashBuckets {
@@ -1285,7 +1263,6 @@ class database {
 
     constructor() {
         this.datasets = []; 
-        this.dbConnectors = {};
     }
 
     getDataset(key) {
@@ -1320,64 +1297,10 @@ class database {
         return this;
     }    
 
-    removeSource (key) {
-
-        for (let i in this.datasets) {
-            
-            let ds = this.datasets[i];
-            
-            if (ds.key == key) {
-                this.datasets.splice(i, 1);
-                return this;
-            }
-
-        }
-
-        return this;
-
-    }
-
-    // parameter should be a dsConnector alias
-    // value should be a dataset name (string)
-    makeDsGetter(func) {
-
-        let conAlias = parser.parameters(func)[0];
-        let dsName = func();
-
-        if (!isString(dsName))
-            throw `
-                ${ds.key} did not return a string.  It should 
-                return the name of a dataset in ${conAlias}.
-            `;
-                 
-        return this.dbConnectors[conAlias]
-            .dsGetter(dsName);
-
-    }
-
     addSources (obj) { 
-
-        let items = Object.keys(obj).map(k => ({ key: k, val: obj[k]}));
-        let dbCons = items.filter(i => i.val instanceof dbConnector);
-        let dsFuncs = items.filter(i => isFunction(i.val));
-        let datasets = items.filter(i => !(i.val instanceof dbConnector) && !isFunction(i.val));
-
-        for (let con of dbCons)
-            this.dbConnectors[con.key] = con.val;
-
-        for (let ds of datasets) 
-            this.addSource(ds.key, ds.val);
-
-        // A function in addSources should only ever have the form:
-        //    dbConnectorAlias => 'datasetName';            
-        for (let dsFunc of dsFuncs) 
-            this.addSource(
-                dsFunc.key, 
-                this.makeDsGetter(dsFunc.val)
-            );
-
+        for (let entry of Object.entries(obj)) 
+            this.addSource(entry[0], entry[1]);
         return this;
-
     }
 
     filter (func) { 
@@ -1433,19 +1356,28 @@ class database {
         return this;
     }
 
+    // TODO: Document new parameter order and console.log capability
     print (func, caption, target) {
 
         let ds = this.getDataset(func);
-        
+
         let printer = rows => 
               target ? print(target, rows, caption)
             : caption ? console.log(caption, rows) 
             : console.log(rows); 
 
-        // if dataset is an external dataset (is a dsGetter),
-        // then it is a promise, so print inside 'then'.
-        if (ds.data instanceof dsGetter) {
-            ds.callWithoutModify('map', func).then(rows => printer(rows));
+        // if dataset is a connector, then it is a 
+        // promise, so print inside 'then'.
+        if (ds.data instanceof connector) {
+            ds.callWithoutModify('map', func)
+            .then(rows => { 
+                if (!target && !caption) 
+                    console.log(
+                        `${ds.key} is a connector that has not been ` +
+                        `imported into the FluentDB instance`
+                    ); 
+                printer(rows);
+            });
             return this;
         }
 
@@ -1485,44 +1417,28 @@ class database {
 
 }
 
-class dsGetterIdb extends dsGetter {
+class connectorIdb extends connector {
 
-    constructor (storeName, idbConnector) {
-        super(idbConnector);
+    constructor (storeName, dbName) {
+        super();
+        this.dbName = dbName;
         this.storeName = storeName;
-        this.filterFunc;
     }
 
-    filter(filterFunc) {
-
-        if (!this.filterFunc) 
-            this.filterFunc = filterFunc;
-        else 
-            this.filterFunc = this.filterFunc && filterFunc;
-
-        return this;
-
-    }
-
-    // - thanks netchkin at https://stackoverflow.com/questions/46326212/
-    //   how-to-return-indexeddb-query-result-out-of-event-handler
-    // - also see "using a cursor" at https://developer.mozilla.org/en-US/
-    //   docs/Web/API/IndexedDB_API/Using_IndexedDB
-    map(mapFunc) {
+    import(mapFunc, filterFunc) {
 
         return new Promise((resolve, reject) => {
 
-            let dbCon = this.dbConnector.open();
+            let dbCon = window.indexedDB.open(this.dbName);
             
             dbCon.onsuccess = () => {
 
+                filterFunc = filterFunc || (x => true);
                 let db = dbCon.result;
                 let tx = db.transaction(this.storeName);
                 let store = tx.objectStore(this.storeName);
-                let filterFunc = this.filterFunc || (x => true);
-                let results = [];
-
                 let storeCursor = store.openCursor();
+                let results = [];
                 
                 storeCursor.onsuccess = event => {
 
@@ -1639,24 +1555,7 @@ class dsGetterIdb extends dsGetter {
 
         });
 
-    }
-
-}
-
-class dbConnectorIdb extends dbConnector {
-
-    constructor (dbName) {
-        super();
-        this.dbName = dbName;
-    }
-
-    open() {
-        return window.indexedDB.open(this.dbName);
-    }
-
-    dsGetter(storeName) {
-        return new dsGetterIdb(storeName, this);
-    }
+    }    
 
 }
 
@@ -1675,6 +1574,22 @@ class FluentDB extends deferable {
         );
     }
  
+    import (mapFunc, filterFunc) {
+        this.then(async db => {
+
+            let ds = db.getDataset(mapFunc);
+
+            if (!(ds instanceof connector))
+                throw 'dataset referenced by mapFunc is not a connector';
+
+            ds.data = await ds.data.import(mapFunc, filterFunc);
+
+            return db;
+
+        });
+        return this;
+    }
+
     mergeExternal (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 
@@ -1685,8 +1600,8 @@ class FluentDB extends deferable {
 
             let target = db.getDataset(targetIdentityKey).data;
 
-            if (!(target instanceof dsGetter))
-                throw 'target dataset is not a dsGetter.  Use "merge" instead.'
+            if (!(target instanceof connector))
+                throw 'target dataset is not a connector.  Use "merge" instead.'
 
             let source = await 
                 db.getDataset(sourceIdentityKey)
@@ -1747,7 +1662,7 @@ class FluentDB extends deferable {
 
     }
 
-    // TODO: Close all dsConnector connections
+    // TODO: Close all connector connections
     execute (finalMapper) {
 
         let catcher = err => { 
@@ -1759,6 +1674,9 @@ class FluentDB extends deferable {
         try {        
 
             let db = super.execute();
+
+            if (finalMapper == undefined)
+                return this;
 
             let param = parser.parameters(finalMapper)[0];
             finalMapper = noUndefinedForFunc(finalMapper);
@@ -1785,7 +1703,6 @@ class FluentDB extends deferable {
         for(let funcName of funcNames) 
             this[funcName] = function(...args) { return this.then(db => {
 
-                db = this.resolveGetters(db, funcName, args);
                 db = this.promisifyDbIfNecessary(db);
                 
                 return (isPromise(db)) 
@@ -1795,33 +1712,6 @@ class FluentDB extends deferable {
             });};
         
     } 
-
-    resolveGetters(db, funcName, args) {
-
-        let argDatasets = this.argumentDatasets(db, args);
-        let foundGetters = 0;
-
-        for(let i = argDatasets.length - 1; i >= 0; i--) {
-
-            let argDs = argDatasets[i];
-            let hasFunc = argDs.data[funcName] ? true : false;
-            let isGetter = argDs.data instanceof dsGetter;
-            if (isGetter)
-                foundGetters++;
-
-            // - If the first dataset arg is a dsGetter, and it is the only dsGetter,
-            //   and the dsGetter has the function being called, then use the function
-            //   on that getter.    
-            if (i == 0 && isGetter && foundGetters == 1 && hasFunc && funcName != 'merge') 
-                argDs.data = argDs.data[funcName](...args);
-            else if (isGetter) 
-                argDs.data = argDs.data.map(x => x);
-
-        }
-
-        return db;
-
-    }
 
     promisifyDbIfNecessary (db) {
         
@@ -1839,22 +1729,6 @@ class FluentDB extends deferable {
                     db.datasets[i].data = datas[i];
                 return db;
             });
-
-    }
-
-    // Get datasets from passed arguments
-    argumentDatasets (db, args) {
-
-        let funcArgs = flattenArray(
-            args
-            .filter(a => isFunction(a))
-            .map(a => parser.parameters(a))
-        );
-
-        return funcArgs
-            .filter((a,i,self) => self.indexOf(a) == i) // distinct
-            .map(p => db.getDataset(p))
-            .filter(p => p); // some function params don't represent datasets
 
     }
 
@@ -1915,9 +1789,10 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 
 $$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
-$$.idb = dbName => new dbConnectorIdb(dbName);
-$$.dbConnector = dbConnector;
-$$.dsGetter = dsGetter;
+$$.connector = connector;
+$$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
+
+// TODO: Merge tests are basically all failing, though I know
 
 class tests {
 

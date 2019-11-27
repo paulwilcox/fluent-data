@@ -2,10 +2,9 @@ import * as g from './general.js';
 import parser from './parser.js';
 import deferable from './deferable.js';
 import database from './database.js';
-import dbConnectorIdb from './dbConnectorIdb.js';
-import dbConnector from './dbConnector.js';
-import dsGetter from './dsGetter.js';
 import { reducer, runEmulators } from './reducer.js';
+import connector from './connector.js';
+import connectorIdb from './connectorIdb.js';
 
 export default function $$(obj) { 
     return new FluentDB().addSources(obj); 
@@ -22,6 +21,22 @@ class FluentDB extends deferable {
         );
     }
  
+    import (mapFunc, filterFunc) {
+        this.then(async db => {
+
+            let ds = db.getDataset(mapFunc);
+
+            if (!(ds instanceof connector))
+                throw 'dataset referenced by mapFunc is not a connector';
+
+            ds.data = await ds.data.import(mapFunc, filterFunc);
+
+            return db;
+
+        });
+        return this;
+    }
+
     mergeExternal (
         type, // update, insert, delete, upsert, full, or [] of 4 bools
         targetIdentityKey, 
@@ -32,8 +47,8 @@ class FluentDB extends deferable {
 
             let target = db.getDataset(targetIdentityKey).data;
 
-            if (!(target instanceof dsGetter))
-                throw 'target dataset is not a dsGetter.  Use "merge" instead.'
+            if (!(target instanceof connector))
+                throw 'target dataset is not a connector.  Use "merge" instead.'
 
             let source = await 
                 db.getDataset(sourceIdentityKey)
@@ -94,7 +109,7 @@ class FluentDB extends deferable {
 
     }
 
-    // TODO: Close all dsConnector connections
+    // TODO: Close all connector connections
     execute (finalMapper) {
 
         let catcher = err => { 
@@ -106,6 +121,9 @@ class FluentDB extends deferable {
         try {        
 
             let db = super.execute();
+
+            if (finalMapper == undefined)
+                return this;
 
             let param = parser.parameters(finalMapper)[0];
             finalMapper = g.noUndefinedForFunc(finalMapper);
@@ -218,7 +236,5 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
 
 $$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
-$$.idb = dbName => new dbConnectorIdb(dbName);
-$$.dbConnector = dbConnector;
-$$.dsGetter = dsGetter;  
-
+$$.connector = connector;
+$$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);

@@ -1,44 +1,28 @@
-import dsGetter from './dsGetter.js';
+import connector from './connector.js';
 import hashBuckets from './hashBuckets.js';
 
-export default class extends dsGetter {
+export default class extends connector {
 
-    constructor (storeName, idbConnector) {
-        super(idbConnector);
+    constructor (storeName, dbName) {
+        super();
+        this.dbName = dbName;
         this.storeName = storeName;
-        this.filterFunc;
     }
 
-    filter(filterFunc) {
-
-        if (!this.filterFunc) 
-            this.filterFunc = filterFunc;
-        else 
-            this.filterFunc = this.filterFunc && filterFunc;
-
-        return this;
-
-    }
-
-    // - thanks netchkin at https://stackoverflow.com/questions/46326212/
-    //   how-to-return-indexeddb-query-result-out-of-event-handler
-    // - also see "using a cursor" at https://developer.mozilla.org/en-US/
-    //   docs/Web/API/IndexedDB_API/Using_IndexedDB
-    map(mapFunc) {
+    import(mapFunc, filterFunc) {
 
         return new Promise((resolve, reject) => {
 
-            let dbCon = this.dbConnector.open();
+            let dbCon = window.indexedDB.open(this.dbName);
             
             dbCon.onsuccess = () => {
 
+                filterFunc = filterFunc || (x => true);
                 let db = dbCon.result;
                 let tx = db.transaction(this.storeName);
                 let store = tx.objectStore(this.storeName);
-                let filterFunc = this.filterFunc || (x => true);
-                let results = [];
-
                 let storeCursor = store.openCursor();
+                let results = [];
                 
                 storeCursor.onsuccess = event => {
 
@@ -155,6 +139,6 @@ export default class extends dsGetter {
 
         });
 
-    }
+    }    
 
-}
+} 
