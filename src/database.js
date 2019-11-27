@@ -165,7 +165,7 @@ export default class {
     print (func, caption, target) {
 
         let ds = this.getDataset(func);
-        
+
         let printer = rows => 
               target ? prn(target, rows, caption)
             : caption ? console.log(caption, rows) 
@@ -174,7 +174,15 @@ export default class {
         // if dataset is an external dataset (is a dsGetter),
         // then it is a promise, so print inside 'then'.
         if (ds.data instanceof dsGetter) {
-            ds.callWithoutModify('map', func).then(rows => printer(rows));
+            ds.callWithoutModify('map', func)
+            .then(rows => { 
+                if (!target && !caption) 
+                    console.log(
+                        `${ds.key} is a dsGetter that has not been ` +
+                        `imported into the FluentDB instance`
+                    ); 
+                printer(rows);
+            });
             return this;
         }
 
