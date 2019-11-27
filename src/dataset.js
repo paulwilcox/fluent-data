@@ -1,58 +1,103 @@
 import * as g from './general.js';
-import connector from './connector.js';
+import hashBuckets from './hashBuckets.js';
+import { quickSort } from './sorts.js';
+import { runEmulators } from './reducer.js';
+import merger from './merger.js';
+import { print as prn } from './visualizer/printer.js';
 
 export default class {
 
-    constructor(key, data) {
-        this.key = key;
+    constructor(data) {
+        super();
         this.data = data;
     }
 
-    call (arrayOperation, ...args) {
-        this.data = this.callWithoutModify(arrayOperation, ...args);
+    map (func) {    
+        this.data = recurse (
+            data => data.map(g.noUndefinedForFunc(func)),
+            this.data, 
+        );
     }
 
-    callWithoutModify (arrayOperation, ...args) {
+    filter (func) {    
+        this.data = recurse (
+            data => data.filter(func),
+            this.data, 
+        );
+    }
 
-        if (this.data instanceof connector) 
-            return this.data[arrayOperation](...args);
+    sort (func) {
 
-        let fromArrayProto = g.isString(arrayOperation);
+        let params = parser.parameters(func);
 
-        if (fromArrayProto) 
-            arrayOperation = Array.prototype[arrayOperation];        
-
-        return this.callNested(
-            arrayOperation, 
-            fromArrayProto,
-            this.data,
-            ...args 
+        let outerFunc = 
+            params.length > 1 
+            ? data => data.sort(func)
+            : data => quickSort(data, func);
+        
+        this.data = recurse(
+            outerFunc,
+            this.data
         );
 
+    } 
+
+    group (func) {
+        this.data = 
+            new hashBuckets(func)
+            .addItems(this.data)
+            .getBuckets();
     }
 
-    callNested(
-        arrayOperation,
-        fromArrayProto,
-        maybeNested,
-        ...args
-    ) {
+    reduce (func) {
+        let outerFunc = data => runEmulators(data, func);
+        this.data = ds.callNested(outerFunc, this.data);
+        // because runEmulators might return a non-array
+        if (!Array.isArray(this.data))
+            this.data = [this.data];
+    }    
 
-        // if not nested, apply the function
-        if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) 
-            return fromArrayProto 
-                ? arrayOperation.call(maybeNested, ...args)
-                : arrayOperation.call(null, maybeNested, ...args);    
-    
-        let output = [];
-    
-        for (let nested of maybeNested)  
-            output.push(
-                this.callNested(arrayOperation, fromArrayProto, nested, ...args)
-            );
-    
-        return output;
-    
+    merge (rightData, matchingLogic, mapper, onDuplicate) {
+        this.data = merger (
+            this.data, 
+            rightData, 
+            matchingLogic, 
+            mapper, 
+            onDuplicate
+        );
     }
+
+    print (func, caption, target) {
+
+        let data = recurse (
+            data => data.map(g.noUndefinedForFunc(func)),
+            this.data, 
+        );
+
+        if (target) 
+            prn(target, data, caption)
+        else if(caption)
+            console.log(caption, data) 
+        else 
+            console.log(data); 
+
+    }
+
+}
+
+
+function recurse (func, data) {
+
+    let isNested = Array.isArray(data[0]);
+
+    if (!isNested) 
+        return func(data);    
+
+    let output = [];
+
+    for (let nested of data)  
+        output.push(func(nested));
+
+    return output;
 
 }
