@@ -21,35 +21,6 @@
 let isPromise = obj => 
     Promise.resolve(obj) == obj;
 
-let stringifyObject = obj => {
-
-    // todo: find out if this is bad.  But for now it's
-    // fixing something.
-    if (obj === undefined) 
-        return '';
-
-    let isObject = variable => 
-           variable 
-        && typeof variable === 'object' 
-        && variable.constructor === Object;
-
-    if (!isObject(obj))
-        return obj.toString();
-
-    let stringified = '[';
-
-    let keys = Object.keys(obj).sort();
-
-    for (let key of keys) {
-        let val = obj[key];
-        let valToStringify = isObject(val) ? stringifyObject(val) : val;
-        stringified += `[${key},${valToStringify}]`;
-    }
-
-    return stringified + ']';
-
-};
-
 let isString = input =>
     typeof input === 'string' 
     || input instanceof String;
@@ -244,225 +215,71 @@ class deferable {
 
 }
 
-class connector {
+class database {
 
-    import() { throw "Please override 'import'." }
-    merge() { throw "Please override 'merge'." }
-
-}
-
-class dataset {
-
-    constructor(key, data) {
-        this.key = key;
-        this.data = data;
+    constructor() {
+        this.datasets = {};
     }
 
-    call (arrayOperation, ...args) {
-        this.data = this.callWithoutModify(arrayOperation, ...args);
-    }
+    addDataset (key, data) { 
+        this.datasets[key] = data;
+        return this;
+    }    
 
-    callWithoutModify (arrayOperation, ...args) {
-
-        if (this.data instanceof connector) 
-            return this.data[arrayOperation](...args);
-
-        let fromArrayProto = isString(arrayOperation);
-
-        if (fromArrayProto) 
-            arrayOperation = Array.prototype[arrayOperation];        
-
-        return this.callNested(
-            arrayOperation, 
-            fromArrayProto,
-            this.data,
-            ...args 
-        );
-
-    }
-
-    callNested(
-        arrayOperation,
-        fromArrayProto,
-        maybeNested,
-        ...args
-    ) {
-
-        // if not nested, apply the function
-        if (!Array.isArray(maybeNested[0]) || maybeNested.length == 0) 
-            return fromArrayProto 
-                ? arrayOperation.call(maybeNested, ...args)
-                : arrayOperation.call(null, maybeNested, ...args);    
-    
-        let output = [];
-    
-        for (let nested of maybeNested)  
-            output.push(
-                this.callNested(arrayOperation, fromArrayProto, nested, ...args)
-            );
-    
-        return output;
-    
-    }
-
-}
-
-class hashBuckets {
-    
-    constructor (
-        hashKeySelector
-    ) {
-        this.mapper = new Map();
-        this.hashKeySelector = hashKeySelector;
-    }
-
-    addItems(items) {
-        for(let item of items) 
-            this.addItem(item);
+    addDatasets (obj) { 
+        for (let entry of Object.entries(obj)) 
+            this.addDataset(entry[0], entry[1]);
         return this;
     }
 
-    addItem(item) {
+    getDataset(arg) {
+        if (isString(arg))
+            return this.datasets[arg];
+        if (isFunction(arg)) {
+            let param = parser.parameters(arg)[0];
+            return this.datasets(param)[0];
+        }
+    }
 
-        let objectKey = this.hashKeySelector(item);
-        let stringKey = stringifyObject(objectKey);
+    getDatasets(arg) {
 
-        if (!this.mapper.has(stringKey)) 
-            this.mapper.set(stringKey, [item]);
-        else 
-            this.mapper.get(stringKey).push(item);
+        if (isString(arg))
+            return [this.getDataset(arg)];
 
-        return this;
+        // arg is then a function 
+        let datasets = [];
+        for(let param of parser.parameters(arg)) {
+            let ds = this.datasets[param];
+            datasets.push(ds);
+        }
+        return datasets;
 
     }
 
-    getBucket(
-        objectToHash, 
-        hashKeySelector,
-        remove = false
-    ) {
+    // - execute a function on a dataset
+    // - determine which datasets based on user-passed parameters to the first function.
+    callOnDs(funcName, ...args) {
 
-        let objectKey = hashKeySelector(objectToHash);
-        let stringKey = stringifyObject(objectKey);
+        // user did not pass a reciever, so make the source dataset the reciever
+        if (isFunction(args[0])) {
+            let param = parser.parameters(args[0])[0];
+            args.unshift(param);
+        }
 
-        let value = this.mapper.get(stringKey);
+        let reciever = args.shift(); // the dataset name to load the results into
+        let func = args.shift(); // the first function passed by the user
+        let funcDatasets = this.getDatasets(func); // the datasets referenced by that first function
+        let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
+        funcDatasets = funcDatasets.map(ds => ds.data); // for the remaining datasets, just get the data
+        args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
+console.log({sourceDataset});
+        let results = sourceDataset[funcName](...args); // execute the function
+        this.datasets[reciever] = results; // load the results into the reciever dataset
+        return this;  // fluently exit 
 
-        if (remove) 
-            this.mapper.delete(stringKey);
-
-        return value;
-
-    }
-
-    getBucketFirstItem (
-        objectToHash,
-        hashKeySelector,
-        remove = false
-    ) {
-
-        let bucket = 
-            this.getBucket(
-                objectToHash,
-                hashKeySelector,
-                remove
-            );
-
-        if (!bucket || bucket.length == 0)
-            return null;
-
-        return bucket[0];
-
-    }
-
-    getKeys() {
-        return Array.from(this.mapper.keys());
-    }
-
-    getBuckets() {
-        return Array.from(this.mapper.values());
     }
 
 }
-
-// TODO: See if we need to uncomment the falsy checks below.
-// I ran orderby without them and surprisingly, it did not 
-// fail, though I don't know if the ordering comes out as 
-// desired.
-//
-// orderedValuesSelector accepts a single function that selects 
-// values from an object "{}" and returns an array "[]"
-let quickSort = (unsorted, orderedValuesSelector) => {
-
-    if (unsorted.length <= 1) 
-        return unsorted;
-
-    let pivot = unsorted.pop();
-    let left = []; 
-    let right = [];
-
-    for (let row of unsorted) {
-
-        let orderDecision = 
-            decideOrder(
-                orderedValuesSelector(row), 
-                orderedValuesSelector(pivot)
-            );
-
-        orderDecision == -1
-            ? left.push(row) 
-            : right.push(row);
-
-    }
-
-    return quickSort(left, orderedValuesSelector)
-        .concat([pivot])
-        .concat(quickSort(right, orderedValuesSelector));
-
-};
-
-/*
-    Take two points or arrays of values.  Compare the 
-    first value in each for <, >, or =.  If < or >, then 
-    that's your result.  If =, then compare the second 
-    value in each array.  Only if all are =, then output =.  
-    As usual -1, 0, and 1 correspond to <, =, > respectively.
-    Valid < invalid (e.g. "x" < undefined) (but is this 
-    going to kill performance?)
-*/  
-let decideOrder = (
-    leftVals,
-    rightVals
-) => {
-
-    if (!Array.isArray(leftVals))
-        leftVals = [leftVals];
-
-    if (!Array.isArray(rightVals))
-        rightVals = [rightVals];
-        
-    let length = 
-            leftVals.length > rightVals.length
-        ? leftVals.length
-        : rightVals.length;
-
-    for(let i = 0; i < length; i++) {
-
-        let leftVal = leftVals[i];
-        let rightVal = rightVals[i];
-
-        //let isLeftValid = leftVal === 0 || leftVal === false || Boolean(leftVal);
-        //let isRightValid = rightVal === 0 || rightVal === false || Boolean(rightVal);
-
-        //if (isLeftValid && !isRightValid) return -1
-        //if (!leftValid && isRightValid) return 1;
-        if (leftVal < rightVal) return -1;
-        if (rightVal < leftVal) return 1;
-
-    }
-
-    return 0;
-
-};
 
 // rowMaker takes the passed in parameters 
 // and turns the into a row in the dataset.
@@ -531,889 +348,10 @@ let runEmulators = function (
 
 };
 
-// 'buckle' signifies tuple with buckets as items.  Usage will 
-// probably only be pairs though, so in the future if desired 
-// you can simplify to simply allow pairs, not more than that.
-class buckles extends Map {
-    
-    constructor (stringify = true) {
-        super();
-        this.stringify = stringify;
-        this.bucketIndicies = new Set();
-    }
+class connector {
 
-    add(bucketIndex, hashFunc, distinctBehavior, ...items) {
-
-        this.bucketIndicies.add(bucketIndex);
-
-        for (let item of items) {
-             
-            let key = this.hashify(hashFunc, item);
-
-            if (!this.has(key)) {
-                let buckle = [];
-                buckle[bucketIndex] = [item];
-                this.set(key, buckle);
-                continue;
-            }
-
-            if (!this.get(key)[bucketIndex])
-                this.get(key)[bucketIndex] = [];
-
-            switch(distinctBehavior) {
-                case 'first': break;
-                case 'last': this.get(key)[bucketIndex][0] = item; break;
-                case 'dist': throw 'distinct option passed but more than one records match.'
-                default: this.get(key)[bucketIndex].push(item);
-            }
-
-        }
-
-        return this;
-
-    }
-
-    * crossMap(func) {
-
-        for (let bucketSet of this.values())  
-        for (let item of this.crossMapBuckle(bucketSet, func))
-            yield item;
-    }
-
-    * crossMapBuckle(bucketSet, func) {
-
-        let isFirstBucket = true;
-        let crosses = [[]]; // but when overwriting, just do [].
-        let working = [];
-                  
-        for (let bucketIX of [...this.bucketIndicies]) {
-
-            let bucket = bucketSet[bucketIX] || [undefined];
-
-            for (let cross of crosses) 
-            for (let row of bucket) 
-                isFirstBucket 
-                    ? working.push([row]) // at this point cross is just a dummy '[]'
-                    : working.push([...cross, row]);
-
-            crosses = working;
-            working = [];
-            isFirstBucket = false;
-
-        }
-
-        // TODO: Can this be worked into a function  
-        // in place of the last run of above?
-        for (let cross of crosses) {
-            let mapped = func(...cross);
-            if (mapped === undefined)
-                continue;
-            if (!Array.isArray(mapped)) {
-                yield mapped;
-                continue;
-            }
-            for(let entry of mapped)
-                if (entry !== undefined)
-                    yield entry;
-        }
-
-    }
-
-    hashify (hashFunc, obj) {
-        return this.stringify 
-            ? stringifyObject(hashFunc(obj))
-            : hashFunc(obj);
-    }
-
-}
-
-function merger (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
-
-    let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
-
-    if (onDuplicate == 'distinct')
-        onDuplicate = 'dist';
-
-    if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
-        throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
-
-    mapFunc = normalizeMapper(mapFunc, matchingLogic);
-
-    return [...new buckles(leftFunc)
-        .add(0, leftFunc, onDuplicate, ...leftData)
-        .add(1, rightFunc, onDuplicate, ...rightData)
-        .crossMap(mapFunc)
-    ];
-
-}
-
-function normalizeMapper (mapFunc, matchingLogic) {
-
-    if (!mapFunc)
-    mapFunc = 'both null'; // inner join by default
-
-    if (isString(mapFunc)) {
-
-        let keywords = mapFunc.split(' ');
-        let onMatched = keywords[0];
-        let onUnmatched = keywords[1];
-        let allowedTerms = ['both', 'thob', 'left', 'right', 'null', 'stack'];
-
-        if (!allowedTerms.includes(onMatched) || !allowedTerms.includes(onUnmatched))
-            throw `mapper must be one of: ${allowedTerms.join(',')}}`;
-
-        return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
-
-    }
-
-
-    if (!parametersAreEqual(matchingLogic, mapFunc))
-        throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
-
-    return mapFunc;
-
-}
-
-function mergeByKeywords (left, right, onMatched, onUnmatched) {
-
-    if(left && right)
-        switch(onMatched) {
-            case 'both': return noUndefined(Object.assign({}, right, left));
-            case 'thob': return noUndefined(Object.assign({}, left, right));
-            case 'left': return left;
-            case 'right': return right;
-            case 'null': return undefined;
-            case 'stack': return [left, right]; 
-        }
-
-    switch(onUnmatched) {
-        case 'both': return left || right;
-        case 'thob': return left || right; 
-        case 'left': return left;
-        case 'right': return right;
-        case 'null': return undefined;
-    }
-
-}
-
-function parseMatchingLogic (matchingLogic) {
-
-    let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-
-    if (!parsed)
-        throw   'Could not parse function into object selectors.  ' +
-                'Pass object selectors explicitly or use loop join instead';
-
-    return {
-        leftFunc: parsed.leftFunc,
-        rightFunc: parsed.rightFunc || parsed.leftFunc
-    }; 
-
-}
-
-function parametersAreEqual (a,b) {
-
-    a = parser.parameters(a);
-    b = parser.parameters(b);
-
-    if (a.length != b.length)
-        return false;
-
-    for(let i in a)
-        if (a[i] != b[i])
-            return false;
-
-    return true;
-
-}
-
-/*
-    jsFiddle paging:
-
-    anushree
-   - https://stackoverflow.com/questions/19605078/
-        how-to-use-pagination-on-html-tables
-   - https://jsfiddle.net/u9d1ewsh
-*/
-
-function addPagerToTables(
-    tables, 
-    rowsPerPage = 10, 
-    aTagMax = 10,
-    pageInputThreshold = null
-) {
-
-    tables = 
-        typeof tables == "string"
-        ? document.querySelectorAll(tables)
-        : tables;
-
-    for (let table of Array.from(tables)) 
-        addPagerToTable(table, rowsPerPage, aTagMax, pageInputThreshold);
-    
-}
-
-function addPagerToTable(
-    table, 
-    rowsPerPage = 10, 
-    aTagMax = 10,
-    pageInputThreshold = null
-) {
-
-    let tBodyRows = table.querySelectorAll(':scope > tBody > tr');
-    let numPages = Math.ceil(tBodyRows.length/rowsPerPage);
-    
-    if (pageInputThreshold == null) 
-        pageInputThreshold = aTagMax;
-
-    if(numPages == 1)
-        return;
-
-    let colCount = 
-        Array.from(
-            table.querySelector('tr').cells
-        )
-        .reduce((a,b) => a + parseInt(b.colSpan), 0);
-
-    table
-    .createTFoot()
-    .insertRow()
-    .innerHTML = `
-        <td colspan=${colCount}>
-            <div class="oneQueryPageDiv"></div>
-        </td>
-    `;
-
-    let pageDiv = table.querySelector('.oneQueryPageDiv');
-    insertPageLinks(pageDiv, numPages);
-    insertPageInput(pageDiv, numPages, pageInputThreshold);
-    addPageInputListeners(table);
-
-    changeToPage(table, 1, rowsPerPage, numPages, aTagMax);
-
-    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a'))
-        pageA.addEventListener(
-            'click', 
-            e => {
-
-                let cPage = currentPage(table);
-                let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
-                let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
-                let rel = e.target.rel;
-
-                let toPage = 
-                    (hasLt && cPage == 1) ? numPages
-                    : (hasGt && cPage == numPages) ? 1
-                    : (hasLt && rel < 0) ? cPage - 1
-                    : (hasGt && rel < 0) ? cPage + 1
-                    : parseInt(rel) + 1;
-
-                changeToPage(
-                    table, 
-                    toPage,  
-                    rowsPerPage,
-                    numPages,
-                    aTagMax
-                );
-
-            }
-        );
-
-}
-
-function insertPageLinks(pageDiv, numPages, aTagMax) {
-
-    let insertA = (rel,innerHtml) =>
-        pageDiv
-        .insertAdjacentHTML(
-            'beforeend',
-            `<a href='#' rel="${rel}">${innerHtml}</a> ` 
-        );
-
-    insertA(0,'<');
-    insertA(-1,'<');
-
-    for(let page = 1; page <= numPages; page++) 
-        insertA(page - 1,page);
-
-    insertA(-1,'>');
-    insertA(numPages - 1,'>');
-
-}
-
-function insertPageInput(pageDiv, numPages, pageInputThreshold) {
-
-    if (numPages < pageInputThreshold)
-        return;
-
-    pageDiv
-    .insertAdjacentHTML(
-        'beforeend',
-        `
-            <br/>
-            <div class='oneQueryPageInputDiv' style='display:none;'>
-                <div contenteditable='true' class='oneQueryPageInput'>1</div>
-                <button class='oneQueryPageInputSubmit'></button>
-            </div>
-            <label class='oneQueryPageRatio'>${numPages} pages</label>
-        `
-    );
-
-}
-
-function showInputDiv (tbl, show) {
-    if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
-        return;
-    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = show ? 'inline-block' : 'none';
-    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = show ? 'none' : 'inline-block';
-}
-
-function addPageInputListeners (table) {
-
-    if (!table.tFoot.querySelector('.oneQueryPageInputDiv'))
-        return;
-
-    let listen = (selector, event, callback) => 
-        table.querySelector(selector)
-        .addEventListener(event, callback); 
-
-    table
-    .addEventListener(
-        'mouseleave',
-        e => {
-            showInputDiv(e.target, false);
-            table.querySelector('.oneQueryPageInput').innerHTML = "";
-        }
-    );
-
-    listen(
-        '.oneQueryPageRatio',
-        'mouseenter',
-        e => showInputDiv(table, true)
-    );
-
-    listen(
-        '.oneQueryPageRatio', 
-        'click',
-        e => showInputDiv(table, true)
-    );
-
-    listen(
-        '.oneQueryPageInput',
-        'mouseenter',
-        e => table.querySelector('.oneQueryPageInput').innerHTML = ""
-    );
-
-    listen(
-        '.oneQueryPageInputSubmit',
-        'click',
-        e => {
-
-            let pInput = table.querySelector('.oneQueryPageInput');
-            let desiredPage = parseInt(pInput.innerHTML);
-
-            if (isNaN(desiredPage)) {
-                pInput.innerHTML = "";
-                return;
-            }
-
-            changeToPage(
-                table,
-                desiredPage,
-                rowsPerPage,
-                numPages,
-                pageButtonDeviation
-            );
-
-        }
-
-    );    
-
-}
-
-function changeToPage(
-    table, 
-    page, 
-    rowsPerPage, 
-    numPages, 
-    aTagMax
-) {
-
-    let startItem = (page - 1) * rowsPerPage;
-    let endItem = startItem + rowsPerPage;
-    let pageAs = table.querySelectorAll('.oneQueryPageDiv a');
-    let tBodyRows = [...table.tBodies].reduce((a,b) => a.concat(b)).rows;
-
-    for (let pix = 0; pix < pageAs.length; pix++) {
-
-        let a = pageAs[pix];
-        let aText = pageAs[pix].innerHTML;
-        let aPage = parseInt(aText);
-
-        if (page == aPage)
-            a.classList.add('active');
-        else 
-            a.classList.remove('active');
-
-        a.style.display =
-            (
-                    aPage > page - Math.ceil(aTagMax / 2.0) 
-                && aPage < page + Math.ceil(aTagMax / 2.0)
-            )
-            || isNaN(aPage) 
-            ? 'inline-block'
-            : 'none';
-
-        for (let trix = 0; trix < tBodyRows.length; trix++) 
-            tBodyRows[trix].style.display = 
-                (trix >= startItem && trix < endItem)
-                ? 'table-row'
-                : 'none';  
-
-    }
-
-}
-
-function currentPage (table) {
-    return parseInt(
-        table.querySelector('.oneQueryPageDiv a.active').innerHTML
-    );
-}
-
-// TODO: See about populating defaultCss variable below
-// automatically from printer.css as an npm run task and
-// as a prerequisite to rollup, with rollup probably being
-// part of that npm run task.  
-
-// Christoph at https://stackoverflow.com/questions/
-//   524696/how-to-create-a-style-tag-with-javascript
-function addDefaultCss () {
-
-    if (hasoneQueryCssRule())
-        return;
-
-    let style = document.createElement('style');
-    style.type = 'text/css';
-
-    style.appendChild(document.createTextNode(defaultCss));
-    document.head.appendChild(style);
-
-}
-
-let hasoneQueryCssRule = () => {
-
-    for(let sheet of document.styleSheets)
-    for(let rule of sheet.rules)
-    if(rule.selectorText.substring(0,5) == ".oneQuery")
-        return true;
-
-    return false; 
-
-};
-
-let defaultCss = `
-
-    .oneQueryString {
-        color: #FF9900;
-    }
-
-    .oneQueryNumber {
-        color: #0088cc;
-    }
-
-    .oneQueryNuloneQuery {
-        color: gainsboro;
-        font-style: italic;
-    }
-
-    .oneQueryFunc {
-        color: BB5500;
-        font-family: monospace;
-    }
-
-    .oneQueryTable {
-        border: 2px solid #0088CC;
-        border-collapse: collapse;
-        margin:5px;
-    }
-
-    .oneQueryTable caption {
-        border: 1px solid #0088CC;
-        background-color: #0088CC;
-        color: white;
-        font-weight: bold;
-        padding: 3px;
-    }
-
-    .oneQueryTable th {
-        background-color: gainsboro;
-        border: 1px solid #C8C8C8;
-        padding: 3px;
-    }
-
-    .oneQueryTable td {
-        border: 1px solid #C8C8C8;
-        text-align: center;
-        vertical-align: middle;
-        padding: 3px;
-    }
-
-    .oneQueryTable tFoot {
-        background-color: whitesmoke;
-        font-style: italic;
-        color: teal;
-    }
-
-    .oneQueryTable tFoot a {
-        text-decoration: none;
-        color: teal;
-    }
-
-    .oneQueryTable tFoot a.active {
-        text-decoration: underline;
-    }
-
-    .oneQueryPageDiv {
-        text-align: left;
-        vertical-align: middle;
-        font-size: smaller;
-    }
-
-    .oneQueryPageInputDiv * {
-        display: inline-block;
-    }
-
-    .oneQueryPageInput {
-        padding: 1px 3px;
-        background-color: white;
-        border: solid 1px blue;
-        color: black;
-        font-style: normal;
-        min-width: 15px;
-    }
-
-    .oneQueryPageInputSubmit {
-        height: 10px;
-        width: 10px;
-        margin: 0;
-        padding: 0;
-    }
-
-`;
-
-function print(target, obj, caption) {
-
-    document.querySelector(target).innerHTML +=
-        makeHtml(obj, caption);
-
-    let maybeTables = 
-        document.querySelector(target)
-        .querySelectorAll('.oneQueryTable');
-
-    if (maybeTables.length > 0)
-        addPagerToTables(maybeTables);
-
-    addDefaultCss();
-
-}
-
-function makeHtml(obj, caption) {
-
-    let printType = getPrintType(obj);
-
-    return printType == 'arrayOfObjects' ? arrayOfObjectsToTable(obj, caption)
-        : printType == 'array' ? arrayToTable(obj, caption)
-        : printType == 'string' ? stringToHtml(obj)
-        : printType == 'number' ? `<span class='oneQueryNumber'>${obj}</span>`
-        : printType == 'nuloneQuery' ? `<span class='oneQueryNuloneQuery'>${obj}</span>`
-        : printType == 'function' ? functionToHtml(obj)
-        : printType == 'object' ? objectToTable(obj)
-        : `${obj}`;
-
-}
-
-function getPrintType (obj) {
-
-    let isArray = Array.isArray(obj);        
-    let isArrayOfObjects = false;
-
-    if (isArray) {
-        let len = obj.length;
-        let keyCounts = Object.values(getArrayKeys(obj));
-        let highlyUsedKeys = keyCounts.filter(kc => kc >= len * 0.75).length;
-        isArrayOfObjects = 
-            highlyUsedKeys >= keyCounts.length * 0.75 // highly structured;
-            && keyCounts.length > 0; 
-    }
-
-    return isArrayOfObjects ? 'arrayOfObjects'
-        : isArray ? 'array'
-        : (obj == null || typeof obj == 'undefined') ? 'nuloneQuery'
-        : typeof obj;
-
-}
-
-function getArrayKeys (array) {
-
-    let keys = {};
-
-    for(let item of array) 
-    if (getPrintType(item) == 'object')
-    for(let key of Object.keys(item))
-        if(keys[key])
-            keys[key] += 1;
-        else 
-            keys[key] = 1;
-
-    return keys;
-
-}
-
-function stringToHtml (str) {
-    return `
-        <span class='oneQueryString'>
-            ${ htmlEncode(str) }
-        </span>
-    `;
-}
-
-function functionToHtml (func) {
-    return `
-        <span class='oneQueryFunc'>
-            ${ htmlEncode(func.toString()) }
-        </span>
-    `;
-}
-
-function objectToTable (obj) {
-    
-    let html = ``;
-
-    for (let entry of Object.entries(obj))
-        html += `
-        <tr>
-            <th>${entry[0]}</th>
-            <td>${makeHtml(entry[1])}</td>
-        </tr>
-        `;
-
-    return `<table class='oneQueryTable'>${html}</table>`;
-
-}
-
-function arrayToTable (items, caption) {
-    
-    let html = ``;
-
-    for(let item of items) 
-        html += `<tr><td>${makeHtml(item)}</td></tr>`;
-
-    return `
-        <table class='oneQueryTable'>
-            ${caption != null ? `<caption>${caption}</caption>` : ''}
-            ${html}
-        </table>`;
-
-}
-
-function arrayOfObjectsToTable (objects, caption) {
-
-    let keys = Object.keys(getArrayKeys(objects));
-    
-    let header = `<tr>`;
-    for(let key of keys)
-        header += `<th>${key}</th>`;
-    header += `</tr>`;
-
-    let body = ``;
-
-    for(let obj of objects) {
-        body += `<tr>`;
-        if (getPrintType(obj) == 'object')
-            for (let key of keys) 
-                body += `<td>${makeHtml(obj[key])}</td>`;
-        else 
-            body += `<td colspan=${keys.length}>${makeHtml(obj)}</td>`;
-        body += `</tr>`;
-    }
-
-    return `
-        <table class='oneQueryTable'>
-            ${caption != null ? `<caption>${caption}</caption>` : ''}
-            <tHead>${header}</tHead>
-            <tBody>${body}</tBody>
-        </table>
-    `;
-
-}
-
-function htmlEncode (str) {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
-        .replace(/\t/g, '&emsp;')
-        .replace(/  /g, '&emsp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br/>');
-}
-
-class database {
-
-    constructor() {
-        this.datasets = []; 
-    }
-
-    getDataset(key) {
-        let dss = this.getDatasets(key);
-        if (dss.length > 1)
-            throw `more than one dataset matching ${key} was found.`
-        return dss[0];
-    }
-
-    getDatasets(key, errorIfNotFound) {
-
-        if (isFunction(key)) 
-            key = new parser.parameters(key);
-
-        if (isString(key))
-            key = [key];
-
-        let foundDss = 
-            this.datasets
-            .filter(ds => key.some(k => ds.key == k));
-
-        if (errorIfNotFound && foundDss.length != key.length) 
-            throw   `One of the keys passed is not a dataset.  ` + 
-                    `The keys passed are: (${key.join(',')})`;
-
-        return foundDss;
-
-    }
-
-    addSource (key, data) { 
-        this.datasets.push(new dataset(key, data));
-        return this;
-    }    
-
-    addSources (obj) { 
-        for (let entry of Object.entries(obj)) 
-            this.addSource(entry[0], entry[1]);
-        return this;
-    }
-
-    filter (func) { 
-        let ds = this.getDataset(func);
-        ds.call('filter', func);
-        return this;
-    }
-
-    map (func) {    
-        let ds = this.getDataset(func);    
-        ds.call('map', noUndefinedForFunc(func));
-        return this;
-    }
-
-    group (groupKeySelector) {
-    
-        let ds = this.getDataset(groupKeySelector);
-
-        let buckets = 
-            new hashBuckets(groupKeySelector)
-            .addItems(ds.data)
-            .getBuckets();
-
-        ds.data = buckets;
-
-        return this;
-
-    }
-
-    sort (orderedValuesSelector) {
-
-        let ds = this.getDatasets(orderedValuesSelector)[0];
-
-        ds.call(
-            parser.parameters(orderedValuesSelector).length > 1 
-                ? 'sort' 
-                : quickSort, 
-            orderedValuesSelector
-        );
-
-        return this;
-
-    } 
-
-    reduce (outerFunc) {
-        let ds = this.getDataset(outerFunc);
-        ds.call(runEmulators, outerFunc);
-        // 'runEmulators' returns an object, reduced from an array.   
-        // But to keep allowing chaining of methods, we still need 
-        // to return an array, not an object.
-        if (!Array.isArray(ds.data))
-            ds.data = [ds.data];
-        return this;
-    }
-
-    // TODO: Document new parameter order and console.log capability
-    print (func, caption, target) {
-
-        let ds = this.getDataset(func);
-
-        let printer = rows => 
-              target ? print(target, rows, caption)
-            : caption ? console.log(caption, rows) 
-            : console.log(rows); 
-
-        // if dataset is a connector, then it is a 
-        // promise, so print inside 'then'.
-        if (ds.data instanceof connector) {
-            ds.callWithoutModify('map', func)
-            .then(rows => { 
-                if (!target && !caption) 
-                    console.log(
-                        `${ds.key} is a connector that has not been ` +
-                        `imported into the FluentDB instance`
-                    ); 
-                printer(rows);
-            });
-            return this;
-        }
-
-        let rows = ds.callWithoutModify('map', func);
-        printer(rows);
-        return this;
-
-    }
-
-    merge (...args) {
-        
-        // user did not pass a 'newKey'.  So make it the function parameter.
-        if (isFunction(args[0]))
-            args.unshift(parser.parameters(args[0])[0]);
-
-        let [ newKey, matchingLogic, mapper, onDuplicate ] = args;
-
-        let keys = parser.parameters(matchingLogic);
-        let leftData = this.getDataset(keys[0]).data;
-        let rightData = this.getDataset(keys[1]).data;
-
-        let merged = merger(
-            leftData, 
-            rightData, 
-            matchingLogic, 
-            mapper, 
-            onDuplicate
-        );
-
-        !this.getDataset(newKey)
-            ? this.addSource(newKey, merged)
-            : this.getDataset(newKey).data = merged;
-
-        return this;
-
-    }
+    import() { throw "Please override 'import'." }
+    merge() { throw "Please override 'merge'." }
 
 }
 
@@ -1470,12 +408,17 @@ class connectorIdb extends connector {
 
     }
 
-    merge (
-        type,
-        targetIdentityKey, 
-        sourceIdentityKey,
-        source 
-    ) {
+    merge (incoming, matchingLogic, mapper, onDuplicate) {
+
+        console.log({
+            incoming,
+            matchingLogic: matchingLogic.toString().substring(0,25),
+            mapper: mapper.toString().substring(0,25),
+            onDuplicate
+        });
+        throw 'not implemented';
+
+        /*
 
         let typeIx = ix => (Array.isArray(type) && type[ix]);
         let typeIn = (...args) => [...args].includes(type.toLowerCase());
@@ -1543,7 +486,7 @@ class connectorIdb extends connector {
 
                     cursor.continue();
 
-                }; 
+                } 
                     
                 storeCursor.onerror = event => reject(event); 
                 tx.oncomplete = () => db.close();
@@ -1554,122 +497,34 @@ class connectorIdb extends connector {
             dbCon.onerror = event => reject(event); 
 
         });
-
+        */
     }    
 
 }
 
 function $$(obj) { 
-    return new FluentDB().addSources(obj); 
+    return new FluentDB().addDatasets(obj); 
 }
 
 class FluentDB extends deferable {
 
     constructor() {
+
         super(new database());
-        this.attachDbFuncs(
-            'addSources', 'filter', 'map', 
-            'group', 'sort', 
-            'reduce', 'print', 'merge'
-        );
-    }
- 
-    import (mapFunc, filterFunc) {
-        this.then(async db => {
 
-            let ds = db.getDataset(mapFunc);
+        let funcsToAttach = [
+            'filter', 'map', 
+            'group', 'sort', 'reduce', 
+            'print', 'merge', 'import'
+        ];
 
-            if (!(ds instanceof connector))
-                throw 'dataset referenced by mapFunc is not a connector';
-
-            ds.data = await ds.data.import(mapFunc, filterFunc);
-
-            return db;
-
-        });
-        return this;
-    }
-
-    mergeExternal (
-        type, // update, insert, delete, upsert, full, or [] of 4 bools
-        targetIdentityKey, 
-        sourceIdentityKey  
-    ) {
-
-        this.then(async db => {
-
-            let target = db.getDataset(targetIdentityKey).data;
-
-            if (!(target instanceof connector))
-                throw 'target dataset is not a connector.  Use "merge" instead.'
-
-            let source = await 
-                db.getDataset(sourceIdentityKey)
-                .callWithoutModify('map', x => x); // just get the raw data
-
-            // TODO: decide wether we want to await the merge or not, or give the option
-            target.merge(type, targetIdentityKey, sourceIdentityKey, source);
-
-            return db;
-
-        });
-
-        return this;
-
-    }
-
-    test (
-        testName = 'test',
-        finalMapper,
-        boolFunc, 
-        catchFunc = err => err
-    ) {
-
-        if (testName == 'notest')
-            return undefined;
-
-        let _catchFunc = err => ({
-            testName,
-            result: false,
-            error: catchFunc(err) 
-        });
-
-        let data;
-        try {data = this.execute(finalMapper);}
-        catch (err) {return _catchFunc(err);}
-
-        let process = rows => {
-            try {
-
-                // if it's not an array, it's the result of a catch
-                if (!Array.isArray(rows))
-                    throw rows;
-
-                return { 
-                    testName,
-                    result: boolFunc(rows)
-                };
-
-            }
-            catch(err) {
-                return _catchFunc(err);
-            }
-        };
-
-        return isPromise(data) 
-            ? data.then(process).catch(_catchFunc)
-            : process(data);
+        for(let funcName of funcsToAttach)
+            this.attachFunc(funcName);
 
     }
 
     // TODO: Close all connector connections
     execute (finalMapper) {
-
-        let catcher = err => { 
-            if (this.catchFunc)
-                return this.catchFunc(err);
-            throw err;
-        };
         
         try {        
 
@@ -1684,41 +539,51 @@ class FluentDB extends deferable {
             if (this.status == 'rejected' || finalMapper === undefined)
                 return db;
     
-            db = this.promisifyDbIfNecessary(db);
-
-            return isPromise(db) 
-                ? db.then(db => db.getDataset(param).data.map(finalMapper)).catch(catcher)
-                : db.getDataset(param).data.map(finalMapper);
+            return this.callOnDb(db, 
+                db => db.getDataset(param).data.map(finalMapper),
+            );
 
         }
 
         catch(err) {
-            return catcher(err);
+            return this.catcher(err);
         }
 
     }
 
-    attachDbFuncs (...funcNames) {
+    addDatasets(obj) {
+        return this.then(
+            db => this.callOnDb(db, db => db.addDatasets(obj))
+        );
+    }
 
-        for(let funcName of funcNames) 
-            this[funcName] = function(...args) { return this.then(db => {
+    attachFunc (funcName) {
 
-                db = this.promisifyDbIfNecessary(db);
-                
-                return (isPromise(db)) 
-                    ? db.then(db => db[funcName](...args))
-                    : db[funcName](...args);
-
-            });};
-        
+        this[funcName] = (...args) => 
+            this.then(
+                db => this.callOnDb(db, 
+                    db => db.callOnDs(funcName, ...args)
+                )
+            );
+            
     } 
+
+    callOnDb(db, func) {
+
+        db = this.promisifyDbIfNecessary(db);
+
+        return isPromise(db) && this.catcher ? db.then(func).catch(this.catcher)
+            : isPromise(db) ? db.then(func)
+            : func(db);
+    
+    }
 
     promisifyDbIfNecessary (db) {
         
         if (isPromise(db))
             return db;
-
-        let hasPromises = db.datasets.filter(ds => isPromise(ds.data)).length > 0; 
+            
+        let hasPromises = Object.values(db.datasets).filter(ds => isPromise(ds.data)).length > 0; 
 
         if (!hasPromises)
             return db;
@@ -1731,6 +596,12 @@ class FluentDB extends deferable {
             });
 
     }
+
+    catcher (err) { 
+        if (this.catchFunc)
+            return this.catchFunc(err);
+        throw err;
+    }    
 
 }
 

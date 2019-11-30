@@ -1,92 +1,68 @@
 import * as g from './general.js';
-import dataset from './dataset.js';
 import parser from './parser.js';
 
 export default class {
 
     constructor() {
-        this.datasets = []; 
+        this.datasets = {};
     }
 
-    getDataset(key) {
-
-        let dss = this.getDatasets(key);
-        if (dss.length > 1)
-            throw `more than one dataset matching ${key} was found.`
-        return dss[0];
-    }
-
-    getDatasets(key, errorIfNotFound) {
-
-        if (g.isFunction(key)) 
-            key = new parser.parameters(key);
-
-        if (g.isString(key))
-            key = [key];
-
-        let foundDss = 
-            this.datasets
-            .filter(ds => key.some(k => ds.key == k));
-
-        if (errorIfNotFound && foundDss.length != key.length) 
-            throw   `One of the keys passed is not a dataset.  ` + 
-                    `The keys passed are: (${key.join(',')})`;
-
-        return foundDss;
-
-    }
-
-    addSource (key, data) { 
-        this.datasets.push(new dataset(key, data));
+    addDataset (key, data) { 
+        this.datasets[key] = data;
         return this;
     }    
 
-    addSources (obj) { 
+    addDatasets (obj) { 
         for (let entry of Object.entries(obj)) 
-            this.addSource(entry[0], entry[1]);
+            this.addDataset(entry[0], entry[1]);
         return this;
     }
 
-    filter (func) { 
-        this.getDataset(func).filter(func);
-        return this;
+    getDataset(arg) {
+        if (g.isString(arg))
+            return this.datasets[arg];
+        if (g.isFunction(arg)) {
+            let param = parser.parameters(arg)[0];
+            return this.datasets(param)[0];
+        }
     }
 
-    map (func) {    
-        this.getDataset(func).map(func);
-        return this;
+    getDatasets(arg) {
+
+        if (g.isString(arg))
+            return [this.getDataset(arg)];
+
+        // arg is then a function 
+        let datasets = [];
+        for(let param of parser.parameters(arg)) {
+            let ds = this.datasets[param];
+            datasets.push(ds);
+        }
+        return datasets;
+
     }
 
-    group (func) {
-        this.getDataset(groupKeySelector).group(func);
-        return this;
-    }
+    // - execute a function on a dataset
+    // - determine which datasets based on user-passed parameters to the first function.
+    callOnDs(funcName, ...args) {
 
-    sort (func) {
-        let ds = this.getDatasets(func)[0];
-        ds.sort(func);
-        return this;
-    } 
+        // user did not pass a reciever, so make the source dataset the reciever
+        if (g.isFunction(args[0])) {
+            let param = parser.parameters(args[0])[0];
+            args.unshift(param)
+        }
 
-    reduce (func) {
-        this.getDataset(func).reduce(func);
-        return this;
-    }
+        let reciever = args.shift(); // the dataset name to load the results into
+        let func = args.shift(); // the first function passed by the user
+        let funcDatasets = this.getDatasets(func); // the datasets referenced by that first function
+        let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
+        funcDatasets = funcDatasets.map(ds => ds.data) // for the remaining datasets, just get the data
+        args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
+console.log({sourceDataset})
+        let results = sourceDataset[funcName](...args); // execute the function
+        this.datasets[reciever] = results; // load the results into the reciever dataset
+        return this;  // fluently exit 
 
-    print (func, caption, target) {
-        this.getDataset(func).print(func, caption, target);
-        return this;
-    }
-
-    merge (func, mapper, onDuplicate) {        
-        let datasets = this.getDatasets(func);
-        datasets[0].merge(
-            datasets[1].data,
-            func,
-            mapper, 
-            onDuplicate
-        );
-        return this;
     }
 
 }

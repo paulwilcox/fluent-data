@@ -54,12 +54,17 @@ export default class extends connector {
 
     }
 
-    merge (
-        type,
-        targetIdentityKey, 
-        sourceIdentityKey,
-        source 
-    ) {
+    merge (incoming, matchingLogic, mapper, onDuplicate) {
+
+        console.log({
+            incoming,
+            matchingLogic: matchingLogic.toString().substring(0,25),
+            mapper: mapper.toString().substring(0,25),
+            onDuplicate
+        })
+        throw 'not implemented';
+
+        /*
 
         let typeIx = ix => (Array.isArray(type) && type[ix]);
         let typeIn = (...args) => [...args].includes(type.toLowerCase());
@@ -138,7 +143,7 @@ export default class extends connector {
             dbCon.onerror = event => reject(event); 
 
         });
-
+        */
     }    
 
 } 

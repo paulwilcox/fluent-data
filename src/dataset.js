@@ -5,7 +5,7 @@ import { runEmulators } from './reducer.js';
 import merger from './merger.js';
 import { print as prn } from './visualizer/printer.js';
 
-export default class {
+export default class dataset {
 
     constructor(data) {
         super();
@@ -13,14 +13,14 @@ export default class {
     }
 
     map (func) {    
-        this.data = recurse (
+        return recurse (
             data => data.map(g.noUndefinedForFunc(func)),
             this.data, 
         );
     }
 
     filter (func) {    
-        this.data = recurse (
+        return recurse (
             data => data.filter(func),
             this.data, 
         );
@@ -35,36 +35,33 @@ export default class {
             ? data => data.sort(func)
             : data => quickSort(data, func);
         
-        this.data = recurse(
-            outerFunc,
-            this.data
-        );
+        return recurse(outerFunc, this.data);
 
     } 
 
     group (func) {
-        this.data = 
-            new hashBuckets(func)
+        return new hashBuckets(func)
             .addItems(this.data)
             .getBuckets();
     }
 
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
-        this.data = ds.callNested(outerFunc, this.data);
+        let ds = recurse(outerFunc, this.data);
         // because runEmulators might return a non-array
-        if (!Array.isArray(this.data))
-            this.data = [this.data];
+        if (!Array.isArray(ds.data))
+            ds.data = [data];
+        return ds;
     }    
 
-    merge (rightData, matchingLogic, mapper, onDuplicate) {
-        this.data = merger (
+    merge (incoming, matchingLogic, mapper, onDuplicate) {
+        return new dataset(merger (
             this.data, 
-            rightData, 
+            incoming, 
             matchingLogic, 
             mapper, 
             onDuplicate
-        );
+        ));
     }
 
     print (func, caption, target) {
@@ -91,7 +88,7 @@ function recurse (func, data) {
     let isNested = Array.isArray(data[0]);
 
     if (!isNested) 
-        return func(data);    
+        return new dataset(func(data));    
 
     let output = [];
 

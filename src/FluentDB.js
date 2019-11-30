@@ -7,175 +7,52 @@ import connector from './connector.js';
 import connectorIdb from './connectorIdb.js';
 
 export default function $$(obj) { 
-    return new FluentDB().addSources(obj); 
+    return new FluentDB().addDatasets(obj); 
 }
 
 class FluentDB extends deferable {
 
     constructor() {
+
         super(new database());
-        this.attachDbFuncs(
-            'addSources', 'filter', 'map', 
-            'group', 'sort', 
-            'reduce', 'print', 'merge'
-        );
-    }
- 
-    import (mapFunc, filterFunc) {
-        this.then(async db => {
 
-            let ds = db.getDataset(mapFunc);
+        super.promisifyCondition = db => 
+            Object.values(db.datasets)
+            .filter(ds => g.isPromise(ds.data))
+            .length > 0;
 
-            if (!(ds instanceof connector))
-                throw 'dataset referenced by mapFunc is not a connector';
-
-            ds.data = await ds.data.import(mapFunc, filterFunc);
-
-            return db;
-
-        });
-        return this;
-    }
-
-    mergeExternal (
-        type, // update, insert, delete, upsert, full, or [] of 4 bools
-        targetIdentityKey, 
-        sourceIdentityKey  
-    ) {
-
-        this.then(async db => {
-
-            let target = db.getDataset(targetIdentityKey).data;
-
-            if (!(target instanceof connector))
-                throw 'target dataset is not a connector.  Use "merge" instead.'
-
-            let source = await 
-                db.getDataset(sourceIdentityKey)
-                .callWithoutModify('map', x => x); // just get the raw data
-
-            // TODO: decide wether we want to await the merge or not, or give the option
-            target.merge(type, targetIdentityKey, sourceIdentityKey, source);
-
-            return db;
-
-        });
-
-        return this;
-
-    }
-
-    test (
-        testName = 'test',
-        finalMapper,
-        boolFunc, 
-        catchFunc = err => err
-    ) {
-
-        if (testName == 'notest')
-            return undefined;
-
-        let _catchFunc = err => ({
-            testName,
-            result: false,
-            error: catchFunc(err) 
-        })
-
-        let data;
-        try {data = this.execute(finalMapper);}
-        catch (err) {return _catchFunc(err);}
-
-        let process = rows => {
-            try {
-
-                // if it's not an array, it's the result of a catch
-                if (!Array.isArray(rows))
-                    throw rows;
-
-                return { 
-                    testName,
-                    result: boolFunc(rows)
-                };
-
-            }
-            catch(err) {
-                return _catchFunc(err);
-            }
-        }
-
-        return g.isPromise(data) 
-            ? data.then(process).catch(_catchFunc)
-            : process(data);
-
-    }
-
-    // TODO: Close all connector connections
-    execute (finalMapper) {
-
-        let catcher = err => { 
-            if (this.catchFunc)
-                return this.catchFunc(err);
-            throw err;
-        }
-        
-        try {        
-
-            let db = super.execute();
-
-            if (finalMapper == undefined)
-                return this;
-
-            let param = parser.parameters(finalMapper)[0];
-            finalMapper = g.noUndefinedForFunc(finalMapper);
-
-            if (this.status == 'rejected' || finalMapper === undefined)
-                return db;
-    
-            db = this.promisifyDbIfNecessary(db);
-
-            return g.isPromise(db) 
-                ? db.then(db => db.getDataset(param).data.map(finalMapper)).catch(catcher)
-                : db.getDataset(param).data.map(finalMapper);
-
-        }
-
-        catch(err) {
-            return catcher(err);
-        }
-
-    }
-
-    attachDbFuncs (...funcNames) {
-
-        for(let funcName of funcNames) 
-            this[funcName] = function(...args) { return this.then(db => {
-
-                db = this.promisifyDbIfNecessary(db);
-                
-                return (g.isPromise(db)) 
-                    ? db.then(db => db[funcName](...args))
-                    : db[funcName](...args);
-
-            });};
-        
-    } 
-
-    promisifyDbIfNecessary (db) {
-        
-        if (g.isPromise(db))
-            return db;
-
-        let hasPromises = db.datasets.filter(ds => g.isPromise(ds.data)).length > 0; 
-
-        if (!hasPromises)
-            return db;
-
-        return Promise.all(db.datasets.map(ds => ds.data))
+        super.promisifyConversion = db => 
+            Promise.all(db.datasets.map(ds => ds.data))
             .then(datas => {
                 for(let i in db.datasets) 
                     db.datasets[i].data = datas[i];
                 return db;
             });
+
+        let funcsToAttach = [
+            'filter', 'map', 
+            'group', 'sort', 'reduce', 
+            'print', 'merge', 'import'
+        ]
+
+        this.addDatasets = this.then(db => db.addDatasets(obj));
+
+        for(let funcName of funcsToAttach) 
+            this[funcName] = 
+                (...args) => this.then(db => db.callOnDs(funcName, ...args))    
+
+    }
+
+    // TODO: Close all connector connections
+    execute (finalMapper) {
+        
+        if (finalMapper) {
+            let param = parser.parameters(finalMapper)[0];
+            finalMapper = g.noUndefinedForFunc(finalMapper);    
+            finalMapper = db => db.getDataset(param).data.map(finalMapper);
+        }
+
+        return super.execute(finalMapper);
 
     }
 
