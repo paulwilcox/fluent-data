@@ -95,3 +95,12 @@ export let noUndefined = obj => {
     return obj;
 
 }
+
+// Convert an unpromised object with promises as
+// values to a promised object with regular values
+export let PromiseAllObjectEntries = obj => 
+    Promise.all(
+        Object.entries(o)
+        .map(entry => Promise.all(entry))
+    )
+    .then(entries => Object.fromEntries(entries));
