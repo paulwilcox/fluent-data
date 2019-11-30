@@ -100,7 +100,7 @@ export let noUndefined = obj => {
 // values to a promised object with regular values
 export let PromiseAllObjectEntries = obj => 
     Promise.all(
-        Object.entries(o)
+        Object.entries(obj)
         .map(entry => Promise.all(entry))
     )
     .then(entries => Object.fromEntries(entries));
