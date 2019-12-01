@@ -10,11 +10,12 @@
         p: sample.products,
         c: $$.idb('customers', 'SampleDB'),
     })
-    .import(c => c, c => c.id != 3)
-    .print(c => c)
-    .execute();
+    .import(c => c /*, c => c.id != 3*/)
+    .map(o => o)
+    .execute(c => c);
 
     console.log(result);
+
 
 /*
     fetch('getMongo')

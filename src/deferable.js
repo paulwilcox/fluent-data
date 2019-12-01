@@ -37,17 +37,19 @@ export default class {
                 this.thens.push(finalFunc);
 
             for(let func of this.thens) {
-
+                
                 // promisify if necessary
                 if (!g.isPromise(this.value) && this.promisifyCondition(this.value))
                     this.value = this.promisifyConversion(this.value);
-    
+
+                // process func on the value (different depending on whether 
+                // it's a promise or not, and whether there's a catch func or not).
                 this.value = 
                     g.isPromise(this.value) && this.catchFunc ? this.value.then(func).catch(this.catchFunc)
                     : g.isPromise(this.value) ? this.value.then(func)
                     : func(this.value);
    
-             }
+            }
 
             this.status = g.isPromise(this.value) 
                 ? 'promisified' 

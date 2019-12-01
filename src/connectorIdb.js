@@ -1,4 +1,5 @@
 import connector from './connector.js';
+import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 
 export default class extends connector {
@@ -9,6 +10,7 @@ export default class extends connector {
         this.storeName = storeName;
     }
 
+    // A converter to a dataset for consumption in FluentDB
     import(mapFunc, filterFunc) {
 
         return new Promise((resolve, reject) => {
@@ -29,7 +31,7 @@ export default class extends connector {
                     let cursor = event.target.result;
 
                     if (!cursor) {
-                        resolve(results);
+                        resolve(new dataset(results));
                         return;
                     }
 

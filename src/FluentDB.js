@@ -18,28 +18,30 @@ class FluentDB extends deferable {
 
         super.promisifyCondition = db => 
             Object.values(db.datasets)
-            .filter(ds => g.isPromise(ds.data))
+            .filter(ds => g.isPromise(ds))
             .length > 0;
 
-        super.promisifyConversion = db => 
-            Promise.all(db.datasets.map(ds => ds.data))
-            .then(datas => {
-                for(let i in db.datasets) 
-                    db.datasets[i].data = datas[i];
-                return db;
-            });
+        super.promisifyConversion = db => {
+            let datasets = g.PromiseAllObjectEntries(db.datasets);
+            return Promise.all([db,datasets])
+                .then(obj => {
+                    let [db,datasets] = obj;
+                    db.datasets = datasets;
+                    return db;
+                });
+        }
+
+        this.addDatasets = obj => this.then(db => db.addDatasets(obj));
 
         let funcsToAttach = [
             'filter', 'map', 
             'group', 'sort', 'reduce', 
             'print', 'merge', 'import'
-        ]
-
-        this.addDatasets = this.then(db => db.addDatasets(obj));
+        ];
 
         for(let funcName of funcsToAttach) 
             this[funcName] = 
-                (...args) => this.then(db => db.callOnDs(funcName, ...args))    
+                (...args) => this.then(db => db.callOnDs(funcName, ...args)); 
 
     }
 
@@ -47,12 +49,12 @@ class FluentDB extends deferable {
     execute (finalMapper) {
         
         if (finalMapper) {
+            this.map(finalMapper);
             let param = parser.parameters(finalMapper)[0];
-            finalMapper = g.noUndefinedForFunc(finalMapper);    
-            finalMapper = db => db.getDataset(param).data.map(finalMapper);
+            return super.execute(db => db.datasets[param].data);
         }
 
-        return super.execute(finalMapper);
+        return super.execute();
 
     }
 

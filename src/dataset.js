@@ -8,7 +8,6 @@ import { print as prn } from './visualizer/printer.js';
 export default class dataset {
 
     constructor(data) {
-        super();
         this.data = data;
     }
 

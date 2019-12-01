@@ -1,5 +1,6 @@
 import * as g from './general.js';
 import parser from './parser.js';
+import dataset from './dataset.js';
 
 export default class {
 
@@ -8,7 +9,9 @@ export default class {
     }
 
     addDataset (key, data) { 
-        this.datasets[key] = data;
+        this.datasets[key] = Array.isArray(data) 
+            ? new dataset(data) 
+            : data;
         return this;
     }    
 
@@ -58,8 +61,7 @@ export default class {
         let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
         funcDatasets = funcDatasets.map(ds => ds.data) // for the remaining datasets, just get the data
         args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
-console.log({sourceDataset})
-        let results = sourceDataset[funcName](...args); // execute the function
+        let results = sourceDataset[funcName](func, ...args); // execute the function
         this.datasets[reciever] = results; // load the results into the reciever dataset
         return this;  // fluently exit 
 
