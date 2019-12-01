@@ -1,5 +1,6 @@
 import connector from './connector.js';
 import dataset from './dataset.js';
+import * as g from './general.js';
 import hashBuckets from './hashBuckets.js';
 
 export default class extends connector {
@@ -58,11 +59,13 @@ export default class extends connector {
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
 
+        let out = x => g.isFunction(x) ? x : JSON.stringify(x);
+
         console.log({
-            incoming,
-            matchingLogic: matchingLogic.toString().substring(0,25),
-            mapper: mapper.toString().substring(0,25),
-            onDuplicate
+            a_incoming: out(incoming),
+            b_matchingLogic: out(matchingLogic),
+            c_mapper: out(mapper),
+            d_onDuplicate: onDuplicate
         })
         throw 'not implemented';
 

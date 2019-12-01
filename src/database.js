@@ -59,9 +59,10 @@ export default class {
         let func = args.shift(); // the first function passed by the user
         let funcDatasets = this.getDatasets(func); // the datasets referenced by that first function
         let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
+        args.unshift(func); // pass the evaluated 'func' back to the front of the arguments
         funcDatasets = funcDatasets.map(ds => ds.data) // for the remaining datasets, just get the data
         args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
-        let results = sourceDataset[funcName](func, ...args); // execute the function
+        let results = sourceDataset[funcName](...args); // execute the function
         this.datasets[reciever] = results; // load the results into the reciever dataset
         return this;  // fluently exit 
 

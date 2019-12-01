@@ -10,9 +10,9 @@
         p: sample.products,
         c: $$.idb('customers', 'SampleDB'),
     })
-    .import(c => c /*, c => c.id != 3*/)
-    .map(o => o)
-    .execute(c => c);
+    //.import(c => c /*, c => c.id != 3*/)
+    .merge((c,o) => c.id == o.customer, 'both left')
+    .execute();
 
     console.log(result);
 
