@@ -71,8 +71,6 @@ export default class extends Map {
 
         }
 
-        // TODO: Can this be worked into a function  
-        // in place of the last run of above?
         for (let cross of crosses) {
             let mapped = func(...cross);
             if (mapped === undefined)
