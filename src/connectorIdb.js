@@ -57,7 +57,12 @@ export default class extends connector {
 
     }
 
-    merge (incoming, matchingLogic, mapper, onDuplicate) {
+    merge (
+        incoming, 
+        matchingLogic, 
+        mapper, 
+        distinct = false
+    ) {
 
         return new Promise((resolve, reject) => {
 
@@ -66,7 +71,7 @@ export default class extends connector {
             let sourceKeyFunc = keyFuncs[1];    
 
             let incomingBuckets = 
-                new hashBuckets(sourceKeyFunc)
+                new hashBuckets(sourceKeyFunc, true, distinct)
                 .addItems(incoming);
     
             let dbCon = this.dbConnector.open();
