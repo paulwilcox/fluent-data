@@ -25,7 +25,7 @@ export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicat
 function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
-    mapFunc = 'both null'; // inner join by default
+        mapFunc = 'both null'; // inner join by default
 
     if (g.isString(mapFunc)) {
 
@@ -40,7 +40,6 @@ function normalizeMapper (mapFunc, matchingLogic) {
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
     }
-
 
     if (!parametersAreEqual(matchingLogic, mapFunc))
         throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
