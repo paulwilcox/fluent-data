@@ -59,31 +59,11 @@ export default class extends connector {
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
 
-        let out = x => g.isFunction(x) ? x : JSON.stringify(x);
-
-        console.log({
-            a_incoming: out(incoming),
-            b_matchingLogic: out(matchingLogic),
-            c_mapper: out(mapper),
-            d_onDuplicate: onDuplicate
-        })
-        throw 'not implemented';
-
-        /*
-
-        let typeIx = ix => (Array.isArray(type) && type[ix]);
-        let typeIn = (...args) => [...args].includes(type.toLowerCase());
-        
-        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
-        let deleteIfMatched = typeIn('delete') || typeIx(1);
-        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
-        let deleteIfNoSource = typeIn('full') || typeIx(3);
-
         return new Promise((resolve, reject) => {
 
             let incomingBuckets = 
                 new hashBuckets(sourceIdentityKey)
-                .addItems(source);
+                .addItems(incoming);
     
             let dbCon = this.dbConnector.open();
 
@@ -99,41 +79,34 @@ export default class extends connector {
                 storeCursor.onsuccess = event => {
 
                     let cursor = event.target.result;
+                    let rowsToAdd = []; 
 
-                    if (!cursor) {
-                        
-                        if (insertIfNoTarget) {
-                                
-                            let remainingItems = // source but no target
-                                incomingBuckets.getBuckets()
-                                .map(bucket => bucket[0]);
-    
-                            for(let item of remainingItems) {
-                                let addRequest = store.add(item);
-                                addRequest.onerror = event => reject(event); 
-                            }
-                        
+                    if (!cursor) {                           
+                        for(let row of rowsToAdd) {
+                            let addRequest = store.add(row);
+                            addRequest.onerror = event => reject(event); 
                         }
-
+                        resolve(store);
                         return;
-
                     }
 
-                    let sourceRow = 
-                        incomingBuckets.getBucketFirstItem(
-                            cursor.value, 
-                            targetIdentityKey,
-                            true 
-                        );
+                    let outputRows = incomingBuckets.crossMapRow(cursor.value, mapper);
 
-                    if (sourceRow)
-                        if (deleteIfMatched) 
-                            cursor.delete();
-                        else if (updateIfMatched) 
-                            cursor.update(sourceRow);
-        
-                    else if (deleteIfNoSource) 
+                    if (outputRows.done)
                         cursor.delete();
+                    else {
+                        let outputRow = outputRows.next();
+                        let updatedAlready = false;
+                        while (!outputRows.done) {
+                            if(!updatedAlready) {
+                                cursor.update(outuptRow);
+                                updatedAlready = true;
+                            } 
+                            else 
+                                rowsToAdd.push(outputRow); // I (psw) don't know if store.add is safe here
+                            outputRow = outputRows.next();
+                        }
+                    }
 
                     cursor.continue();
 
@@ -148,7 +121,7 @@ export default class extends connector {
             dbCon.onerror = event => reject(event); 
 
         });
-        */
+        
     }    
 
 } 
