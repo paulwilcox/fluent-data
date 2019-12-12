@@ -77,6 +77,7 @@ export default class extends Map {
                 for (let entry of mapped) 
                     if (entry !== undefined)
                         yield entry;
+                        
             else if (mapped !== undefined)
                 yield mapped;
 
