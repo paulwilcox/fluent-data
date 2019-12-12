@@ -1,7 +1,7 @@
 import connector from './connector.js';
 import dataset from './dataset.js';
-import * as g from './general.js';
 import hashBuckets from './hashBuckets.js';
+import parser from './parser.js';
 
 export default class extends connector {
 
@@ -60,9 +60,13 @@ export default class extends connector {
     merge (incoming, matchingLogic, mapper, onDuplicate) {
 
         return new Promise((resolve, reject) => {
- 
+
+            let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
+            let targetKeyFunc = keyFuncs[0];
+            let sourceKeyFunc = keyFuncs[1];    
+
             let incomingBuckets = 
-                new hashBuckets(sourceIdentityKey)
+                new hashBuckets(sourceKeyFunc)
                 .addItems(incoming);
     
             let dbCon = this.dbConnector.open();
@@ -90,7 +94,12 @@ export default class extends connector {
                         return;
                     }
 
-                    let outputRows = incomingBuckets.crossMapRow(cursor.value, mapper);
+                    let outputRows = incomingBuckets.crossMapRow(
+                        cursor.value, 
+                        targetKeyFunc,
+                        true,
+                        mapper
+                    );
 
                     if (outputRows.done)
                         cursor.delete();
