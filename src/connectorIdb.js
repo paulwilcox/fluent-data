@@ -60,7 +60,7 @@ export default class extends connector {
     merge (incoming, matchingLogic, mapper, onDuplicate) {
 
         return new Promise((resolve, reject) => {
-
+ 
             let incomingBuckets = 
                 new hashBuckets(sourceIdentityKey)
                 .addItems(incoming);

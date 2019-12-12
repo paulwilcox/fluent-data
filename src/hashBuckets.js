@@ -13,7 +13,7 @@ export default class extends Map {
             ? item => g.stringifyObject(hashKeySelector(item)) 
             : hashKeySelector;
     }
-
+ 
     addItems(items) {
         for(let item of items) 
             this.addItem(item);
