@@ -1421,6 +1421,29 @@ class connectorIdb extends connector {
         this.storeName = storeName;
     }
 
+
+    // A converter to a dataset for consumption in FluentDB
+    import(mapFunc, filterFunc) {
+
+        filterFunc = filterFunc || (x => true);                
+        let results = [];
+
+        return this.curse(cursor => {
+
+            if (!cursor) 
+                return new dataset(results);
+
+            if (filterFunc(cursor.value))
+                results.push(
+                    mapFunc(cursor.value)
+                );
+
+            cursor.continue();
+
+        });
+
+    }
+/*
     // A converter to a dataset for consumption in FluentDB
     import(mapFunc, filterFunc) {
 
@@ -1458,14 +1481,14 @@ class connectorIdb extends connector {
 
                     cursor.continue();
 
-                }; 
+                } 
                 
             };
 
         });
 
     }
-
+*/
     merge (
         incoming, 
         matchingLogic, 
@@ -1545,7 +1568,42 @@ class connectorIdb extends connector {
 
         });
         
-    }    
+    }
+    
+    curse ( 
+        func,
+        transactionMode = 'readonly'
+    ) {
+
+        return new Promise((resolve, reject) => {
+
+            let dbCon = window.indexedDB.open(this.dbName);
+            dbCon.onerror = event => reject(event); 
+    
+            dbCon.onsuccess = () => {
+    
+                let db = dbCon.result;
+    
+                let tx = db.transaction(this.storeName, transactionMode);
+                tx.oncomplete = () => db.close();
+                tx.onerror = event => reject(event); 
+    
+                let store = tx.objectStore(this.storeName);
+    
+                let storeCursor = store.openCursor();
+                storeCursor.onerror = event => reject(event); 
+                storeCursor.onsuccess = event => {
+                    let cursor = event.target.result;    
+                    let completionResult = func(cursor);
+                    if (completionResult !== undefined)
+                        resolve(completionResult);
+                };
+
+            };
+
+        });
+
+    }
 
 }
 

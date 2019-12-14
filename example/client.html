@@ -11,9 +11,8 @@
         let result = $$({
             o: sample.orders,
             p: sample.products,
-            c: sample.customers,
-            pc: sample.potentialCustomers,
-            ci: $$.idb('customers', 'SampleDB'),
+            c: $$.idb('customers', 'SampleDB'),
+            d: $$.idb('customers', 'SampleDB')
         })
         .import(c => c)
         //.merge((c,o) => c.id == o.customer, 'both left')
