@@ -1443,52 +1443,7 @@ class connectorIdb extends connector {
         });
 
     }
-/*
-    // A converter to a dataset for consumption in FluentDB
-    import(mapFunc, filterFunc) {
 
-        return new Promise((resolve, reject) => {
-
-            let dbCon = window.indexedDB.open(this.dbName);
-            dbCon.onerror = event => reject(event);             
-            dbCon.onsuccess = () => {
-
-                filterFunc = filterFunc || (x => true);                
-                let results = [];
-                let db = dbCon.result;
-                
-                let tx = db.transaction(this.storeName);
-                tx.oncomplete = () => db.close(); 
-                tx.onerror = event => reject(event); 
-                
-                let store = tx.objectStore(this.storeName);
-
-                let storeCursor = store.openCursor();
-                storeCursor.onerror = event => reject(event);                
-                storeCursor.onsuccess = event => {
-
-                    let cursor = event.target.result;
-
-                    if (!cursor) {
-                        resolve(new dataset(results));
-                        return;
-                    }
-
-                    if (filterFunc(cursor.value))
-                        results.push(
-                            mapFunc(cursor.value)
-                        );
-
-                    cursor.continue();
-
-                } 
-                
-            };
-
-        });
-
-    }
-*/
     merge (
         incoming, 
         matchingLogic, 
@@ -1496,77 +1451,54 @@ class connectorIdb extends connector {
         distinct = false
     ) {
 
-        return new Promise((resolve, reject) => {
+        let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
+        let targetKeyFunc = keyFuncs.leftFunc;
+        let sourceKeyFunc = keyFuncs.rightFunc;    
 
-            let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
-            let targetKeyFunc = keyFuncs.leftFunc;
-            let sourceKeyFunc = keyFuncs.rightFunc;    
+        let incomingBuckets = 
+            new hashBuckets(sourceKeyFunc, true, distinct)
+            .addItems(incoming);
 
-            let incomingBuckets = 
-                new hashBuckets(sourceKeyFunc, true, distinct)
-                .addItems(incoming);
-    
-            let dbCon = window.indexedDB.open(this.dbName);
-            dbCon.onerror = event => reject(event); 
+        let rowsToAdd = []; 
 
-            dbCon.onsuccess = () => {
+        return this.curse((cursor, store) => {
 
-                let db = dbCon.result;
+            // When you've finished looping the target, add 
+            // any excess rows to the store.  Then resolve. 
+            if (!cursor) {                           
+                for(let row of rowsToAdd) {
+                    let addRequest = store.add(row);
+                    addRequest.onerror = event => reject(event); 
+                }
+                return this;
+            }
 
-                let tx = db.transaction(this.storeName, "readwrite");
-                tx.oncomplete = () => db.close();
-                tx.onerror = event => reject(event); 
+            // Finds the bucket of incoming rows matching the 
+            // target and 'crossMaps' them.  Returns a generator. 
+            let outputGenerator = incomingBuckets.crossMapRow(
+                cursor.value, 
+                targetKeyFunc,
+                true,
+                mapper
+            );
 
-                let store = tx.objectStore(this.storeName);
+            // For the first match, delete or update. based on
+            // whether there's a match or not.
+            let outputYield = outputGenerator.next();
+            outputYield.done 
+                ? cursor.delete()
+                : cursor.update(outputYield.value);
 
-                let storeCursor = store.openCursor();
-                storeCursor.onerror = event => reject(event); 
-                storeCursor.onsuccess = event => {
+            // For additional matches, add them to the rowsToAdd array.
+            outputYield = outputGenerator.next();
+            while (outputYield.done === false) {
+                rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
+                outputYield = outputGenerator.next();
+            }
 
-                    let cursor = event.target.result;
-                    let rowsToAdd = []; 
+            cursor.continue();
 
-                    // When you've finished looping the target, add 
-                    // any excess rows to the store.  Then resolve. 
-                    if (!cursor) {                           
-                        for(let row of rowsToAdd) {
-                            let addRequest = store.add(row);
-                            addRequest.onerror = event => reject(event); 
-                        }
-                        resolve(this);
-                        return;
-                    }
-
-                    // Finds the bucket of incoming rows matching the 
-                    // target and 'crossMaps' them.  Returns a generator. 
-                    let outputGenerator = incomingBuckets.crossMapRow(
-                        cursor.value, 
-                        targetKeyFunc,
-                        true,
-                        mapper
-                    );
-
-                    // For the first match, delete or update. based on
-                    // whether there's a match or not.
-                    let outputYield = outputGenerator.next();
-                    outputYield.done 
-                        ? cursor.delete()
-                        : cursor.update(outputYield.value);
-
-                    // For additional matches, add them to the rowsToAdd array.
-                    outputYield = outputGenerator.next();
-                    while (outputYield.done === false) {
-                        rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
-                        outputYield = outputGenerator.next();
-                    }
-
-                    cursor.continue();
-
-                }; 
-                    
-            };
-
-        });
+        }, 'readwrite');
         
     }
     
@@ -1594,7 +1526,7 @@ class connectorIdb extends connector {
                 storeCursor.onerror = event => reject(event); 
                 storeCursor.onsuccess = event => {
                     let cursor = event.target.result;    
-                    let completionResult = func(cursor);
+                    let completionResult = func(cursor, store);
                     if (completionResult !== undefined)
                         resolve(completionResult);
                 };
