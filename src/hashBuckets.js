@@ -73,12 +73,13 @@ export default class extends Map {
 
             let mapped = mapper(existingRow, incomingRow);
 
-            if (Array.isArray(mapped)) 
+            if (Array.isArray(mapped)) {
                 for (let entry of mapped) 
-                    if (entry !== undefined)
+                    if (entry !== undefined) 
                         yield entry;
+            }
                         
-            else if (mapped !== undefined)
+            else if (mapped !== undefined) 
                 yield mapped;
 
         }

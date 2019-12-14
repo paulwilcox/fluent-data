@@ -68,7 +68,7 @@ export default class dataset {
         let data = recurse (
             data => data.map(g.noUndefinedForFunc(func)),
             this.data, 
-        );
+        ).data;
 
         if (target) 
             prn(target, data, caption)
@@ -77,6 +77,8 @@ export default class dataset {
         else 
             console.log(data); 
 
+        return this;
+        
     }
 
 }

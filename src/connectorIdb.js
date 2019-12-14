@@ -17,16 +17,21 @@ export default class extends connector {
         return new Promise((resolve, reject) => {
 
             let dbCon = window.indexedDB.open(this.dbName);
-            
+            dbCon.onerror = event => reject(event);             
             dbCon.onsuccess = () => {
 
-                filterFunc = filterFunc || (x => true);
-                let db = dbCon.result;
-                let tx = db.transaction(this.storeName);
-                let store = tx.objectStore(this.storeName);
-                let storeCursor = store.openCursor();
+                filterFunc = filterFunc || (x => true);                
                 let results = [];
+                let db = dbCon.result;
                 
+                let tx = db.transaction(this.storeName);
+                tx.oncomplete = () => db.close(); 
+                tx.onerror = event => reject(event); 
+                
+                let store = tx.objectStore(this.storeName);
+
+                let storeCursor = store.openCursor();
+                storeCursor.onerror = event => reject(event);                
                 storeCursor.onsuccess = event => {
 
                     let cursor = event.target.result;
@@ -45,13 +50,7 @@ export default class extends connector {
 
                 } 
                 
-                storeCursor.onerror = event => reject(event);
-                tx.oncomplete = () => db.close(); 
-                tx.onerror = event => reject(event); 
-
             };
-
-            dbCon.onerror = event => reject(event); 
 
         });
 
@@ -67,72 +66,72 @@ export default class extends connector {
         return new Promise((resolve, reject) => {
 
             let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-            let targetKeyFunc = keyFuncs[0];
-            let sourceKeyFunc = keyFuncs[1];    
+            let targetKeyFunc = keyFuncs.leftFunc;
+            let sourceKeyFunc = keyFuncs.rightFunc;    
 
             let incomingBuckets = 
                 new hashBuckets(sourceKeyFunc, true, distinct)
                 .addItems(incoming);
     
-            let dbCon = this.dbConnector.open();
+            let dbCon = window.indexedDB.open(this.dbName);
+            dbCon.onerror = event => reject(event); 
 
             dbCon.onsuccess = () => {
 
                 let db = dbCon.result;
 
                 let tx = db.transaction(this.storeName, "readwrite");
+                tx.oncomplete = () => db.close();
+                tx.onerror = event => reject(event); 
+
                 let store = tx.objectStore(this.storeName);
 
                 let storeCursor = store.openCursor();
-                
+                storeCursor.onerror = event => reject(event); 
                 storeCursor.onsuccess = event => {
 
                     let cursor = event.target.result;
                     let rowsToAdd = []; 
 
+                    // When you've finished looping the target, add 
+                    // any excess rows to the store.  Then resolve. 
                     if (!cursor) {                           
                         for(let row of rowsToAdd) {
                             let addRequest = store.add(row);
                             addRequest.onerror = event => reject(event); 
                         }
-                        resolve(store);
+                        resolve(this);
                         return;
                     }
 
-                    let outputRows = incomingBuckets.crossMapRow(
+                    // Finds the bucket of incoming rows matching the 
+                    // target and 'crossMaps' them.  Returns a generator. 
+                    let outputGenerator = incomingBuckets.crossMapRow(
                         cursor.value, 
                         targetKeyFunc,
                         true,
                         mapper
                     );
 
-                    if (outputRows.done)
-                        cursor.delete();
-                    else {
-                        let outputRow = outputRows.next();
-                        let updatedAlready = false;
-                        while (!outputRows.done) {
-                            if(!updatedAlready) {
-                                cursor.update(outuptRow);
-                                updatedAlready = true;
-                            } 
-                            else 
-                                rowsToAdd.push(outputRow); // I (psw) don't know if store.add is safe here
-                            outputRow = outputRows.next();
-                        }
+                    // For the first match, delete or update. based on
+                    // whether there's a match or not.
+                    let outputYield = outputGenerator.next();
+                    outputYield.done 
+                        ? cursor.delete()
+                        : cursor.update(outputYield.value);
+
+                    // For additional matches, add them to the rowsToAdd array.
+                    outputYield = outputGenerator.next();
+                    while (outputYield.done === false) {
+                        rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
+                        outputYield = outputGenerator.next();
                     }
 
                     cursor.continue();
 
                 } 
                     
-                storeCursor.onerror = event => reject(event); 
-                tx.oncomplete = () => db.close();
-                tx.onerror = event => reject(event); 
-
             };
-
-            dbCon.onerror = event => reject(event); 
 
         });
         

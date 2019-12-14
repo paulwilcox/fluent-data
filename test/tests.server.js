@@ -240,9 +240,7 @@ class deferable {
 
             for(let func of this.thens) {
                 
-                // promisify if necessary
-                if (!isPromise(this.value) && this.promisifyCondition(this.value))
-                    this.value = this.promisifyConversion(this.value);
+                this.promisifyIfNecessary();
 
                 // process func on the value (different depending on whether 
                 // it's a promise or not, and whether there's a catch func or not).
@@ -257,6 +255,8 @@ class deferable {
                 ? 'promisified' 
                 : 'resolved'; 
             
+            this.promisifyIfNecessary();
+
             return this.value;
 
         }
@@ -267,17 +267,36 @@ class deferable {
 
     }
 
-}
+    promisifyIfNecessary() {
 
-class hashBuckets {
-    
-    constructor (
-        hashKeySelector
-    ) {
-        this.mapper = new Map();
-        this.hashKeySelector = hashKeySelector;
+        if (!isPromise(this.value) && this.promisifyCondition(this.value))
+            this.value = this.promisifyConversion(this.value);
+
+        else if (isPromise(this.value)) 
+            this.value = this.value.then(db => 
+                this.promisifyCondition(db)
+                    ? this.promisifyConversion(db)
+                    : db
+            );
+
     }
 
+}
+
+class hashBuckets extends Map {
+    
+    constructor (
+        hashKeySelector,
+        stringify = true,
+        distinct = false
+    ) {
+        super();
+        this.distinct = distinct;
+        this.hashKeySelector = stringify 
+            ? item => stringifyObject(hashKeySelector(item)) 
+            : hashKeySelector;
+    }
+ 
     addItems(items) {
         for(let item of items) 
             this.addItem(item);
@@ -286,13 +305,17 @@ class hashBuckets {
 
     addItem(item) {
 
-        let objectKey = this.hashKeySelector(item);
-        let stringKey = stringifyObject(objectKey);
+        let key = this.hashKeySelector(item);
+        
+        if (this.distinct) {
+            this.set(key, item);
+            return this;
+        }
 
-        if (!this.mapper.has(stringKey)) 
-            this.mapper.set(stringKey, [item]);
-        else 
-            this.mapper.get(stringKey).push(item);
+        if(!this.has(key))
+            this.set(key, []);
+
+        this.get(key).push(item);
 
         return this;
 
@@ -301,49 +324,51 @@ class hashBuckets {
     getBucket(
         objectToHash, 
         hashKeySelector,
-        remove = false
+        stringify
     ) {
-
-        let objectKey = hashKeySelector(objectToHash);
-        let stringKey = stringifyObject(objectKey);
-
-        let value = this.mapper.get(stringKey);
-
-        if (remove) 
-            this.mapper.delete(stringKey);
-
-        return value;
-
-    }
-
-    getBucketFirstItem (
-        objectToHash,
-        hashKeySelector,
-        remove = false
-    ) {
-
-        let bucket = 
-            this.getBucket(
-                objectToHash,
-                hashKeySelector,
-                remove
-            );
-
-        if (!bucket || bucket.length == 0)
-            return null;
-
-        return bucket[0];
-
-    }
-
-    getKeys() {
-        return Array.from(this.mapper.keys());
+        let key = stringify
+            ? stringifyObject(hashKeySelector(objectToHash))
+            : hashKeySelector(objectToHash);
+        return this.get(key);
     }
 
     getBuckets() {
-        return Array.from(this.mapper.values());
+        return Array.from(this.values());
     }
 
+    * crossMap(incomingRows, mapper) {
+        for (let incomingRow of incomingRows)
+            for(let outputRow of crossMapRow(incomingRow, mapper)) {
+                yield outputRow;
+                if (this.distinct)
+                    continue;
+            }
+    }
+
+    * crossMapRow(incomingRow, hashKeySelector, stringify, mapper) {
+                
+        let existingRows = this.getBucket(incomingRow, hashKeySelector, stringify);
+
+        if (existingRows === undefined)
+            existingRows = [undefined];
+
+        for(let existingRow of existingRows) {
+
+            let mapped = mapper(existingRow, incomingRow);
+
+            if (Array.isArray(mapped)) {
+                for (let entry of mapped) 
+                    if (entry !== undefined) 
+                        yield entry;
+            }
+                        
+            else if (mapped !== undefined) 
+                yield mapped;
+
+        }
+
+    }
+    
 }
 
 // TODO: See if we need to uncomment the falsy checks below.
@@ -564,8 +589,6 @@ class buckles extends Map {
 
         }
 
-        // TODO: Can this be worked into a function  
-        // in place of the last run of above?
         for (let cross of crosses) {
             let mapped = func(...cross);
             if (mapped === undefined)
@@ -612,7 +635,7 @@ function merger (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
 function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
-    mapFunc = 'both null'; // inner join by default
+        mapFunc = 'both null'; // inner join by default
 
     if (isString(mapFunc)) {
 
@@ -627,7 +650,6 @@ function normalizeMapper (mapFunc, matchingLogic) {
         return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
 
     }
-
 
     if (!parametersAreEqual(matchingLogic, mapFunc))
         throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
@@ -1284,7 +1306,7 @@ class dataset {
         let data = recurse (
             data => data.map(noUndefinedForFunc(func)),
             this.data, 
-        );
+        ).data;
 
         if (target) 
             print(target, data, caption);
@@ -1293,6 +1315,8 @@ class dataset {
         else 
             console.log(data); 
 
+        return this;
+        
     }
 
 }
@@ -1403,16 +1427,21 @@ class connectorIdb extends connector {
         return new Promise((resolve, reject) => {
 
             let dbCon = window.indexedDB.open(this.dbName);
-            
+            dbCon.onerror = event => reject(event);             
             dbCon.onsuccess = () => {
 
-                filterFunc = filterFunc || (x => true);
-                let db = dbCon.result;
-                let tx = db.transaction(this.storeName);
-                let store = tx.objectStore(this.storeName);
-                let storeCursor = store.openCursor();
+                filterFunc = filterFunc || (x => true);                
                 let results = [];
+                let db = dbCon.result;
                 
+                let tx = db.transaction(this.storeName);
+                tx.oncomplete = () => db.close(); 
+                tx.onerror = event => reject(event); 
+                
+                let store = tx.objectStore(this.storeName);
+
+                let storeCursor = store.openCursor();
+                storeCursor.onerror = event => reject(event);                
                 storeCursor.onsuccess = event => {
 
                     let cursor = event.target.result;
@@ -1431,110 +1460,91 @@ class connectorIdb extends connector {
 
                 }; 
                 
-                storeCursor.onerror = event => reject(event);
-                tx.oncomplete = () => db.close(); 
-                tx.onerror = event => reject(event); 
-
             };
-
-            dbCon.onerror = event => reject(event); 
 
         });
 
     }
 
-    merge (incoming, matchingLogic, mapper, onDuplicate) {
-
-        let out = x => isFunction(x) ? x : JSON.stringify(x);
-
-        console.log({
-            a_incoming: out(incoming),
-            b_matchingLogic: out(matchingLogic),
-            c_mapper: out(mapper),
-            d_onDuplicate: onDuplicate
-        });
-        throw 'not implemented';
-
-        /*
-
-        let typeIx = ix => (Array.isArray(type) && type[ix]);
-        let typeIn = (...args) => [...args].includes(type.toLowerCase());
-        
-        let updateIfMatched = typeIn('upsert', 'update', 'full') || typeIx(0);
-        let deleteIfMatched = typeIn('delete') || typeIx(1);
-        let insertIfNoTarget = typeIn('upsert', 'insert', 'full') || typeIx(2);
-        let deleteIfNoSource = typeIn('full') || typeIx(3);
+    merge (
+        incoming, 
+        matchingLogic, 
+        mapper, 
+        distinct = false
+    ) {
 
         return new Promise((resolve, reject) => {
 
+            let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
+            let targetKeyFunc = keyFuncs.leftFunc;
+            let sourceKeyFunc = keyFuncs.rightFunc;    
+
             let incomingBuckets = 
-                new hashBuckets(sourceIdentityKey)
-                .addItems(source);
+                new hashBuckets(sourceKeyFunc, true, distinct)
+                .addItems(incoming);
     
-            let dbCon = this.dbConnector.open();
+            let dbCon = window.indexedDB.open(this.dbName);
+            dbCon.onerror = event => reject(event); 
 
             dbCon.onsuccess = () => {
 
                 let db = dbCon.result;
 
                 let tx = db.transaction(this.storeName, "readwrite");
-                let store = tx.objectStore(this.storeName);
-
-                let storeCursor = store.openCursor();
-                
-                storeCursor.onsuccess = event => {
-
-                    let cursor = event.target.result;
-
-                    if (!cursor) {
-                        
-                        if (insertIfNoTarget) {
-                                
-                            let remainingItems = // source but no target
-                                incomingBuckets.getBuckets()
-                                .map(bucket => bucket[0]);
-    
-                            for(let item of remainingItems) {
-                                let addRequest = store.add(item);
-                                addRequest.onerror = event => reject(event); 
-                            }
-                        
-                        }
-
-                        return;
-
-                    }
-
-                    let sourceRow = 
-                        incomingBuckets.getBucketFirstItem(
-                            cursor.value, 
-                            targetIdentityKey,
-                            true 
-                        );
-
-                    if (sourceRow)
-                        if (deleteIfMatched) 
-                            cursor.delete();
-                        else if (updateIfMatched) 
-                            cursor.update(sourceRow);
-        
-                    else if (deleteIfNoSource) 
-                        cursor.delete();
-
-                    cursor.continue();
-
-                } 
-                    
-                storeCursor.onerror = event => reject(event); 
                 tx.oncomplete = () => db.close();
                 tx.onerror = event => reject(event); 
 
+                let store = tx.objectStore(this.storeName);
+
+                let storeCursor = store.openCursor();
+                storeCursor.onerror = event => reject(event); 
+                storeCursor.onsuccess = event => {
+
+                    let cursor = event.target.result;
+                    let rowsToAdd = []; 
+
+                    // When you've finished looping the target, add 
+                    // any excess rows to the store.  Then resolve. 
+                    if (!cursor) {                           
+                        for(let row of rowsToAdd) {
+                            let addRequest = store.add(row);
+                            addRequest.onerror = event => reject(event); 
+                        }
+                        resolve(this);
+                        return;
+                    }
+
+                    // Finds the bucket of incoming rows matching the 
+                    // target and 'crossMaps' them.  Returns a generator. 
+                    let outputGenerator = incomingBuckets.crossMapRow(
+                        cursor.value, 
+                        targetKeyFunc,
+                        true,
+                        mapper
+                    );
+
+                    // For the first match, delete or update. based on
+                    // whether there's a match or not.
+                    let outputYield = outputGenerator.next();
+                    outputYield.done 
+                        ? cursor.delete()
+                        : cursor.update(outputYield.value);
+
+                    // For additional matches, add them to the rowsToAdd array.
+                    outputYield = outputGenerator.next();
+                    while (outputYield.done === false) {
+                        rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
+                        outputYield = outputGenerator.next();
+                    }
+
+                    cursor.continue();
+
+                }; 
+                    
             };
 
-            dbCon.onerror = event => reject(event); 
-
         });
-        */
+        
     }    
 
 }

@@ -4,18 +4,26 @@
 
     import $$ from '../dist/FluentDB.client.js';
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
-    
-    let result = $$({
-        o: sample.orders,
-        p: sample.products,
-        c: $$.idb('customers', 'SampleDB'),
-    })
-    //.import(c => c /*, c => c.id != 3*/)
-    .merge((c,o) => c.id == o.customer, 'both left')
-    .execute();
+    import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
 
-    console.log(result);
+    sampleIdb("SampleDB", true).then(() => {
 
+        let result = $$({
+            o: sample.orders,
+            p: sample.products,
+            c: sample.customers,
+            pc: sample.potentialCustomers,
+            ci: $$.idb('customers', 'SampleDB'),
+        })
+        .import(c => c)
+        //.merge((c,o) => c.id == o.customer, 'both left')
+        .merge((d,o) => d.id == o.customer, (d,o) => Object.assign({}, d, o))
+        .import(d => d)
+        .execute();
+
+        console.log(result);
+
+    });
 
 /*
     fetch('getMongo')

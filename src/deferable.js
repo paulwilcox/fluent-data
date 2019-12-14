@@ -38,9 +38,7 @@ export default class {
 
             for(let func of this.thens) {
                 
-                // promisify if necessary
-                if (!g.isPromise(this.value) && this.promisifyCondition(this.value))
-                    this.value = this.promisifyConversion(this.value);
+                this.promisifyIfNecessary();
 
                 // process func on the value (different depending on whether 
                 // it's a promise or not, and whether there's a catch func or not).
@@ -55,6 +53,8 @@ export default class {
                 ? 'promisified' 
                 : 'resolved'; 
             
+            this.promisifyIfNecessary();
+
             return this.value;
 
         }
@@ -62,6 +62,20 @@ export default class {
         catch(error) {
             this.catcher(error);
         }
+
+    }
+
+    promisifyIfNecessary() {
+
+        if (!g.isPromise(this.value) && this.promisifyCondition(this.value))
+            this.value = this.promisifyConversion(this.value);
+
+        else if (g.isPromise(this.value)) 
+            this.value = this.value.then(db => 
+                this.promisifyCondition(db)
+                    ? this.promisifyConversion(db)
+                    : db
+            );
 
     }
 
