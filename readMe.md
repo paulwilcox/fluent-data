@@ -1,3 +1,7 @@
+** **Doumentation is off for now.  'Join' functionality will now be subsumed
+into 'Merge' to create one function.  On the tail end of this, but becuase
+of this the documentation is not accurate.** **
+
 ** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
 
 Work with datasets (arrays of objects) by chaining methods -- similar to c# linq method syntax, though in many ways more pleasant. Query datasets composed from regular javascript, from indexedDb, from mongoDb, or mix them using the same API. 
