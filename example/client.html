@@ -5,9 +5,6 @@
     // TODO: some reconciliation is required between merge logic 
     // for dataset and for idbConnector
 
-    // TODO: aggregations have to be broken given the changes I
-    // made to hashBuckets. 
-
     import $$ from '../dist/FluentDB.client.js';
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
     //import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
@@ -15,15 +12,15 @@
     let grouped = 
     $$({ o: sample.orders })
     .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
-    /*.reduce(o => ({
+    .reduce(o => ({
         customer: $$.first(o.customer), 
         speed: $$.avg(o.speed),
         rating: $$.avg(o.rating),
         speed_cor: $$.cor(o.speed, o.rating)
-    }))*/
+    }))
     .execute(o => o);
 
-console.log(grouped);    
+    console.log(grouped);    
 
 /*
     fetch('getMongo')

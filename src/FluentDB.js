@@ -58,9 +58,9 @@ class FluentDB extends deferable {
     execute (finalMapper) {
         
         if (finalMapper) {
-            this.map(finalMapper);
+            this.map(finalMapper); // adds a mapping to this.thens
             let param = parser.parameters(finalMapper)[0];
-            return super.execute(db => db.datasets[param].data);
+            return super.execute(db => db.datasets[param].data); // just get the data
         }
 
         return super.execute();

@@ -1286,9 +1286,6 @@ class dataset {
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
         let ds = recurse(outerFunc, this.data);
-        // because runEmulators might return a non-array
-        //if (!Array.isArray(ds.data))
-            //ds.data = [data];
         return ds;
     }    
 
@@ -1335,7 +1332,7 @@ function recurse (func, data) {
     for (let nested of data)  
         output.push(func(nested));
 
-    return output;
+    return new dataset(output);
 
 }
 
@@ -1614,9 +1611,9 @@ class FluentDB extends deferable {
     execute (finalMapper) {
         
         if (finalMapper) {
-            this.map(finalMapper);
+            this.map(finalMapper); // adds a mapping to this.thens
             let param = parser$1.parameters(finalMapper)[0];
-            return super.execute(db => db.datasets[param].data);
+            return super.execute(db => db.datasets[param].data); // just get the data
         }
 
         return super.execute();

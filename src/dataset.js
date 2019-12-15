@@ -94,6 +94,6 @@ function recurse (func, data) {
     for (let nested of data)  
         output.push(func(nested));
 
-    return output;
+    return new dataset(output);
 
 }
