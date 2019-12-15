@@ -16,11 +16,19 @@ class FluentDB extends deferable {
 
         super(new database());
 
-        // TODO: this fails when db is a promise
-        super.promisifyCondition = db => 
-            Object.values(db.datasets)
-            .filter(ds => g.isPromise(ds))
-            .length > 0;
+        super.promisifyCondition = db => { 
+
+            // The final mapper in 'execute' will cause the 
+            // thenable to return a non-database
+            if(!(db instanceof database))
+                return false;
+
+            return 0 < 
+                Object.values(db.datasets)
+                .filter(ds => g.isPromise(ds))
+                .length;
+
+        }
 
         super.promisifyConversion = db => {
             let datasets = g.PromiseAllObjectEntries(db.datasets);

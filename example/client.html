@@ -14,15 +14,12 @@
             c: $$.idb('customers', 'SampleDB'),
         })
         //.merge((c,o) => c.id == o.customer, 'both left')
-        .print(c => c, 'before')
         .merge(
             (c,o) => c.id == o.customer, 
             (c,o) => Object.assign({}, c, o)
         )
-        .print(c => c, 'after')
-        .execute();
+        .execute(o => o);
 
-        console.log(idb);
         console.log(result);
 
     });
