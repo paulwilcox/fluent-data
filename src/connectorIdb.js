@@ -2,6 +2,7 @@ import connector from './connector.js';
 import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 import parser from './parser.js';
+import { print as prn } from './visualizer/printer.js';
 
 export default class extends connector {
 
@@ -10,7 +11,6 @@ export default class extends connector {
         this.dbName = dbName;
         this.storeName = storeName;
     }
-
 
     // A converter to a dataset for consumption in FluentDB
     import(mapFunc, filterFunc) {
@@ -27,6 +27,29 @@ export default class extends connector {
                 results.push(
                     mapFunc(cursor.value)
                 );
+
+            cursor.continue();
+
+        });
+
+    }
+
+    print(mapFunc, caption, target) {
+            
+        let results = [];
+
+        return this.curse(cursor => {
+
+            if (!cursor) {
+                target ? prn(target, results, caption)
+                    : caption ? console.log(caption, results) 
+                    : console.log(results);
+                return this;
+            }             
+
+            results.push(
+                mapFunc(cursor.value)
+            );
 
             cursor.continue();
 

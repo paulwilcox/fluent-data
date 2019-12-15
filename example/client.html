@@ -6,20 +6,23 @@
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
     import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
 
-    sampleIdb("SampleDB", true).then(() => {
+    sampleIdb("SampleDB", true, true).then((idb) => {
 
         let result = $$({
             o: sample.orders,
             p: sample.products,
             c: $$.idb('customers', 'SampleDB'),
-            d: $$.idb('customers', 'SampleDB')
         })
-        .import(c => c)
         //.merge((c,o) => c.id == o.customer, 'both left')
-        .merge((d,o) => d.id == o.customer, (d,o) => Object.assign({}, d, o))
-        .import(d => d)
+        .print(c => c, 'before')
+        .merge(
+            (c,o) => c.id == o.customer, 
+            (c,o) => Object.assign({}, c, o)
+        )
+        .print(c => c, 'after')
         .execute();
 
+        console.log(idb);
         console.log(result);
 
     });

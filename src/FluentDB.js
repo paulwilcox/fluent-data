@@ -16,6 +16,7 @@ class FluentDB extends deferable {
 
         super(new database());
 
+        // TODO: this fails when db is a promise
         super.promisifyCondition = db => 
             Object.values(db.datasets)
             .filter(ds => g.isPromise(ds))

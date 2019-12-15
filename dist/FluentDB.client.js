@@ -1465,7 +1465,6 @@ class connectorIdb extends connector {
         this.storeName = storeName;
     }
 
-
     // A converter to a dataset for consumption in FluentDB
     import(mapFunc, filterFunc) {
 
@@ -1481,6 +1480,29 @@ class connectorIdb extends connector {
                 results.push(
                     mapFunc(cursor.value)
                 );
+
+            cursor.continue();
+
+        });
+
+    }
+
+    print(mapFunc, caption, target) {
+            
+        let results = [];
+
+        return this.curse(cursor => {
+
+            if (!cursor) {
+                target ? print(target, results, caption)
+                    : caption ? console.log(caption, results) 
+                    : console.log(results);
+                return this;
+            }             
+
+            results.push(
+                mapFunc(cursor.value)
+            );
 
             cursor.continue();
 
@@ -1593,6 +1615,7 @@ class FluentDB extends deferable {
 
         super(new database());
 
+        // TODO: this fails when db is a promise
         super.promisifyCondition = db => 
             Object.values(db.datasets)
             .filter(ds => isPromise(ds))
