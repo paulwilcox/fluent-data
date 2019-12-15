@@ -39,17 +39,15 @@ export default class dataset {
     } 
 
     group (func) {
-        return new hashBuckets(func)
+        let b = new hashBuckets(func)
             .addItems(this.data)
             .getBuckets();
+        return new dataset(b);
     }
 
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
         let ds = recurse(outerFunc, this.data);
-        // because runEmulators might return a non-array
-        if (!Array.isArray(ds.data))
-            ds.data = [data];
         return ds;
     }    
 
