@@ -128,65 +128,6 @@ export default class extends connector {
         }, 'readwrite');
         
     }
-
-
-    merge2 (
-        incoming, 
-        matchingLogic, 
-        mapper, 
-        distinct = false
-    ) {
-
-        let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-        let targetKeyFunc = keyFuncs.leftFunc;
-        let sourceKeyFunc = keyFuncs.rightFunc;    
-
-        let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, true, distinct)
-            .addItems(incoming);
-
-        let rowsToAdd = []; 
-
-        return this.curse((cursor, store) => {
-
-            // When you've finished looping the target, add 
-            // any excess rows to the store.  Then resolve. 
-            if (!cursor) {                           
-                for(let row of rowsToAdd) {
-                    let addRequest = store.add(row);
-                    addRequest.onerror = event => reject(event); 
-                }
-                return this;
-            }
-
-            // Finds the bucket of incoming rows matching the 
-            // target and 'crossMaps' them.  Returns a generator. 
-            let outputGenerator = incomingBuckets.crossMapRow(
-                cursor.value, 
-                targetKeyFunc,
-                true,
-                mapper
-            );
-
-            // For the first match, delete or update. based on
-            // whether there's a match or not.
-            let outputYield = outputGenerator.next();
-            outputYield.done 
-                ? cursor.delete()
-                : cursor.update(outputYield.value);
-
-            // For additional matches, add them to the rowsToAdd array.
-            outputYield = outputGenerator.next();
-            while (outputYield.done === false) {
-                rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
-                outputYield = outputGenerator.next();
-            }
-
-            cursor.continue();
-
-        }, 'readwrite');
-        
-    }
     
     curse ( 
         func,
