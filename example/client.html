@@ -7,20 +7,28 @@
 
     import $$ from '../dist/FluentDB.client.js';
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
-    //import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
+    import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
 
-    let grouped = 
-    $$({ o: sample.orders })
-    .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
-    .reduce(o => ({
-        customer: $$.first(o.customer), 
-        speed: $$.avg(o.speed),
-        rating: $$.avg(o.rating),
-        speed_cor: $$.cor(o.speed, o.rating)
-    }))
-    .execute(o => o);
+    sampleIdb("SampleDB", true, true).then((idb) => {
 
-    console.log(grouped);    
+        let result = $$({
+            o: sample.orders,
+            p: sample.products,
+            c: $$.idb('customers', 'SampleDB'),
+        })
+        //.merge((c,o) => c.id == o.customer, 'both left')
+        .merge(
+            (c,o) => c.id == o.customer, 
+            (c,o) => Object.assign({}, c, o),
+            true
+        )
+        .import(c => c)
+        .print(c => c)
+        .execute();
+
+        console.log(result);
+
+    });
 
 /*
     fetch('getMongo')

@@ -25,7 +25,7 @@ export default class extends Map {
         let key = this.hashKeySelector(item);
         
         if (this.distinct) {
-            this.set(key, item);
+            this.set(key, [item]);
             return this;
         }
 

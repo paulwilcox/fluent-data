@@ -67,15 +67,12 @@ export default class extends connector {
         let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
         let targetKeyFunc = keyFuncs.leftFunc;
         let sourceKeyFunc = keyFuncs.rightFunc;    
+        let rowsToAdd = []; 
+        let processedTargets = new hashBuckets(targetKeyFunc, true, true);
 
         let incomingBuckets = 
             new hashBuckets(sourceKeyFunc, true, distinct)
             .addItems(incoming);
-
-        let processedSources = 
-            new hashBuckets(targetKeyFunc, true, true);
-
-        let rowsToAdd = []; 
 
         return this.curse((cursor, store) => {
 
@@ -89,18 +86,18 @@ export default class extends connector {
                 return this;
             }
 
-            // If user wants distinct rows in the source, then
+            // If user wants distinct rows in the target, then
             // track if such a row has already been processed.
-            // If so, delete future rows in the source.  If not,
+            // If so, delete future rows in the target.  If not,
             // just record that it has now been processed.
             if (distinct) {  
-                let processedSource = processedSources.getBucket(cursor.value, targetKeyFunc, true);
-                if (processedSource.size > 0) {
+                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc, true);
+                if (processedTarget) {
                     cursor.delete();
                     cursor.continue();
                     return;
                 }
-                processedSources.addItem(cursor.value);
+                processedTargets.addItem(cursor.value);
             }
 
             // Finds the bucket of incoming rows matching the 
@@ -116,8 +113,8 @@ export default class extends connector {
             // whether there's a match or not.
             let outputYield = outputGenerator.next();
             (outputYield.done) 
-                ? cursor.update()
-                : cursor.delete();
+                ? cursor.delete()
+                : cursor.update(outputYield.value);
 
             // For additional matches, add them to the rowsToAdd array.
             outputYield = outputGenerator.next();
