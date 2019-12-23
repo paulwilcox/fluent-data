@@ -1,7 +1,57 @@
 import parser from './parser.js';
 import buckles from './buckles.js';
+import hashBuckets from './hashBuckets.js';
 import * as g from './general.js';
 
+export default function (leftData, rightData, matchingLogic, mapFunc, distinct) {
+
+    mapFunc = normalizeMapper(mapFunc, matchingLogic);
+
+    let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
+    let targetKeyFunc = keyFuncs.leftFunc;
+    let sourceKeyFunc = keyFuncs.rightFunc;    
+    let processedTargets = new hashBuckets(targetKeyFunc, true, true);
+
+    let incomingBuckets = 
+        new hashBuckets(sourceKeyFunc, true, distinct)
+        .addItems(rightData);
+
+    for (let targetRow of leftData) {
+            
+        // If user wants distinct rows in the target, then
+        // track if such a row has already been processed.
+        // If so, delete future rows in the target.  If not,
+        // just record that it has now been processed.
+        if (distinct) {  
+            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc, true);
+            if (processedTarget)
+                continue;
+            processedTargets.addItem(targetRow);
+        }
+
+        // Finds the bucket of incoming rows matching the 
+        // target and 'crossMaps' them.  Returns a generator. 
+        let outputGenerator = incomingBuckets.crossMapRow(
+            targetRow, 
+            targetKeyFunc,
+            true,
+            mapper
+        );
+
+        // Flatten the output to ensure that a whole array
+        // is not returned.
+        for(let outputYield of outputGenerator) {
+            yield outputYield; 
+            if (distinct)
+                continue;
+        }
+
+    }
+
+
+}
+
+/*
 export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
 
     let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
@@ -21,6 +71,7 @@ export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicat
     ];
 
 }
+*/
 
 function normalizeMapper (mapFunc, matchingLogic) {
 
