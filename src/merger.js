@@ -9,10 +9,10 @@ export default function* (leftData, rightData, matchingLogic, mapFunc, distinct)
     let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
     let targetKeyFunc = keyFuncs.leftFunc;
     let sourceKeyFunc = keyFuncs.rightFunc;    
-    let processedTargets = new hashBuckets(targetKeyFunc, true, true);
+    let processedTargets = new hashBuckets(targetKeyFunc, true);
 
     let incomingBuckets = 
-        new hashBuckets(sourceKeyFunc, true, distinct)
+        new hashBuckets(sourceKeyFunc, distinct)
         .addItems(rightData);
 
     for (let targetRow of leftData) {
@@ -22,7 +22,7 @@ export default function* (leftData, rightData, matchingLogic, mapFunc, distinct)
         // If so, delete future rows in the target.  If not,
         // just record that it has now been processed.
         if (distinct) {  
-            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc, true);
+            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc);
             if (processedTarget)
                 continue;
             processedTargets.addItem(targetRow);
@@ -33,7 +33,6 @@ export default function* (leftData, rightData, matchingLogic, mapFunc, distinct)
         let outputGenerator = incomingBuckets.crossMapRow(
             targetRow, 
             targetKeyFunc,
-            true,
             mapper
         );
 
@@ -95,21 +94,6 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
         case 'right': return right;
         case 'null': return undefined;
     }
-
-}
-
-function parseMatchingLogic (matchingLogic) {
-
-    let parsed = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-
-    if (!parsed)
-        throw   'Could not parse function into object selectors.  ' +
-                'Pass object selectors explicitly or use loop join instead';
-
-    return {
-        leftFunc: parsed.leftFunc,
-        rightFunc: parsed.rightFunc || parsed.leftFunc
-    }; 
 
 }
 

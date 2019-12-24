@@ -287,14 +287,11 @@ class hashBuckets extends Map {
     
     constructor (
         hashKeySelector,
-        stringify = true,
         distinct = false
     ) {
         super();
         this.distinct = distinct;
-        this.hashKeySelector = stringify 
-            ? item => stringifyObject(hashKeySelector(item)) 
-            : hashKeySelector;
+        this.hashKeySelector = hashKeySelector;
     }
  
     addItems(items) {
@@ -306,7 +303,9 @@ class hashBuckets extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        
+        if (!isString(key))
+            key = stringifyObject(key);
+
         if (this.distinct) {
             this.set(key, [item]);
             return this;
@@ -323,12 +322,11 @@ class hashBuckets extends Map {
 
     getBucket(
         objectToHash, 
-        hashKeySelector,
-        stringify
+        hashKeySelector
     ) {
-        let key = stringify
-            ? stringifyObject(hashKeySelector(objectToHash))
-            : hashKeySelector(objectToHash);
+        let key = hashKeySelector(objectToHash);
+        if (!isString(key))
+            key = stringifyObject(key);
         return this.get(key);
     }
 
@@ -336,18 +334,9 @@ class hashBuckets extends Map {
         return Array.from(this.values());
     }
 
-    * crossMap(incomingRows, mapper) {
-        for (let incomingRow of incomingRows)
-            for(let outputRow of crossMapRow(incomingRow, mapper)) {
-                yield outputRow;
-                if (this.distinct)
-                    continue;
-            }
-    }
-
-    * crossMapRow(incomingRow, hashKeySelector, stringify, mapper) {
+    * crossMapRow(incomingRow, hashKeySelector, mapper) {
                 
-        let existingRows = this.getBucket(incomingRow, hashKeySelector, stringify);
+        let existingRows = this.getBucket(incomingRow, hashKeySelector);
 
         if (existingRows === undefined)
             existingRows = [undefined];
@@ -525,10 +514,10 @@ function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
     let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
     let targetKeyFunc = keyFuncs.leftFunc;
     let sourceKeyFunc = keyFuncs.rightFunc;    
-    let processedTargets = new hashBuckets(targetKeyFunc, true, true);
+    let processedTargets = new hashBuckets(targetKeyFunc, true);
 
     let incomingBuckets = 
-        new hashBuckets(sourceKeyFunc, true, distinct)
+        new hashBuckets(sourceKeyFunc, distinct)
         .addItems(rightData);
 
     for (let targetRow of leftData) {
@@ -538,7 +527,7 @@ function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
         // If so, delete future rows in the target.  If not,
         // just record that it has now been processed.
         if (distinct) {  
-            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc, true);
+            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc);
             if (processedTarget)
                 continue;
             processedTargets.addItem(targetRow);
@@ -549,7 +538,6 @@ function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
         let outputGenerator = incomingBuckets.crossMapRow(
             targetRow, 
             targetKeyFunc,
-            true,
             mapper
         );
 
@@ -565,28 +553,6 @@ function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
 
 }
-
-/*
-export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
-
-    let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
-
-    if (onDuplicate == 'distinct')
-        onDuplicate = 'dist';
-
-    if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
-        throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
-
-    mapFunc = normalizeMapper(mapFunc, matchingLogic);
-
-    return [...new buckles(leftFunc)
-        .add(0, leftFunc, onDuplicate, ...leftData)
-        .add(1, rightFunc, onDuplicate, ...rightData)
-        .crossMap(mapFunc)
-    ];
-
-}
-*/
 
 function normalizeMapper (mapFunc, matchingLogic) {
 
@@ -1231,13 +1197,13 @@ class dataset {
     }    
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
-        return new dataset(...merger (
+        return new dataset([...merger (
             this.data, 
             incoming, 
             matchingLogic, 
             mapper, 
             onDuplicate
-        ));
+        )]);
     }
 
     print (func, caption, target) {
@@ -1416,10 +1382,10 @@ class connectorIdb extends connector {
         let targetKeyFunc = keyFuncs.leftFunc;
         let sourceKeyFunc = keyFuncs.rightFunc;    
         let rowsToAdd = []; 
-        let processedTargets = new hashBuckets(targetKeyFunc, true, true);
+        let processedTargets = new hashBuckets(targetKeyFunc, true);
 
         let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, true, distinct)
+            new hashBuckets(sourceKeyFunc, distinct)
             .addItems(incoming);
 
         return this.curse((cursor, store) => {
@@ -1439,7 +1405,7 @@ class connectorIdb extends connector {
             // If so, delete future rows in the target.  If not,
             // just record that it has now been processed.
             if (distinct) {  
-                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc, true);
+                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc);
                 if (processedTarget) {
                     cursor.delete();
                     cursor.continue();
@@ -1453,7 +1419,6 @@ class connectorIdb extends connector {
             let outputGenerator = incomingBuckets.crossMapRow(
                 cursor.value, 
                 targetKeyFunc,
-                true,
                 mapper
             );
 

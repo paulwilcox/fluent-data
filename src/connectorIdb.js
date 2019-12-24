@@ -68,10 +68,10 @@ export default class extends connector {
         let targetKeyFunc = keyFuncs.leftFunc;
         let sourceKeyFunc = keyFuncs.rightFunc;    
         let rowsToAdd = []; 
-        let processedTargets = new hashBuckets(targetKeyFunc, true, true);
+        let processedTargets = new hashBuckets(targetKeyFunc, true);
 
         let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, true, distinct)
+            new hashBuckets(sourceKeyFunc, distinct)
             .addItems(incoming);
 
         return this.curse((cursor, store) => {
@@ -91,7 +91,7 @@ export default class extends connector {
             // If so, delete future rows in the target.  If not,
             // just record that it has now been processed.
             if (distinct) {  
-                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc, true);
+                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc);
                 if (processedTarget) {
                     cursor.delete();
                     cursor.continue();
@@ -105,7 +105,6 @@ export default class extends connector {
             let outputGenerator = incomingBuckets.crossMapRow(
                 cursor.value, 
                 targetKeyFunc,
-                true,
                 mapper
             );
 

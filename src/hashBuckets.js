@@ -4,14 +4,11 @@ export default class extends Map {
     
     constructor (
         hashKeySelector,
-        stringify = true,
         distinct = false
     ) {
         super();
         this.distinct = distinct;
-        this.hashKeySelector = stringify 
-            ? item => g.stringifyObject(hashKeySelector(item)) 
-            : hashKeySelector;
+        this.hashKeySelector = hashKeySelector;
     }
  
     addItems(items) {
@@ -23,7 +20,9 @@ export default class extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        
+        if (!g.isString(key))
+            key = g.stringifyObject(key);
+
         if (this.distinct) {
             this.set(key, [item]);
             return this;
@@ -40,12 +39,11 @@ export default class extends Map {
 
     getBucket(
         objectToHash, 
-        hashKeySelector,
-        stringify
+        hashKeySelector
     ) {
-        let key = stringify
-            ? g.stringifyObject(hashKeySelector(objectToHash))
-            : hashKeySelector(objectToHash);
+        let key = hashKeySelector(objectToHash);
+        if (!g.isString(key))
+            key = g.stringifyObject(key);
         return this.get(key);
     }
 
@@ -53,9 +51,9 @@ export default class extends Map {
         return Array.from(this.values());
     }
 
-    * crossMapRow(incomingRow, hashKeySelector, stringify, mapper) {
+    * crossMapRow(incomingRow, hashKeySelector, mapper) {
                 
-        let existingRows = this.getBucket(incomingRow, hashKeySelector, stringify);
+        let existingRows = this.getBucket(incomingRow, hashKeySelector);
 
         if (existingRows === undefined)
             existingRows = [undefined];
