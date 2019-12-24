@@ -605,101 +605,56 @@ let runEmulators = function (
 
 };
 
-// 'buckle' signifies tuple with buckets as items.  Usage will 
-// probably only be pairs though, so in the future if desired 
-// you can simplify to simply allow pairs, not more than that.
-class buckles extends Map {
-    
-    constructor (stringify = true) {
-        super();
-        this.stringify = stringify;
-        this.bucketIndicies = new Set();
-    }
+function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
-    add(bucketIndex, hashFunc, distinctBehavior, ...items) {
+    let mapper = normalizeMapper(mapFunc, matchingLogic);
 
-        this.bucketIndicies.add(bucketIndex);
+    let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
+    let targetKeyFunc = keyFuncs.leftFunc;
+    let sourceKeyFunc = keyFuncs.rightFunc;    
+    let processedTargets = new hashBuckets(targetKeyFunc, true, true);
 
-        for (let item of items) {
-             
-            let key = this.hashify(hashFunc, item);
+    let incomingBuckets = 
+        new hashBuckets(sourceKeyFunc, true, distinct)
+        .addItems(rightData);
 
-            if (!this.has(key)) {
-                let buckle = [];
-                buckle[bucketIndex] = [item];
-                this.set(key, buckle);
+    for (let targetRow of leftData) {
+            
+        // If user wants distinct rows in the target, then
+        // track if such a row has already been processed.
+        // If so, delete future rows in the target.  If not,
+        // just record that it has now been processed.
+        if (distinct) {  
+            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc, true);
+            if (processedTarget)
                 continue;
-            }
-
-            if (!this.get(key)[bucketIndex])
-                this.get(key)[bucketIndex] = [];
-
-            switch(distinctBehavior) {
-                case 'first': break;
-                case 'last': this.get(key)[bucketIndex][0] = item; break;
-                case 'dist': throw 'distinct option passed but more than one records match.'
-                default: this.get(key)[bucketIndex].push(item);
-            }
-
+            processedTargets.addItem(targetRow);
         }
 
-        return this;
+        // Finds the bucket of incoming rows matching the 
+        // target and 'crossMaps' them.  Returns a generator. 
+        let outputGenerator = incomingBuckets.crossMapRow(
+            targetRow, 
+            targetKeyFunc,
+            true,
+            mapper
+        );
 
-    }
-
-    * crossMap(func) {
-
-        for (let bucketSet of this.values())  
-        for (let item of this.crossMapBuckle(bucketSet, func))
-            yield item;
-    }
-
-    * crossMapBuckle(bucketSet, func) {
-
-        let isFirstBucket = true;
-        let crosses = [[]]; // but when overwriting, just do [].
-        let working = [];
-                  
-        for (let bucketIX of [...this.bucketIndicies]) {
-
-            let bucket = bucketSet[bucketIX] || [undefined];
-
-            for (let cross of crosses) 
-            for (let row of bucket) 
-                isFirstBucket 
-                    ? working.push([row]) // at this point cross is just a dummy '[]'
-                    : working.push([...cross, row]);
-
-            crosses = working;
-            working = [];
-            isFirstBucket = false;
-
-        }
-
-        for (let cross of crosses) {
-            let mapped = func(...cross);
-            if (mapped === undefined)
+        // Flatten the output to ensure that a whole array
+        // is not returned.
+        for(let outputYield of outputGenerator) {
+            yield outputYield; 
+            if (distinct)
                 continue;
-            if (!Array.isArray(mapped)) {
-                yield mapped;
-                continue;
-            }
-            for(let entry of mapped)
-                if (entry !== undefined)
-                    yield entry;
         }
 
     }
 
-    hashify (hashFunc, obj) {
-        return this.stringify 
-            ? stringifyObject(hashFunc(obj))
-            : hashFunc(obj);
-    }
 
 }
 
-function merger (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
+/*
+export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
 
     let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
 
@@ -718,6 +673,7 @@ function merger (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
     ];
 
 }
+*/
 
 function normalizeMapper (mapFunc, matchingLogic) {
 
@@ -764,21 +720,6 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
         case 'right': return right;
         case 'null': return undefined;
     }
-
-}
-
-function parseMatchingLogic (matchingLogic) {
-
-    let parsed = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
-
-    if (!parsed)
-        throw   'Could not parse function into object selectors.  ' +
-                'Pass object selectors explicitly or use loop join instead';
-
-    return {
-        leftFunc: parsed.leftFunc,
-        rightFunc: parsed.rightFunc || parsed.leftFunc
-    }; 
 
 }
 
@@ -1377,7 +1318,7 @@ class dataset {
     }    
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
-        return new dataset(merger (
+        return new dataset(...merger (
             this.data, 
             incoming, 
             matchingLogic, 
@@ -1600,65 +1541,6 @@ class connectorIdb extends connector {
             // whether there's a match or not.
             let outputYield = outputGenerator.next();
             (outputYield.done) 
-                ? cursor.delete()
-                : cursor.update(outputYield.value);
-
-            // For additional matches, add them to the rowsToAdd array.
-            outputYield = outputGenerator.next();
-            while (outputYield.done === false) {
-                rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
-                outputYield = outputGenerator.next();
-            }
-
-            cursor.continue();
-
-        }, 'readwrite');
-        
-    }
-
-
-    merge2 (
-        incoming, 
-        matchingLogic, 
-        mapper, 
-        distinct = false
-    ) {
-
-        let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
-        let targetKeyFunc = keyFuncs.leftFunc;
-        let sourceKeyFunc = keyFuncs.rightFunc;    
-
-        let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, true, distinct)
-            .addItems(incoming);
-
-        let rowsToAdd = []; 
-
-        return this.curse((cursor, store) => {
-
-            // When you've finished looping the target, add 
-            // any excess rows to the store.  Then resolve. 
-            if (!cursor) {                           
-                for(let row of rowsToAdd) {
-                    let addRequest = store.add(row);
-                    addRequest.onerror = event => reject(event); 
-                }
-                return this;
-            }
-
-            // Finds the bucket of incoming rows matching the 
-            // target and 'crossMaps' them.  Returns a generator. 
-            let outputGenerator = incomingBuckets.crossMapRow(
-                cursor.value, 
-                targetKeyFunc,
-                true,
-                mapper
-            );
-
-            // For the first match, delete or update. based on
-            // whether there's a match or not.
-            let outputYield = outputGenerator.next();
-            outputYield.done 
                 ? cursor.delete()
                 : cursor.update(outputYield.value);
 

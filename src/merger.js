@@ -1,11 +1,10 @@
 import parser from './parser.js';
-import buckles from './buckles.js';
 import hashBuckets from './hashBuckets.js';
 import * as g from './general.js';
 
-export default function (leftData, rightData, matchingLogic, mapFunc, distinct) {
+export default function* (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
-    mapFunc = normalizeMapper(mapFunc, matchingLogic);
+    let mapper = normalizeMapper(mapFunc, matchingLogic);
 
     let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
     let targetKeyFunc = keyFuncs.leftFunc;
@@ -50,28 +49,6 @@ export default function (leftData, rightData, matchingLogic, mapFunc, distinct) 
 
 
 }
-
-/*
-export default function (leftData, rightData, matchingLogic, mapFunc, onDuplicate) {
-
-    let { leftFunc, rightFunc } = parseMatchingLogic(matchingLogic);
-
-    if (onDuplicate == 'distinct')
-        onDuplicate = 'dist';
-
-    if (onDuplicate !== undefined && !['first', 'last', 'dist'].includes(onDuplicate))
-        throw 'onDuplicate must be one of: first, last, distinct, dist, or it must be undefined.';
-
-    mapFunc = normalizeMapper(mapFunc, matchingLogic);
-
-    return [...new buckles(leftFunc)
-        .add(0, leftFunc, onDuplicate, ...leftData)
-        .add(1, rightFunc, onDuplicate, ...rightData)
-        .crossMap(mapFunc)
-    ];
-
-}
-*/
 
 function normalizeMapper (mapFunc, matchingLogic) {
 
