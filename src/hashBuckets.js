@@ -53,15 +53,6 @@ export default class extends Map {
         return Array.from(this.values());
     }
 
-    * crossMap(incomingRows, mapper) {
-        for (let incomingRow of incomingRows)
-            for(let outputRow of crossMapRow(incomingRow, mapper)) {
-                yield outputRow;
-                if (this.distinct)
-                    continue;
-            }
-    }
-
     * crossMapRow(incomingRow, hashKeySelector, stringify, mapper) {
                 
         let existingRows = this.getBucket(incomingRow, hashKeySelector, stringify);
