@@ -18,6 +18,78 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+var SampleDB_client = {
+
+    products: [
+        { id: 123456, price: 5 },
+        { id: 123457, price: 2 },
+        { id: 123458, price: 1.5 },
+        { id: 123459, price: 4 }
+    ],        
+
+    customers: [
+        { id: 1, fullname: "Jane Doe" },
+        { id: 2, fullname: "John Doe" }
+    ],  
+
+    potentialCustomers: [
+        { id: 2, fullname: "Johnathan Doe" },
+        { id: 3, fullname: "John Q. Public" },
+        { id: 4, fullname: "John J. Gingleheimer-Schmidt" }
+    ],
+
+    shoplifters: [
+        { id: 4, fullname: "John J. Gingleheimer-Schmidt" },
+        { id: 5, fullname: "Sneaky Pete" }
+    ],
+
+    orders: [
+        { id: 901, customer: 1, product: 123456, speed: 1, rating: 2 },
+        { id: 902, customer: 1, product: 123457, speed: 2, rating: 7 },
+        { id: 903, customer: 2, product: 123456, speed: 3, rating: 43 },
+        { id: 904, customer: 2, product: 123457, speed: 4, rating: 52 },
+        { id: 905, customer: 1, product: 123459, speed: 5, rating: 93 },
+        { id: 906, customer: 1, product: 123459, speed: 6, rating: 74 },
+        { id: 907, customer: 2, product: 123458, speed: 7, rating: 3 },
+        { id: 908, customer: 2, product: 123458, speed: 8, rating: 80 },
+        { id: 909, customer: 1, product: 123459, speed: 7, rating: 23 },
+        { id: 910, customer: 1, product: 123459, speed: 8, rating: 205 },
+        { id: 911, customer: 1, product: 123459, speed: 3, rating: 4 },
+        { id: 912, customer: 7, product: 123457, speed: 2, rating: 6 } // notice no customer 7 (use for outer joins)
+    ],    
+
+    students: [
+        { id: "a", name: "Andrea" },
+        { id: "b", name: "Becky" },
+        { id: "c", name: "Colin" }
+    ],
+
+    foods: [
+        { id: 1, name: 'tacos' },
+        { id: 2, name: 'skittles' },
+        { id: 3, name: 'flan' }
+    ],
+
+    scores: [
+        {id: 1, student: "a", score: 5 },
+        {id: 2, student: "b", score: 7 },
+        {id: 3, student: "c", score: 10 },
+        {id: 4, student: "a", score: 0 },
+        {id: 5, student: "b", score: 6 },
+        {id: 6, student: "c", score: 9 }
+    ]
+
+};
+
+/**
+ * ISC License (ISC)
+ * Copyright (c) 2019, Paul Wilcox <t78t78@gmail.com>
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 let isPromise = obj => 
     Promise.resolve(obj) == obj;
 
@@ -1600,126 +1672,80 @@ $$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 $$.connector = connector;
 $$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
 
-// TODO: Merge tests are basically all failing, though I know
+test('client.filter', 
+    fdb => fdb.filter(o => o.customer == 2).execute(o => o),
+    ds => 
+        ds.filter(x => x.customer == 2).length > 0 && 
+        ds.filter(x => x.customer != 2).length == 0
+);
 
-class tests {
+test('client.map', 
+    fdb => 
+        fdb.map(o => ({
+            customer: o.customer,
+            rating: o.rating,
+            flag: o.rating < 10 ? 'bad' : o.rating < 50 ? 'okay' : 'good'
+        })),
+    ds =>
+        Object.keys(ds[0]).includes('customer') && 
+        !Object.keys(ds[0]).includes('id')
+);
 
-    constructor (seriToRun, testsToRun) {
-        this.seriToRun = seriToRun;
-        this.testsToRun = testsToRun;
+test('client.sort',  
+    fdb => fdb.sort((o,o2) => 
+        o.customer > o2.customer ? 1
+        : o.customer < o2.customer ? -1  
+        : o.rating > o2.rating ? -1 
+        : o.rating < o2.rating ? 1
+        : 0
+    ),
+    ds => {
+        for(let i = 1; i < ds.length; i++) {
+            let [prv, nxt] = [ ds[i-1], ds[i] ];
+            if (prv.customer > nxt.customer)
+                return false;
+            if (prv.customer == nxt.customer && prv.rating > nxt.rating)
+                return false;
+        }
+        return true;
     }
+);
 
-    name (testName, seriesName) {
-        let compare = (x,y) => x !== undefined && !x.includes(y) && x != y;
-        return compare(this.testsToRun, testName) ? 'notest'
-            : compare(this.seriToRun, seriesName) ? 'notest'
-            : testName;
-    }
+test('clinet.groupReduce', 
+    fdb => 
+        fdb
+        .group(o => o.customer) 
+        .reduce(o => ({
+            customer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
+            speed_cor: $$.cor(o.speed, o.rating)
+        })),
+    ds => {
+            let row0 = prop => Math.round(ds[0][prop] * 100) / 100;
+            return ds.length == 3
+                && row0('rating') == 58.29
+                && row0('speed') == 4.57
+                && row0('speed_cor') == 0.74;
+        }
+);
 
-    async run (seriesName, createFDB) { 
-        
-        let n = testName => this.name(testName, seriesName);
-        
-        let promises = [
+console.log('done');
 
-            createFDB()
-                .filter(o => o.customer == 2)
-                .test(n('filter'), o => o, data => 
-                    data.filter(x => x.customer == 2).length > 0 && 
-                    data.filter(x => x.customer != 2).length == 0
-                ),
+function test (
+    testName,
+    fdbWorker,
+    tester
+) { 
 
-            createFDB()
-                .map(o => ({
-                    customer: o.customer,
-                    rating: o.rating,
-                    flag: o.rating < 10 ? 'bad' : o.rating < 50 ? 'okay' : 'good'
-                }))
-                .test(n('map'), o => o, data =>
-                    Object.keys(data[0]).includes('customer') && 
-                    !Object.keys(data[0]).includes('id')
-                ),
+    let fdb = $$({ 
+        c: SampleDB_client.customers,
+        o: SampleDB_client.orders  
+    })
+    .catch(err => err);
 
-            createFDB() 
-                .sort((o,o2) => // 'o2' is free, in that it doesn't matter what you name it
-                    o.customer > o2.customer ? 1
-                    : o.customer < o2.customer ? -1  
-                    : o.rating > o2.rating ? -1 
-                    : o.rating < o2.rating ? 1
-                    : 0
-                )
-                .test(n('sort'), o => o, data => {
-                    for(let i = 1; i < data.length; i++) {
-                        let prv = data[i-1];
-                        let cur = data[i];
-                        return prv.customer <= cur.customer && prv.rating >= cur.rating;
-                    }
-                }),
+    let results = fdbWorker(fdb);
 
-            createFDB()
-                .group(o => o.customer) // if you don't group, '.reduce' will still output an array (with one item)
-                .reduce(o => ({
-                    customer: $$.first(o.customer), 
-                    speed: $$.avg(o.speed),
-                    rating: $$.avg(o.rating),
-                    speed_cor: $$.cor(o.speed, o.rating)
-                }))
-                .test(n('groupReduce'), o => o, data => {
-                    let row0 = prop => Math.round(data[0][prop] * 100) / 100;
-                    return data.length == 3
-                        && row0('rating') == 58.29
-                        && row0('speed') == 4.57
-                        && row0('speed_cor') == 0.74;
-                })
-
-        ];
-
-        let mergeTypes = ['both','thob','left','right','null'];
-
-        for (let matchedType of mergeTypes)
-        for (let unmatchedType of mergeTypes)
-            promises.push(
-                createFDB()
-                .merge2(`${matchedType} ${unmatchedType}`, c => c.id, pc => pc.id)
-                .test(n(`merge.${matchedType}_${unmatchedType}`), c => c, data => {
-                    
-                    let matched = data.find(row => row.id == 2);
-                    let left = data.find(row => row.id == 1);
-                    let right = data.find(row => row.id == 3);
-                    
-                    switch (matchedType) {
-                        case 'both': 
-                        case 'right': if(matched.fullname != 'Johnathan Doe') return false;  
-                        case 'thob':
-                        case 'left': if(matched.fullname != 'John Doe') return false;
-                        case 'null': if(matched != undefined) return false;
-                    }
-                    
-                    switch (unmatchedType) {
-                        case 'both':
-                        case 'thob': if(!left || !right) return false;
-                        case 'left': if(right || !left) return false;
-                        case 'right': if(left || !right) return false;  
-                        case 'null': if(left || right) return false;
-                    }
-
-                    return true;
-
-                })
-            );
-
-        return Promise.all(promises).then(res => 
-            res
-            .filter(row => row !== undefined)
-            .map(row => ({
-                passStatus: row.result,
-                seriesName,
-                name: row.testName
-            }))
-        ); 
-
-    }
+    console.log(`test ${testName} ${tester(results)}`);
 
 }
-
-module.exports = tests;

@@ -1,22 +1,16 @@
 let puppeteer = require('puppeteer');
 let server = require('../server.js');
-let getServerResults = require('./doServer.js');
+//let getServerResults = require('./doServer.js');
 require('console.table');
 
 // TODO: Allow output for when all tests pass.  Use this
 // in a "tests" script in package.json
 
-let seriToRun = process.argv[2];
-let testsToRun = process.argv[3];
 let results = [];
 
 async function getClientResults (type, headless = true) {
 
     let clientUrl = `http://127.0.0.1:8081/test/${type}`
-    if (seriToRun) clientUrl += `&seriToRun='${seriToRun}'`;
-    if (testsToRun) clientUrl += `&testsToRun='${testsToRun}'`; 
-    clientUrl = clientUrl.replace('&', '?'); // replaces only first '&', which is actually what we want    
-
     let browser = await puppeteer.launch({headless: headless});
     let page = await browser.newPage();
 
@@ -27,18 +21,18 @@ async function getClientResults (type, headless = true) {
             console.log('headless browser closed');    
             return;
         }
-        
+
         if (!msg.text().startsWith('test')) {
             console.log(msg.text());
             return;
         }
-        
+
         let parts = msg.text().split(' ');
         results.push({
             test_name: parts[1], 
             status: parts[2] === 'true' ? 'pass' : 'fail'
         });  
-        
+   
     });
 
     page.on('pageerror', async err => {
@@ -49,10 +43,12 @@ async function getClientResults (type, headless = true) {
         });
 
         await browser.close();
-        console.log('Error from browser when running tests: ');
-        console.log(err.name);
-        console.log(err.message);
-        console.log(err.stack);    
+        console.log(
+            'Error from browser when running tests: ', 
+            err.name, 
+            err.message, 
+            err.stack
+        );    
         return;
 
     })
@@ -63,10 +59,10 @@ async function getClientResults (type, headless = true) {
 
 (async () => {
 
-    getClientResults('doClient');
-    getClientResults('doExternalIdb');
-    let serverResults = await getServerResults(seriToRun, testsToRun);
-    results.push(...serverResults);    
+    await getClientResults('tests');
+//    getClientResults('doExternalIdb');
+//    let serverResults = await getServerResults(seriToRun, testsToRun);
+//    results.push(...serverResults);    
     server.close(() => console.log('server closed'));
 
     // sort results and remove duplicate browser errors

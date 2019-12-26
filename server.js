@@ -71,14 +71,15 @@ module.exports = http.createServer(async (request, response) => {
             break;
 
         case '/test/doexternalidb':
-        case '/test/doclient':
+        case '/test/tests':
 
-            fs.readFile(`.${url}.html`, function(error, content) {
+            fs.readFile(`.${url}.js`, function(error, content) {
                 if (error) {
                     response.writeHead(500);
                     response.end(error.message);
                 }
                 else {
+                    content = `<script type='module'>${content}</script>`
                     content = fillTemplate(content)
                     response.writeHead(200, { 'Content-Type': 'text/html' });
                     response.end(content, 'utf-8');
