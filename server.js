@@ -70,8 +70,7 @@ module.exports = http.createServer(async (request, response) => {
                 .catch(e => console.log(e));
             break;
 
-        case '/test/doexternalidb':
-        case '/test/tests':
+        case '/test/clienttests':
 
             fs.readFile(`.${url}.js`, function(error, content) {
                 if (error) {

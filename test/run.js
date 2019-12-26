@@ -1,6 +1,6 @@
 let puppeteer = require('puppeteer');
 let server = require('../server.js');
-//let getServerResults = require('./doServer.js');
+let serverTestResults = require('./serverTests.js');
 require('console.table');
 
 // TODO: Allow output for when all tests pass.  Use this
@@ -59,10 +59,8 @@ async function getClientResults (type, headless = true) {
 
 (async () => {
 
-    await getClientResults('tests');
-//    getClientResults('doExternalIdb');
-//    let serverResults = await getServerResults(seriToRun, testsToRun);
-//    results.push(...serverResults);    
+    await getClientResults('clienttests');
+    results.push(...serverTestResults);    
     server.close(() => console.log('server closed'));
 
     // sort results and remove duplicate browser errors
