@@ -34,7 +34,6 @@ test('client.sort',
         )
         .execute(o => o),
     ds => {
-        console.log({ds})
         for(let i = 1; i < ds.length; i++) {
             let [prv, nxt] = [ ds[i-1], ds[i] ];
             if (prv.customer > nxt.customer)

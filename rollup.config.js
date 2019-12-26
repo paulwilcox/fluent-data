@@ -25,12 +25,5 @@ export default [{
         format: 'esm'
     },
     plugins: licensePlugin
-}, {
-    input: 'test/tests.js',
-    output: {
-        file: 'test/tests.server.js',
-        format: 'cjs'
-    },
-    plugins: licensePlugin
 }];
 
