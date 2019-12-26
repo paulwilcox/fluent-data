@@ -39,7 +39,7 @@ test('client.sort',
             let [prv, nxt] = [ ds[i-1], ds[i] ];
             if (prv.customer > nxt.customer)
                 return false;
-            if (prv.customer == nxt.customer && prv.rating > nxt.rating)
+            if (prv.customer == nxt.customer && prv.rating < nxt.rating)
                 return false;
         }
         return true;

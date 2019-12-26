@@ -1,6 +1,7 @@
 import * as g from './general.js';
 import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
+import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import merger from './merger.js';
 import { print as prn } from './visualizer/printer.js';

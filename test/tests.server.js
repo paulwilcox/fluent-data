@@ -155,7 +155,7 @@ let PromiseAllObjectEntries = obj =>
     )
     .then(entries => Object.fromEntries(entries));
 
-class parser$1 {
+class parser {
 
     // Parse function into argument names and body
     constructor (func) {
@@ -216,20 +216,20 @@ class parser$1 {
 
 }
 
-parser$1.parse = function (func) {
-    return new parser$1(func);
+parser.parse = function (func) {
+    return new parser(func);
 };
 
-parser$1.parameters = function(func) {
-    return new parser$1(func).parameters;
+parser.parameters = function(func) {
+    return new parser(func).parameters;
 };
 
 // Converts (v,w) => v.a = w.a && v.b == w.b 
 // into v => { x0 = v.a, x1 = v.b }
 // and w => { x0 = w.a, x1 = w.b }
-parser$1.pairEqualitiesToObjectSelectors = function(func) {
+parser.pairEqualitiesToObjectSelectors = function(func) {
 
-    let parsed = new parser$1(func);
+    let parsed = new parser(func);
     let leftParam = parsed.parameters[0];
     let rightParam = parsed.parameters[1];
     let leftEqualities = [];
@@ -583,7 +583,7 @@ function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
     let mapper = normalizeMapper(mapFunc, matchingLogic);
 
-    let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
+    let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
     let targetKeyFunc = keyFuncs.leftFunc;
     let sourceKeyFunc = keyFuncs.rightFunc;    
     let processedTargets = new hashBuckets(targetKeyFunc, true);
@@ -676,8 +676,8 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
 
 function parametersAreEqual (a,b) {
 
-    a = parser$1.parameters(a);
-    b = parser$1.parameters(b);
+    a = parser.parameters(a);
+    b = parser.parameters(b);
 
     if (a.length != b.length)
         return false;
@@ -1338,7 +1338,7 @@ class database {
         if (isString(arg))
             return this.datasets[arg];
         if (isFunction(arg)) {
-            let param = parser$1.parameters(arg)[0];
+            let param = parser.parameters(arg)[0];
             return this.datasets(param)[0];
         }
     }
@@ -1350,7 +1350,7 @@ class database {
 
         // arg is then a function 
         let datasets = [];
-        for(let param of parser$1.parameters(arg)) {
+        for(let param of parser.parameters(arg)) {
             let ds = this.datasets[param];
             datasets.push(ds);
         }
@@ -1364,7 +1364,7 @@ class database {
 
         // user did not pass a reciever, so make the source dataset the reciever
         if (isFunction(args[0])) {
-            let param = parser$1.parameters(args[0])[0];
+            let param = parser.parameters(args[0])[0];
             args.unshift(param);
         }
 
@@ -1373,6 +1373,7 @@ class database {
         let funcDatasets = this.getDatasets(func); // the datasets referenced by that first function
         let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
         args.unshift(func); // pass the evaluated 'func' back to the front of the arguments
+        funcDatasets = funcDatasets.filter(ds => ds instanceof dataset); // get rid of non-dataset parameters 
         funcDatasets = funcDatasets.map(ds => ds.data); // for the remaining datasets, just get the data
         args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
         let results = sourceDataset[funcName](...args); // execute the function
@@ -1450,7 +1451,7 @@ class connectorIdb extends connector {
         distinct = false
     ) {
 
-        let keyFuncs = parser$1.pairEqualitiesToObjectSelectors(matchingLogic);
+        let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
         let targetKeyFunc = keyFuncs.leftFunc;
         let sourceKeyFunc = keyFuncs.rightFunc;    
         let rowsToAdd = []; 
@@ -1604,7 +1605,7 @@ class FluentDB extends deferable {
         
         if (finalMapper) {
             this.map(finalMapper); // adds a mapping to this.thens
-            let param = parser$1.parameters(finalMapper)[0];
+            let param = parser.parameters(finalMapper)[0];
             return super.execute(db => db.datasets[param].data); // just get the data
         }
 
@@ -1673,33 +1674,39 @@ $$.connector = connector;
 $$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
 
 test('client.filter', 
-    fdb => fdb.filter(o => o.customer == 2).execute(o => o),
+    fdb => fdb
+        .filter(o => o.customer == 2)
+        .execute(o => o),
     ds => 
         ds.filter(x => x.customer == 2).length > 0 && 
         ds.filter(x => x.customer != 2).length == 0
 );
 
 test('client.map', 
-    fdb => 
-        fdb.map(o => ({
+    fdb => fdb
+        .map(o => ({
             customer: o.customer,
             rating: o.rating,
             flag: o.rating < 10 ? 'bad' : o.rating < 50 ? 'okay' : 'good'
-        })),
+        }))
+        .execute(o => o),
     ds =>
         Object.keys(ds[0]).includes('customer') && 
         !Object.keys(ds[0]).includes('id')
 );
 
 test('client.sort',  
-    fdb => fdb.sort((o,o2) => 
-        o.customer > o2.customer ? 1
-        : o.customer < o2.customer ? -1  
-        : o.rating > o2.rating ? -1 
-        : o.rating < o2.rating ? 1
-        : 0
-    ),
+    fdb => fdb
+        .sort((o,o2) => 
+            o.customer > o2.customer ? 1
+            : o.customer < o2.customer ? -1  
+            : o.rating > o2.rating ? -1 
+            : o.rating < o2.rating ? 1
+            : 0
+        )
+        .execute(o => o),
     ds => {
+        console.log({ds});
         for(let i = 1; i < ds.length; i++) {
             let [prv, nxt] = [ ds[i-1], ds[i] ];
             if (prv.customer > nxt.customer)
@@ -1711,7 +1718,7 @@ test('client.sort',
     }
 );
 
-test('clinet.groupReduce', 
+test('client.groupReduce', 
     fdb => 
         fdb
         .group(o => o.customer) 
@@ -1720,7 +1727,8 @@ test('clinet.groupReduce',
             speed: $$.avg(o.speed),
             rating: $$.avg(o.rating),
             speed_cor: $$.cor(o.speed, o.rating)
-        })),
+        }))
+        .execute(o => o),
     ds => {
             let row0 = prop => Math.round(ds[0][prop] * 100) / 100;
             return ds.length == 3
