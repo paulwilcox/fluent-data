@@ -14,27 +14,6 @@ async function getClientResults (type, headless = true) {
     let browser = await puppeteer.launch({headless: headless});
     let page = await browser.newPage();
 
-    page.on('console', async msg => {
-
-        if (msg.text() == 'done') {
-            await browser.close();
-            console.log('headless browser closed');    
-            return;
-        }
-
-        if (!msg.text().startsWith('test')) {
-            console.log(msg.text());
-            return;
-        }
-
-        let parts = msg.text().split(' ');
-        results.push({
-            test_name: parts[1], 
-            status: parts[2] === 'true' ? 'pass' : 'fail'
-        });  
-   
-    });
-
     page.on('pageerror', async err => {
 
         results.push({
@@ -54,6 +33,23 @@ async function getClientResults (type, headless = true) {
     })
 
     await page.goto(clientUrl);
+    await page.waitForSelector('#results');
+    
+    let clientResults = await page.evaluate(() => 
+        document.querySelector('#results').innerHTML
+    );
+
+    for (let clientResult of clientResults.split(';')) {
+        if (clientResult == '')
+            continue;
+        let parts = clientResult.split(':');
+        results.push({
+            test_name: parts[0],
+            status: parts[1]
+        });
+    }
+
+    await browser.close();
 
 }
 

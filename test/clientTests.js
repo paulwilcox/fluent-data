@@ -1,5 +1,9 @@
 import sample from '../node_modules/sampledb/dist/SampleDB.client.js';
+import sampleIdb from '../node_modules/sampledb/dist/SampleDB.idb.js';
 import $$ from '../dist/FluentDB.client.js';
+
+let div = document.createElement('div');
+div.id = 'results';
 
 test('client.filter', 
     fdb => fdb
@@ -65,7 +69,25 @@ test('client.groupReduce',
         }
 );
 
-console.log('done');
+sampleIdb('SampleDB', true, true)
+    .then(() => 
+
+        $$({c: $$.idb('customers', 'SampleDB')})
+        .merge((c,o) => c.id == o.customer, 'both left')
+        .import(c => c)
+        .execute(c => c)
+
+    )
+    .then(data => {
+        result = data.length == 11;
+        div.innerHTML += (`idb.mergeImport:${result}`);
+    })
+    .catch(err => {
+        div.innerHTML += (`idb.mergeImport:false;`);            
+    })
+    .finally(() => {
+        document.body.appendChild(div);
+    });
 
 function test (
     testName,
@@ -77,11 +99,13 @@ function test (
         c: sample.customers,
         o: sample.orders  
     })
-    .catch(err => err);
+    .catch(err => {
+        div.innerHTML += `${testName}:false;`;
+    });
 
     let results = fdbWorker(fdb);
 
-    console.log(`test ${testName} ${tester(results)}`);
+    div.innerHTML += `${testName}:${tester(results)};`;
 
 }
 
