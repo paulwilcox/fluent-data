@@ -18,38 +18,6 @@ class connector {
 
 }
 
-class connectorMongo extends connector {
-
-    constructor (collectionName, url) {
-        super();
-        this.collectionName = collectionName;
-        this.client = mongodb.MongoClient.connect(url, {useNewUrlParser: true});
-    }
-
-    import(mapFunc, filterFunc) {
-            
-        return this.client
-            .then(async client => {
-                
-                filterFunc = this.filterFunc || (x => true);
-                let db = client.db();
-                let results = [];
-
-                await db.collection(this.collectionName)
-                    .find()
-                    .forEach(record => {
-                        if (filterFunc(record))
-                            results.push(mapFunc(record));
-                    });
-                
-                return results;
-
-            });
-
-    }
-
-}
-
 let isSubsetOf = (sub, sup) =>  
     setEquals (
         new Set(
@@ -154,7 +122,13 @@ let PromiseAllObjectEntries = obj =>
         Object.entries(obj)
         .map(entry => Promise.all(entry))
     )
-    .then(entries => Object.fromEntries(entries));
+    .then(entries => {
+        // use Object.fromEntries(entries) when node.js permits it
+        let obj = {};
+        for(let entry of entries) 
+            obj[entry[0]] = entry[1];
+        return obj;
+    });
 
 var g = /*#__PURE__*/Object.freeze({
     isSubsetOf: isSubsetOf,
@@ -169,206 +143,6 @@ var g = /*#__PURE__*/Object.freeze({
     noUndefined: noUndefined,
     PromiseAllObjectEntries: PromiseAllObjectEntries
 });
-
-class parser {
-
-    // Parse function into argument names and body
-    constructor (func) {
-
-        this.parameters = [];
-        this.body = "";
-
-        let lr = this.splitLeftAndRight(func);
-
-        this.parameters = 
-            lr.left
-            .replace(/[()\s]/g, '')
-            .split(',');
-
-        this.body =
-            lr.right
-            .replace(/^\s*\{|\}\s*$/g,'')
-            .replace(/^\s*|\s*$/g,'');
-
-    }
-
-    splitLeftAndRight (func) {
-
-        let uncommented = 
-            func.toString() 
-            .replace(/[/][/].*$/mg,'') // strip single-line comments
-            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
-	
-        let arrowIx = uncommented.indexOf('=>');
-        let braceIx = uncommented.indexOf('{');	
-
-        if (arrowIx == -1 && braceIx == -1) {
-            console.trace();
-            throw "it seems that a non-function was passed to 'parser'";
-        }
-
-        let splitIx = 
-            braceIx == -1 ? arrowIx
-            : arrowIx == -1 ? braceIx
-            : arrowIx < braceIx ? arrowIx 
-            : braceIx;
-
-        let isArrow = splitIx == arrowIx;
-
-        let left = uncommented.slice(0,splitIx);
-        let right = uncommented.slice(splitIx);
-
-        if(isArrow)
-            right = right.slice(2); // get rid of the arrow
-        else {
-            let parenIx = left.indexOf('(');
-            left = left.slice(parenIx);
-        }
-        
-        return { left, right };
-
-    }
-
-}
-
-parser.parse = function (func) {
-    return new parser(func);
-};
-
-parser.parameters = function(func) {
-    return new parser(func).parameters;
-};
-
-// Converts (v,w) => v.a = w.a && v.b == w.b 
-// into v => { x0 = v.a, x1 = v.b }
-// and w => { x0 = w.a, x1 = w.b }
-parser.pairEqualitiesToObjectSelectors = function(func) {
-
-    let parsed = new parser(func);
-    let leftParam = parsed.parameters[0];
-    let rightParam = parsed.parameters[1];
-    let leftEqualities = [];
-    let rightEqualities = [];
-    let splitBodyByAnds = parsed.body.split(/&&|&/);
-
-    for (let aix in splitBodyByAnds) {
-
-        let andPart = splitBodyByAnds[aix];
-        let eqParts = andPart.split(/===|==|=/);
-        let leftEq;
-        let rightEq;
-
-        if (eqParts.length != 2)
-            return;
-
-        for (let eix in eqParts) {
-
-            let ep = eqParts[eix].trim();
-
-            if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                return;
-
-            if (ep.startsWith(`${leftParam}.`))
-                leftEq = ep;
-            else if (ep.startsWith(`${rightParam}.`))
-                rightEq = ep;
-            else
-                return; 
-
-        }	    
-
-        leftEqualities[aix] = `x${aix}: ${leftEq}`;
-        rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-    }
-
-    return {
-        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
-        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
-    };
-
-};
-
-class deferable {
-
-    constructor(initial) {
-        this.value = initial;
-        this.thens = [];
-        this.status = 'pending';
-        this.promisifyCondition; // whether this.value is should become a promise
-        this.promisifyConversion; // how to convert this.value into a promise
-    }
-
-    then(func) {
-        this.thens.push(func);
-        return this;
-    }
-
-    // for the user to set the catch logic
-    catch(func) {
-        this.catchFunc = func;
-        return this;
-    }
-
-    // for the developer to use the catch logic
-    catcher (error) { 
-        this.status = 'rejected';
-        if (!this.catchFunc)
-            throw error;
-        this.value = this.catchFunc(error);        
-    }    
-
-    execute(finalFunc) {
-
-        try {
-                
-            if (finalFunc != undefined)
-                this.thens.push(finalFunc);
-
-            for(let func of this.thens) {
-                
-                this.promisifyIfNecessary();
-
-                // process func on the value (different depending on whether 
-                // it's a promise or not, and whether there's a catch func or not).
-                this.value = 
-                    isPromise(this.value) && this.catchFunc ? this.value.then(func).catch(this.catchFunc)
-                    : isPromise(this.value) ? this.value.then(func)
-                    : func(this.value);
-   
-            }
-
-            this.status = isPromise(this.value) 
-                ? 'promisified' 
-                : 'resolved'; 
-            
-            this.promisifyIfNecessary();
-
-            return this.value;
-
-        }
-
-        catch(error) {
-            this.catcher(error);
-        }
-
-    }
-
-    promisifyIfNecessary() {
-
-        if (!isPromise(this.value) && this.promisifyCondition(this.value))
-            this.value = this.promisifyConversion(this.value);
-
-        else if (isPromise(this.value)) 
-            this.value = this.value.then(db => 
-                this.promisifyCondition(db)
-                    ? this.promisifyConversion(db)
-                    : db
-            );
-
-    }
-
-}
 
 class hashBuckets extends Map {
     
@@ -524,6 +298,125 @@ let decideOrder = (
     }
 
     return 0;
+
+};
+
+class parser {
+
+    // Parse function into argument names and body
+    constructor (func) {
+
+        this.parameters = [];
+        this.body = "";
+
+        let lr = this.splitLeftAndRight(func);
+
+        this.parameters = 
+            lr.left
+            .replace(/[()\s]/g, '')
+            .split(',');
+
+        this.body =
+            lr.right
+            .replace(/^\s*\{|\}\s*$/g,'')
+            .replace(/^\s*|\s*$/g,'');
+
+    }
+
+    splitLeftAndRight (func) {
+
+        let uncommented = 
+            func.toString() 
+            .replace(/[/][/].*$/mg,'') // strip single-line comments
+            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
+	
+        let arrowIx = uncommented.indexOf('=>');
+        let braceIx = uncommented.indexOf('{');	
+
+        if (arrowIx == -1 && braceIx == -1) {
+            console.trace();
+            throw "it seems that a non-function was passed to 'parser'";
+        }
+
+        let splitIx = 
+            braceIx == -1 ? arrowIx
+            : arrowIx == -1 ? braceIx
+            : arrowIx < braceIx ? arrowIx 
+            : braceIx;
+
+        let isArrow = splitIx == arrowIx;
+
+        let left = uncommented.slice(0,splitIx);
+        let right = uncommented.slice(splitIx);
+
+        if(isArrow)
+            right = right.slice(2); // get rid of the arrow
+        else {
+            let parenIx = left.indexOf('(');
+            left = left.slice(parenIx);
+        }
+        
+        return { left, right };
+
+    }
+
+}
+
+parser.parse = function (func) {
+    return new parser(func);
+};
+
+parser.parameters = function(func) {
+    return new parser(func).parameters;
+};
+
+// Converts (v,w) => v.a = w.a && v.b == w.b 
+// into v => { x0 = v.a, x1 = v.b }
+// and w => { x0 = w.a, x1 = w.b }
+parser.pairEqualitiesToObjectSelectors = function(func) {
+
+    let parsed = new parser(func);
+    let leftParam = parsed.parameters[0];
+    let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
+
+    for (let aix in splitBodyByAnds) {
+
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
+
+        if (eqParts.length != 2)
+            return;
+
+        for (let eix in eqParts) {
+
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
+                return;
+
+            if (ep.startsWith(`${leftParam}.`))
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`))
+                rightEq = ep;
+            else
+                return; 
+
+        }	    
+
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
+
+    }
+
+    return {
+        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
+        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
+    };
 
 };
 
@@ -1327,6 +1220,141 @@ function recurse (func, data) {
         output.push(func(nested));
 
     return new dataset(output);
+
+}
+
+class connectorMongo extends connector {
+
+    constructor (collectionName, url) {
+        super();
+        this.collectionName = collectionName;
+        this.client = mongodb.MongoClient.connect(url, {useNewUrlParser: true});
+    }
+
+    import(mapFunc, filterFunc) {
+            
+        return this.client.then(async client => {
+                
+            filterFunc = filterFunc || (x => true);
+            let db = client.db();
+            let results = [];
+
+            await db.collection(this.collectionName)
+                .find()
+                .forEach(record => {
+                    if (filterFunc(record))
+                        results.push(mapFunc(record));
+                });
+            
+            return new dataset(results);
+
+        });
+
+    }
+
+    print(mapFunc, caption, target) {
+            
+        this.client = this.client.then(async client => {
+
+            let db = client.db();
+            let results = [];
+
+            await db.collection(this.collectionName)
+                .find()
+                .forEach(record => results.push(mapFunc(record)));
+
+            target ? print(target, results, caption)
+                : caption ? console.log(caption, results) 
+                : console.log(results);
+
+            return client;
+
+        });
+
+        return this;
+
+    }    
+
+}
+
+class deferable {
+
+    constructor(initial) {
+        this.value = initial;
+        this.thens = [];
+        this.status = 'pending';
+        this.promisifyCondition; // whether this.value is should become a promise
+        this.promisifyConversion; // how to convert this.value into a promise
+    }
+
+    then(func) {
+        this.thens.push(func);
+        return this;
+    }
+
+    // for the user to set the catch logic
+    catch(func) {
+        this.catchFunc = func;
+        return this;
+    }
+
+    // for the developer to use the catch logic
+    catcher (error) { 
+        this.status = 'rejected';
+        if (!this.catchFunc)
+            throw error;
+        this.value = this.catchFunc(error);        
+    }    
+
+    execute(finalFunc) {
+
+        try {
+                
+            if (finalFunc != undefined)
+                this.thens.push(finalFunc);
+
+            for(let func of this.thens) {
+                
+                this.promisifyIfNecessary();
+
+                // process func on the value (different depending on whether 
+                // it's a promise or not, and whether there's a catch func or not).
+                this.value = 
+                    isPromise(this.value) && this.catchFunc ? this.value.then(func).catch(this.catchFunc)
+                    : isPromise(this.value) ? this.value.then(func)
+                    : func(this.value);
+   
+            }
+
+            this.status = isPromise(this.value) 
+                ? 'promisified' 
+                : 'resolved'; 
+            
+            this.promisifyIfNecessary();
+
+            return this.value;
+
+        }
+
+        catch(error) {
+            this.catcher(error);
+        }
+
+    }
+
+    promisifyIfNecessary() {
+
+        if (!isPromise(this.value) && this.promisifyCondition(this.value))
+            this.value = this.promisifyConversion(this.value);
+
+        else if (isPromise(this.value)) 
+            this.value = this.value.then(db => 
+                this.promisifyCondition(db)
+                    ? this.promisifyConversion(db)
+                    : db
+            );
+
+    }
 
 }
 

@@ -83,10 +83,10 @@ sampleIdb('SampleDB', true, true)
     )
     .then(data => {
         let result = data.length == 11;
-        div.innerHTML += `idb.mergeImport:${result};`;
+        div.innerHTML += `mergeImport.idb:${result};`;
     })
     .catch(err => {
-        div.innerHTML += `idb.mergeImport:false;`;            
+        div.innerHTML += `mergeImport.idb:false;`;            
     })
     .finally(() => {
         document.body.appendChild(div);

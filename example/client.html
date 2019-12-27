@@ -5,8 +5,8 @@
     import $$ from '../dist/FluentDB.client.js';
     import sample from '../node_modules/sampledb/dist/sampledb.client.js'; 
     import sampleIdb from '../node_modules/sampledb/dist/sampledb.idb.js';
-
-    sampleIdb("SampleDB", true, true).then((idb) => {
+/*
+    sampleIdb('SampleDB', true, true).then(() => {
 
         let result = 
             $$({
@@ -21,12 +21,12 @@
 
     });
 
-/*
+*/
     fetch('getMongo')
     .then(response => response.json())
     .then(json => console.log(JSON.stringify(json)))
     .catch(e => console.log({e}));
-*/
+
 
 </script>
 

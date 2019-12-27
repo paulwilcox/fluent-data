@@ -45,7 +45,7 @@ async function getClientResults (type, headless = true) {
         let parts = clientResult.split(':');
         results.push({
             test_name: parts[0],
-            status: parts[1]
+            status: parts[1] == 'true' ? 'pass' : 'fail'
         });
     }
 
