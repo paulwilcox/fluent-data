@@ -103,4 +103,10 @@ export let PromiseAllObjectEntries = obj =>
         Object.entries(obj)
         .map(entry => Promise.all(entry))
     )
-    .then(entries => Object.fromEntries(entries));
+    .then(entries => {
+        // use Object.fromEntries(entries) when node.js permits it
+        let obj = {};
+        for(let entry of entries) 
+            obj[entry[0]] = entry[1];
+        return obj;
+    });
