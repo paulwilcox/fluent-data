@@ -72,18 +72,21 @@ test('client.groupReduce',
 sampleIdb('SampleDB', true, true)
     .then(() => 
 
-        $$({c: $$.idb('customers', 'SampleDB')})
+        $$({
+            o: sample.orders,
+            c: $$.idb('customers', 'SampleDB')
+        })
         .merge((c,o) => c.id == o.customer, 'both left')
         .import(c => c)
         .execute(c => c)
 
     )
     .then(data => {
-        result = data.length == 11;
-        div.innerHTML += (`idb.mergeImport:${result}`);
+        let result = data.length == 11;
+        div.innerHTML += `idb.mergeImport:${result};`;
     })
     .catch(err => {
-        div.innerHTML += (`idb.mergeImport:false;`);            
+        div.innerHTML += `idb.mergeImport:false;`;            
     })
     .finally(() => {
         document.body.appendChild(div);

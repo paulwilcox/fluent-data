@@ -3,6 +3,7 @@ import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 import parser from './parser.js';
 import { print as prn } from './visualizer/printer.js';
+import { normalizeMapper } from './mergeTools.js';
 
 export default class extends connector {
 
@@ -60,7 +61,7 @@ export default class extends connector {
     merge (
         incoming, 
         matchingLogic, 
-        mapper, 
+        mapFunc, 
         distinct = false
     ) {
 
@@ -69,6 +70,7 @@ export default class extends connector {
         let sourceKeyFunc = keyFuncs.rightFunc;    
         let rowsToAdd = []; 
         let processedTargets = new hashBuckets(targetKeyFunc, true);
+        let mapper = normalizeMapper(mapFunc);
 
         let incomingBuckets = 
             new hashBuckets(sourceKeyFunc, distinct)

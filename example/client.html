@@ -8,21 +8,14 @@
 
     sampleIdb("SampleDB", true, true).then((idb) => {
 
-        let result = $$({
-            o: sample.orders,
-            p: sample.products,
-            c: $$.idb('customers', 'SampleDB'),
-            //c: sample.customers
-        })
-        //.merge((c,o) => c.id == o.customer, 'both left')
-        .merge(
-            (c,o) => c.id == o.customer, 
-            (c,o) => Object.assign({}, c, o),
-            true
-        )
-        .import(c => c)
-        .print(c => c)
-        .execute();
+        let result = 
+            $$({
+                o: sample.orders,
+                c: $$.idb('customers', 'SampleDB')
+            })
+            .merge((c,o) => c.id == o.customer, 'both left')
+            .import(c => c)
+            .execute(c => c)
 
         console.log(result);
 

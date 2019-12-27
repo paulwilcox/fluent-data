@@ -3,7 +3,7 @@ import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
-import merger from './merger.js';
+import { merge as mrg } from './mergeTools.js';
 import { print as prn } from './visualizer/printer.js';
 
 export default class dataset {
@@ -53,7 +53,7 @@ export default class dataset {
     }    
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
-        return new dataset([...merger (
+        return new dataset([...mrg (
             this.data, 
             incoming, 
             matchingLogic, 

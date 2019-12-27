@@ -594,7 +594,7 @@ let runEmulators = function (
 
 };
 
-function* merger (leftData, rightData, matchingLogic, mapFunc, distinct) {
+function* merge (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
     let mapper = normalizeMapper(mapFunc, matchingLogic);
 
@@ -1284,7 +1284,7 @@ class dataset {
     }    
 
     merge (incoming, matchingLogic, mapper, onDuplicate) {
-        return new dataset([...merger (
+        return new dataset([...merge (
             this.data, 
             incoming, 
             matchingLogic, 
@@ -1455,7 +1455,7 @@ class connectorIdb extends connector {
     merge (
         incoming, 
         matchingLogic, 
-        mapper, 
+        mapFunc, 
         distinct = false
     ) {
 
@@ -1464,6 +1464,7 @@ class connectorIdb extends connector {
         let sourceKeyFunc = keyFuncs.rightFunc;    
         let rowsToAdd = []; 
         let processedTargets = new hashBuckets(targetKeyFunc, true);
+        let mapper = normalizeMapper(mapFunc);
 
         let incomingBuckets = 
             new hashBuckets(sourceKeyFunc, distinct)

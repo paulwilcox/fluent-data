@@ -2,7 +2,7 @@ import parser from './parser.js';
 import hashBuckets from './hashBuckets.js';
 import * as g from './general.js';
 
-export default function* (leftData, rightData, matchingLogic, mapFunc, distinct) {
+export function* merge (leftData, rightData, matchingLogic, mapFunc, distinct) {
 
     let mapper = normalizeMapper(mapFunc, matchingLogic);
 
@@ -49,7 +49,7 @@ export default function* (leftData, rightData, matchingLogic, mapFunc, distinct)
 
 }
 
-function normalizeMapper (mapFunc, matchingLogic) {
+export function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
         mapFunc = 'both null'; // inner join by default
