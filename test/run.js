@@ -56,7 +56,7 @@ async function getClientResults (type, headless = true) {
 (async () => {
 
     await getClientResults('clienttests');
-    results.push(...serverTestResults);    
+    results.push(...(await serverTestResults));    
     server.close(() => console.log('server closed'));
 
     // sort results and remove duplicate browser errors

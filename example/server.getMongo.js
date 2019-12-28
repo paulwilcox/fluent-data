@@ -6,7 +6,8 @@ module.exports = async function () {
 
     await sampleMongo('mongodb://localhost:27017/SampleDB', true, true);
 
-    return await $$({
+    return await 
+        $$({
             c: $$.mongo('customers', 'mongodb://localhost:27017/SampleDB'),
             o: sample.orders
         })
