@@ -6,9 +6,8 @@ let results = [];
 
 module.exports = async function () {
 
-    await test('server.filter', 
-        () => 
-            fdb()
+    await test('server.filter', () => 
+        fdb()
             .filter(o => o.customer == 2)
             .execute(o => o),
         ds => 
@@ -16,9 +15,8 @@ module.exports = async function () {
             ds.filter(x => x.customer != 2).length == 0
     );
 
-    await test('server.map', 
-        () => 
-            fdb()
+    await test('server.map', () => 
+        fdb()
             .map(o => ({
                 customer: o.customer,
                 rating: o.rating,
@@ -30,9 +28,8 @@ module.exports = async function () {
             !Object.keys(ds[0]).includes('id')
     );
 
-    await test('server.sort',  
-        () => 
-            fdb()
+    await test('server.sort', () => 
+        fdb()
             .sort((o,o2) => 
                 o.customer > o2.customer ? 1
                 : o.customer < o2.customer ? -1  
@@ -53,9 +50,8 @@ module.exports = async function () {
         }
     );
 
-    await test('server.groupReduce', 
-        () => 
-            fdb()
+    await test('server.groupReduce', () => 
+        fdb()
             .group(o => o.customer) 
             .reduce(o => ({
                 customer: $$.first(o.customer), 
@@ -75,8 +71,8 @@ module.exports = async function () {
 
     await sampleMongo('mongodb://localhost:27017/SampleDB', true, true);
 
-    await test('mergeImport.mongo',
-        () => $$({
+    await test('mergeImport.mongo', () => 
+        $$({
                 c: $$.mongo('customers', 'mongodb://localhost:27017/SampleDB'),
                 o: sample.orders
             })
