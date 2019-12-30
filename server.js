@@ -45,8 +45,7 @@ module.exports = http.createServer(async (request, response) => {
             break;
 
         // TODO: response.end returns that message even when connection 
-        // refuse dfor await sampleMongo.
-        // TODO: rename databae from SampleDB to SampleDB
+        // refused for await sampleMongo.
         case '/resetmongo':
             await sampleMongo('mongodb://localhost:27017/SampleDB', true);
             response.writeHead(200, { 'Content-type': 'text/plain' });
