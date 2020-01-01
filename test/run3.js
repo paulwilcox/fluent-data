@@ -2,33 +2,35 @@ let fs = require('fs');
 let http = require('http');
 let puppeteer = require('puppeteer');
 
-// TODO: Write file contents into script in a way that
-// '#results' captures the return value.  Then use the
-// output.
+(async () => {
 
-let server = http.createServer(async (request, response) => {
+    let server = startServer();
+    let results = [];
 
-    if (!request.url.endsWith('.js')) {
-        response.writeHead(204);
-        response.end();
-        return;
+    for (let file of fs.readdirSync('test')) {
+
+        if (['clientTests.js', 'serverTests.js', 'run.js', 'run2.js', 'run3.js'].includes(file))
+            continue;
+
+        let result = {testName: file.replace('.js', '')};
+
+        try {
+            result.success = await makeClientRequest(file);
+        }
+        catch (err) {
+            result.success = false;
+            result.errorMsg = err;
+        }
+
+        results.push(result);
+
     }
 
-    response.writeHead(200, { 'Content-Type': 'text/html' });
-    response.end(`
+    server.close();
 
-        <body>
-        <script>
-            let div = document.createElement('div');
-            div.id = 'results';       
-            document.body.appendChild(div); 
-        </script>
-        </body> 
+    console.log({results})
 
-    `, 'utf-8');
-
-})
-.listen(8082);
+})();
 
 async function makeClientRequest (fileName) {
 
@@ -37,16 +39,18 @@ async function makeClientRequest (fileName) {
     let pageErrored = false;
 
     page.on('pageerror', async err => {
-        console.log({pageError: err});
+        await page.content().then(pg => console.log({
+            pageError: err,
+            pageContents: pg
+        }))
         pageErrored = true;
         await browser.close();
     });
 
-    await page.goto(`http://127.0.0.1:8082/${fileName}`);
+    await page.goto(`http://127.0.0.1:8082/test/${fileName}`);
 
-    if (pageErrored) {
+    if (pageErrored) 
         return;
-    }
 
     await page.waitForSelector('#results');
     
@@ -60,9 +64,79 @@ async function makeClientRequest (fileName) {
 
 }
 
-makeClientRequest('filterTest.js')
-.then(x => {
-    console.log({x});
-})
-.finally(() => server.close());
+function startServer () { 
+    
+    return http.createServer(async (request, response) => {
 
+        if (!request.url.endsWith('.js')) {
+            response.writeHead(204);
+            response.end();
+            return;
+        }
+
+        if (!request.url.startsWith('/test')) {
+            response.writeHead(200, { 'Content-Type': 'text/javascript' });
+            response.end(fs.readFileSync(`.${request.url}`));
+            return;
+        }
+
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+        response.end(`
+
+            <body>
+            <script type = 'module'>
+                ${testFuncString(request.url)}
+                let div = document.createElement('div');
+                div.id = 'results'; 
+                div.innerHTML = testFunc();
+                document.body.appendChild(div); 
+            </script>
+            </body> 
+
+        `, 'utf-8');
+
+    })
+    .listen(8082);
+
+}
+
+function testFuncString (file, isServer) {
+
+    // file will be '/test/file.js'
+    let contents = fs.readFileSync(`.${file}`, 'utf8');
+
+    return `
+        ${importsString(contents, isServer)}
+        function testFunc () {
+            ${contents}  
+        }  
+    `;
+
+}
+
+function importsString (
+    contents,
+    isServer
+) {
+
+    let imports = '';
+    let sampleDist = '../node_modules/sampledb/dist';
+
+    if (isServer) imports += `
+            let $$ = require('../dist/FluentDB.server.js');
+            let sample = require('${sampleDist}/SampleDB.server.js');
+        `;
+    else imports += `
+            import $$ from '../dist/FluentDB.client.js';
+            import sample from '${sampleDist}/SampleDB.client.js';
+        `;                
+
+    if (contents.includes('sampleIdb.')) imports += 
+        `import sampleIdb from '${sampleDist}/SampleDB.idb.js';`;
+    
+    if (contents.includes('sampleMongo.')) imports += 
+        `let sampleMongo = require('${sampleDist}/SampleDB.mongo.js');`;
+
+    return imports;
+
+}
