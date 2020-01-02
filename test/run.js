@@ -2,6 +2,7 @@ require('console.table');
 let fs = require('fs');
 let http = require('http');
 let puppeteer = require('puppeteer');
+let { performance } = require('perf_hooks');
 let $$ = require('../dist/FluentDB.server.js');
 let sample = require('../node_modules/sampledb/dist/SampleDB.server.js');
 let sampleMongo = require('../node_modules/sampledb/dist/SampleDB.mongo.js');
@@ -28,22 +29,35 @@ let sampleMongo = require('../node_modules/sampledb/dist/SampleDB.mongo.js');
                 // file will be '/test/file.js'
                 let contents = fs.readFileSync(`./test/${file}`, 'utf8');
 
-                if (contents.includes('sampleIdb') && location == 'server')
-                    continue;
+                if (location == 'server') {
 
-                if (contents.includes('sampleMongo') && location == 'client')
-                    continue;
+                    if (contents.includes('sampleIdb'))
+                        continue;
 
-                if (location == 'server') 
                     eval(`
                         function testFunc() {
                             ${contents}
                         }
                     `);
 
-                result.success = location == 'client' 
-                    ? await makeClientRequest(file)
-                    : testFunc();
+                    let t0 = performance.now();
+                    result.success = testFunc();
+                    result.time = performance.now() - t0;
+
+                }
+
+                if (location == 'client') {
+
+                    if (contents.includes('sampleMongo') && location == 'client')
+                        continue;
+
+                    let response = await makeClientRequest(file);
+                    result.success = response.split(';')[0];
+                    result.time = response.split(';')[1];
+
+                }
+
+                result.time = msToTime(result.time);                
 
             }
             catch (err) {
@@ -129,7 +143,9 @@ function startServer () {
 
                 let div = document.createElement('div');
                 div.id = 'results'; 
+                let t0 = performance.now();
                 div.innerHTML = testFunc();
+                div.innerHTML += ';' + (performance.now() - t0);
                 document.body.appendChild(div);
 
             </script>
@@ -139,5 +155,22 @@ function startServer () {
 
     })
     .listen(8082);
+
+}
+
+// dusht at stackoverflow.com/questions/19700283
+// except that I don't know why he divides ms by 100
+function msToTime(duration) {
+
+    let ms = parseInt(duration % 1000);
+    let sec = Math.floor((duration / 1000) % 60);
+    let min = Math.floor((duration / (1000 * 60)) % 60);
+    let hr = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  
+    hr = hr < 10 ? '0' + hr : hr;
+    min = min < 10 ? '0' + min : min;
+    sec = sec < 10 ? '0' + sec : sec;
+  
+    return `${hr}:${min}:${sec}.${ms}`;
 
 }
