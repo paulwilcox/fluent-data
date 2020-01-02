@@ -1,72 +1,143 @@
-let puppeteer = require('puppeteer');
-let server = require('../server.js');
-let serverTestResults = require('./serverTests.js');
 require('console.table');
+let fs = require('fs');
+let http = require('http');
+let puppeteer = require('puppeteer');
+let $$ = require('../dist/FluentDB.server.js');
+let sample = require('../node_modules/sampledb/dist/SampleDB.server.js');
+let sampleMongo = require('../node_modules/sampledb/dist/SampleDB.mongo.js');
 
-// TODO: Allow output for when all tests pass.  Use this
-// in a "tests" script in package.json
+(async () => {
 
-let results = [];
+    let server = startServer();
+    let results = [];
 
-async function getClientResults (type, headless = true) {
+    for (let file of fs.readdirSync('test')) {
 
-    let clientUrl = `http://127.0.0.1:8081/test/${type}`
-    let browser = await puppeteer.launch({headless: headless});
+        if (file == 'run.js')
+            continue;        
+
+        for (let location of ['client', 'server']) {
+
+            let result = {
+                testName: file.replace('.js', ''),
+                location
+            };
+
+            try {
+
+                // file will be '/test/file.js'
+                let contents = fs.readFileSync(`./test/${file}`, 'utf8');
+
+                if (contents.includes('sampleIdb') && location == 'server')
+                    continue;
+
+                if (contents.includes('sampleMongo') && location == 'client')
+                    continue;
+
+                if (location == 'server') 
+                    eval(`
+                        function testFunc() {
+                            ${contents}
+                        }
+                    `);
+
+                result.success = location == 'client' 
+                    ? await makeClientRequest(file)
+                    : testFunc();
+
+            }
+            catch (err) {
+                result.success = false;
+                result.errorMsg = err;
+            }
+
+            results.push(result);
+            
+        }
+    }
+
+    server.close();
+
+    console.table(results)
+
+})();
+
+async function makeClientRequest (fileName) {
+
+    let browser = await puppeteer.launch({headless: true});
     let page = await browser.newPage();
+    let pageErrored = false;
 
     page.on('pageerror', async err => {
-
-        results.push({
-            test_name: '_browserError',
-            status: 'fail'
-        });
-
+        await page.content().then(pg => console.log({
+            pageError: err,
+            pageContents: pg
+        }))
+        pageErrored = true;
         await browser.close();
-        console.log(
-            'Error from browser when running tests: ', 
-            err.name, 
-            err.message, 
-            err.stack
-        );    
+    });
+
+    await page.goto(`http://127.0.0.1:8082/test/${fileName}`);
+
+    if (pageErrored) 
         return;
 
-    })
-
-    await page.goto(clientUrl);
     await page.waitForSelector('#results');
     
     let clientResults = await page.evaluate(() => 
         document.querySelector('#results').innerHTML
     );
 
-    for (let clientResult of clientResults.split(';')) {
-        if (clientResult == '')
-            continue;
-        let parts = clientResult.split(':');
-        results.push({
-            test_name: parts[0],
-            status: parts[1] == 'true' ? 'pass' : 'fail'
-        });
-    }
-
     await browser.close();
+
+    return clientResults;
 
 }
 
-(async () => {
+function startServer () { 
+    
+    return http.createServer(async (request, response) => {
 
-    await getClientResults('clienttests');
-    results.push(...(await serverTestResults));    
-    server.close(() => console.log('server closed'));
+        if (!request.url.endsWith('.js')) {
+            response.writeHead(204);
+            response.end();
+            return;
+        }
 
-    // sort results and remove duplicate browser errors
-    results.sort((a,b) => a.test_name > b.test_name ? 1 : a.test_name < b.test_name ? -1 : 0);
-    let browserErrors = results.filter(r => r.test_name == '_browserError').length;
-    if (browserErrors > 0)
-        results = results.slice(browserErrors - 1);
+        if (!request.url.startsWith('/test')) {
+            response.writeHead(200, { 'Content-Type': 'text/javascript' });
+            response.end(fs.readFileSync(`.${request.url}`));
+            return;
+        }
 
-    console.log();
-    console.table(results); 
-    process.exit(0);    
+        // file will be '/test/file.js'
+        let contents = fs.readFileSync(`.${request.url}`, 'utf8');
 
-})();
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+        response.end(`
+
+            <body>
+            <script type = 'module'>
+
+                import $$ from '../dist/FluentDB.client.js';
+                import sample from '../node_modules/sampledb/dist/SampleDB.client.js';
+                import sampleIdb from '../node_modules/sampledb/dist/SampleDB.idb.js';
+    
+                function testFunc () {
+                    ${contents}  
+                } 
+
+                let div = document.createElement('div');
+                div.id = 'results'; 
+                div.innerHTML = testFunc();
+                document.body.appendChild(div);
+
+            </script>
+            </body> 
+
+        `, 'utf-8');
+
+    })
+    .listen(8082);
+
+}
