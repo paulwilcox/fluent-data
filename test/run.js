@@ -35,13 +35,13 @@ let sampleMongo = require('../node_modules/sampledb/dist/SampleDB.mongo.js');
                         continue;
 
                     eval(`
-                        function testFunc() {
+                        async function testFunc() {
                             ${contents}
                         }
                     `);
 
                     let t0 = performance.now();
-                    result.success = testFunc();
+                    result.success = await testFunc();
                     result.time = performance.now() - t0;
 
                 }
@@ -72,7 +72,9 @@ let sampleMongo = require('../node_modules/sampledb/dist/SampleDB.mongo.js');
 
     server.close();
 
-    console.table(results)
+    console.table(results);
+
+    process.exit(results.some(res => !res.success) ? 1 : 0);
 
 })();
 
@@ -137,16 +139,23 @@ function startServer () {
                 import sample from '../node_modules/sampledb/dist/SampleDB.client.js';
                 import sampleIdb from '../node_modules/sampledb/dist/SampleDB.idb.js';
     
-                function testFunc () {
+                async function testFunc () {
                     ${contents}  
                 } 
 
                 let div = document.createElement('div');
                 div.id = 'results'; 
+
                 let t0 = performance.now();
-                div.innerHTML = testFunc();
-                div.innerHTML += ';' + (performance.now() - t0);
-                document.body.appendChild(div);
+
+                testFunc()
+                .then(res => {
+                    div.innerHTML = res;
+                })
+                .then(() => 
+                    div.innerHTML += ';' + (performance.now() - t0)
+                )
+                .finally(() => document.body.appendChild(div));
 
             </script>
             </body> 

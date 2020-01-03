@@ -1,7 +1,3 @@
-// TODO: The goal is to just write the test like this,
-// and have exteranl logic convert it to client
-// or server function with appropriate error
-// handling, import handling, and test-naming.
 
 let results = 
     $$({ 
