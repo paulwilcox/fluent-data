@@ -1,12 +1,12 @@
 
 async function test () {
 
-    let s = await sample();
+    let data = await sample('customers, orders');
 
     let results = 
         $$({ 
-            c: s.customers,
-            o: s.orders  
+            c: data.customers,
+            o: data.orders  
         })
         .filter(o => o.customer == 2)
         .execute(o => o);
