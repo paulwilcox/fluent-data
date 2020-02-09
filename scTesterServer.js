@@ -17,7 +17,7 @@ let $$ = require('./dist/FluentDB.server.js');
 let sampleServer = require('./node_modules/sampledb/dist/SampleDB.server.js');
 let sampleMongo = require('./node_modules/sampledb/dist/SampleDB.mongo.js');
 
-var sample = stores => 
+let sample = stores => 
     sampleServer('./test/_SampleDB.json', stores)
     .data;
 
@@ -25,6 +25,23 @@ let testDirectory = './test';
 let port = 8083; 
 
 (async () => {
+
+    if (true) {
+        // See gidztech on Dec 21, 2018 at
+        // https://github.com/puppeteer/puppeteer/issues/3699
+        // for a possible way to click on the console tab.
+        // If you change his 'indexOf' to 'devtools://' and  
+        // condense his query selector to '#tab-network'
+        // you can get the 'networkTab'.  But there's no 'click'
+        // property and also you really get two devtools tabs.  
+        let srv = startServer();
+        let browser = await puppeteer.launch({devtools: true});
+        let pages = await browser.pages();
+        let page = pages[0];    
+        page.on('close', () => srv.close())
+        await page.goto(`http://127.0.0.1:${port}`);
+        return;
+    }
 
     console.log();
     console.log(chalk.bgBlue('Starting SCTester:'));
@@ -69,6 +86,8 @@ let port = 8083;
                     if (file.endsWith('.s.js'))
                         continue;
                     let response = await makeClientRequest(fileFull);
+                    if (response.startsWith('error:'))
+                        throw response.slice(6);
                     result.success = response.split(';')[0] === 'true';
                     result.time = response.split(';')[1];
                 }
@@ -78,7 +97,7 @@ let port = 8083;
             }
             catch (err) {
                 result.success = `err:${errors.length}`;
-                errors.push(err);
+                errors.push(errorString(err));
             }
 
             results.push(result);
@@ -118,33 +137,23 @@ async function makeClientRequest (fileName) {
 
     let browser = await puppeteer.launch({headless: true});
     let page = await browser.newPage();
-    let pageErrored = false;
 
-    page.on('pageerror', async err => {
-        await page.content().then(pg => console.log({
-            pageError: err,
-            pageContents: pg
-        }))
-        pageErrored = true;
-        await browser.close();
-    });
+    let doError = err => 
+        page.evaluate(error => {
+            let div = document.createElement('div');
+            div.id = 'results'; 
+            div.innerHTML = `error: ${error}`;
+            document.body.appendChild(div);            
+        }, errorString(err));
 
-    page.on('requestfailed', async request => {
-        console.log({
-            requestUrl: request.url(), 
-            requestError: request.failure().errorText
-        });
-        pageErrored = true;
-        await browser.close();
-    });
+    page.on('pageerror', doError);
+    page.on('error', doError); 
+    page.on('requestfailed', request => doError(
+        `request: ${rquest.url()}; ` +
+        `error: ${request.failure().errorText}`
+    ));
 
     await page.goto(`http://127.0.0.1:${port}/${fileName}`);
-
-    // FIX: This never hits because the events in 
-    // question occur after this line reads. 
-    if (pageErrored) 
-        return;
-
     await page.waitForSelector('#results');
     
     let clientResults = await page.evaluate(() => 
@@ -152,7 +161,6 @@ async function makeClientRequest (fileName) {
     );
 
     await browser.close();
-
     return clientResults;
 
 }
@@ -161,9 +169,27 @@ function startServer () {
     
     console.log(`server starting on ${port}`);
 
-    return http.createServer(async (request, response) => {
+    return http.createServer((request, response) => {
 
         let file = `.${request.url}`;
+
+        if (file == './') {
+            let c = '';
+            for(let f of fs.readdirSync(testDirectory)) {
+                if (f.startsWith('_'))
+                    continue;
+                c += `<li><a href=${testDirectory}/${f}>${f}</a></li>`
+            }
+            c = `
+                <p>
+                    Click on a link to run a test.  
+                    Then check the console.
+                </p>
+                <ul>${c}</ul>
+            `;
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(c, 'utf-8');
+        }
 
         let cType =
             file.endsWith('.css') ? 'text/css'
@@ -180,8 +206,7 @@ function startServer () {
         let content;
 
         try {
-            content = fs.readFileSync(file)
-            .toString(); 
+            content = fs.readFileSync(file).toString(); 
         }
         catch (error) {
             response.writeHead(500);
@@ -205,6 +230,7 @@ async function sample (stores) {
     return s.data;
 }
 
+                    let errorString = ${errorString}
 
                     ${content}   
 
@@ -214,9 +240,14 @@ async function sample (stores) {
                     let t0 = performance.now();
 
                     Promise.resolve(test())
-                    .then(res => { div.innerHTML = res; })
+                    .then(res => div.innerHTML = res)
                     .then(() => 
-                        div.innerHTML += ';' + (performance.now() - t0)
+                        div.innerHTML += ';' + 
+                        (performance.now() - t0)
+                    )
+                    .catch(err => 
+                        div.innerHTML += 'error:' + 
+                        errorString(err)
                     )
                     .finally(() => document.body.appendChild(div));
 
@@ -251,3 +282,18 @@ function msToTime(duration) {
     return `${hr}:${min}:${sec}.${ms}`;
 
 }
+
+function errorString (error) {
+    let e = '';
+    let add = (label, item) => { 
+        if (item)
+            e += `${label}: ${item};`
+    }
+    add('type', error.name);
+    add('file', error.fileName);
+    add('line', error.lineNumber);
+    add('message', error.message);
+    add('stack', error.stack);
+    return e || error;
+}
+

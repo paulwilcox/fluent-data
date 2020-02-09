@@ -143,8 +143,17 @@ export default class extends connector {
             dbCon.onsuccess = () => {
     
                 let db = dbCon.result;
-    
-                let tx = db.transaction(this.storeName, transactionMode);
+                let tx;
+                
+                try {
+                    tx = db.transaction(this.storeName, transactionMode);
+                }
+                catch(err) {
+                    throw err.name == "NotFoundError" 
+                        ? `${this.storeName} not found in ${this.dbName}`
+                        : err
+                }
+
                 tx.oncomplete = () => db.close();
                 tx.onerror = event => reject(event); 
     

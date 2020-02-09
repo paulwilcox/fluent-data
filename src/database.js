@@ -9,6 +9,8 @@ export default class {
     }
 
     addDataset (key, data) { 
+        if (!data)
+            throw `Cannot pass ${key} as undefined in 'addDataset'`
         this.datasets[key] = Array.isArray(data) 
             ? new dataset(data) 
             : data;

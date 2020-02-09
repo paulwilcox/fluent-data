@@ -1300,6 +1300,8 @@ class database {
     }
 
     addDataset (key, data) { 
+        if (!data)
+            throw `Cannot pass ${key} as undefined in 'addDataset'`
         this.datasets[key] = Array.isArray(data) 
             ? new dataset(data) 
             : data;
@@ -1507,8 +1509,17 @@ class connectorIdb extends connector {
             dbCon.onsuccess = () => {
     
                 let db = dbCon.result;
-    
-                let tx = db.transaction(this.storeName, transactionMode);
+                let tx;
+                
+                try {
+                    tx = db.transaction(this.storeName, transactionMode);
+                }
+                catch(err) {
+                    throw err.name == "NotFoundError" 
+                        ? `${this.storeName} not found in ${this.dbName}`
+                        : err
+                }
+
                 tx.oncomplete = () => db.close();
                 tx.onerror = event => reject(event); 
     
