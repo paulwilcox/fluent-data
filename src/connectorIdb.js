@@ -83,7 +83,9 @@ export default class extends connector {
             if (!cursor) {                           
                 for(let row of rowsToAdd) {
                     let addRequest = store.add(row);
-                    addRequest.onerror = event => reject(event); 
+                    addRequest.onerror = event => { 
+                        throw event.target.error; 
+                    }; 
                 }
                 return this;
             }
@@ -113,9 +115,36 @@ export default class extends connector {
             // For the first match, delete or update. based on
             // whether there's a match or not.
             let outputYield = outputGenerator.next();
-            (outputYield.done) 
-                ? cursor.delete()
-                : cursor.update(outputYield.value);
+
+            try {
+                outputYield.done 
+                    ? cursor.delete()
+                    : cursor.update(outputYield.value);
+            }
+            catch(err) {
+                let isKeyError = 
+                    err.message.includes('cursor uses in-line keys')
+                    && err.message.includes('different value than the cursor\'s effective key')
+                if (!isKeyError)
+                    throw err;
+                let newErr = new Error(
+                    'The error message below means that you are trying ' + 
+                    'to update a row in IndexedDB with another row ' + 
+                    'where the primary keys are not the same.  Are ' +
+                    'you matching on keys with different names?  If so ' +
+                    'try changing the name (using .map()) of the incoming ' +
+                    'foreign key to match the target\'s primary key. \n\n' +
+                    'Otherwise, play around with the in-line/out-of-line ' +
+                    'and auto-incrementing features of your store.  And ' +
+                    'it may also be possible that in its present state, ' +
+                    'this library cannot support the structure of your ' +
+                    'store. \n\n-- expand to see stack --\n\n' + 
+                    '------------- \n\n' +
+                    err.message
+                );
+                newErr.originalError = err;
+                throw newErr;
+            }
 
             // For additional matches, add them to the rowsToAdd array.
             outputYield = outputGenerator.next();
