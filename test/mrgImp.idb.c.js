@@ -8,7 +8,6 @@ async function test () {
             o: data.orders,
             c: $$.idb('customers', 'SampleDB')
         })
-        .map(o => ({ ...o, id: o.customer, orderId: o.id }))
         .merge((c,o) => c.id == o.customer, 'both left')
         .import(c => c)
         .execute(c => c);

@@ -80,7 +80,8 @@ export default class extends connector {
 
             // When you've finished looping the target, add 
             // any excess rows to the store.  Then resolve. 
-            if (!cursor) {                           
+            if (!cursor) {        
+                console.log({rowsToAdd})                   
                 for(let row of rowsToAdd) {
                     let addRequest = store.add(row);
                     addRequest.onerror = event => { 
