@@ -52,8 +52,8 @@ export default class extends Map {
     }
 
     * crossMapRow(incomingRow, hashKeySelector, mapper) {
-                
-        let existingRows = this.getBucket(incomingRow, hashKeySelector);
+
+        let existingRows = this.getBucket(incomingRow, hashKeySelector);                
 
         if (existingRows === undefined)
             existingRows = [undefined];
