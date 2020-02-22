@@ -3,36 +3,41 @@ import hashBuckets from './hashBuckets.js';
 import * as g from './general.js';
 
 export function* merge (leftData, rightData, matchingLogic, mapFunc, distinct) {
+    
+    console.log({
+        leftData,
+        rightData
+    })
 
     let mapper = normalizeMapper(mapFunc, matchingLogic);
 
     let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
     let targetKeyFunc = keyFuncs.leftFunc;
     let sourceKeyFunc = keyFuncs.rightFunc;    
-    let processedTargets = new hashBuckets(targetKeyFunc, true);
+    let processedSources = new hashBuckets(sourceKeyFunc, true);
 
-    let incomingBuckets = 
-        new hashBuckets(sourceKeyFunc, distinct)
-        .addItems(rightData);
+    let existingBuckets = 
+        new hashBuckets(targetKeyFunc, distinct)
+        .addItems(leftData);
 
-    for (let targetRow of leftData) {
+    for (let sourceRow of rightData) {
             
         // If user wants distinct rows in the target, then
         // track if such a row has already been processed.
         // If so, delete future rows in the target.  If not,
         // just record that it has now been processed.
         if (distinct) {  
-            let processedTarget = processedTargets.getBucket(targetRow, targetKeyFunc);
-            if (processedTarget)
+            let processedSource = processedSources.getBucket(sourceRow, sourceKeyFunc);
+            if (processedSource)
                 continue;
-            processedTargets.addItem(targetRow);
+            processedSources.addItem(sourceRow);
         }
 
-        // Finds the bucket of incoming rows matching the 
-        // target and 'crossMaps' them.  Returns a generator. 
-        let outputGenerator = incomingBuckets.crossMapRow(
-            targetRow, 
-            targetKeyFunc,
+        // Finds the bucket of existing rows matching the 
+        // source and 'crossMaps' them.  Returns a generator. 
+        let outputGenerator = existingBuckets.crossMapRow(
+            sourceRow, 
+            sourceKeyFunc,
             mapper
         );
 
