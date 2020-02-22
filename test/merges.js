@@ -1,19 +1,30 @@
 async function test () {
 
+    let results = await merge('both both');
+
+    return results.length == 5 
+        && confirm(results, 'c', 'Confucius', 'change');
+
+}
+
+async function merge(mapper) {
+
     let data = await sample('philosophites, mathematicians');
 
-    let results = 
+    let results = await
         $$({
             p: data.philosophites,
             m: data.mathematicians
         })
-        .merge((p,m) => p.id == m.id, (p,m) => p)
+        .merge((p,m) => p.id == m.id, mapper)
         .execute(p => p);
 
-console.log({results})
+    return results;
 
-    return results.length == 5 
-        && results.find(row => row.id == 'c').subject == 'Confucius'
-        && results.find(row => row.id == 'c').term == 'change';
+}
 
+function confirm(results, rowId, subject, term) {
+    let row = results.find(row => row.id == rowId);
+    return row.subject == subject 
+        && row.term == term;
 }

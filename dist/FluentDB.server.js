@@ -487,55 +487,56 @@ let runEmulators = function (
 
 };
 
-function* merge (leftData, rightData, matchingLogic, mapFunc, distinct) {
-    
-    console.log({
-        leftData,
-        rightData
-    });
+function* merge (
+    leftData, 
+    rightData, 
+    matchingLogic, 
+    mapFunc, 
+    distinct
+) {
 
     let mapper = normalizeMapper(mapFunc, matchingLogic);
 
     let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-    let targetKeyFunc = keyFuncs.leftFunc;
-    let sourceKeyFunc = keyFuncs.rightFunc;    
-    let processedSources = new hashBuckets(sourceKeyFunc, true);
+    let leftKeyFunc = keyFuncs.leftFunc;
+    let rightKeyFunc = keyFuncs.rightFunc;    
 
-    let existingBuckets = 
-        new hashBuckets(targetKeyFunc, distinct)
+    let leftBuckets = 
+        new hashBuckets(leftKeyFunc, distinct)
         .addItems(leftData);
 
-    for (let sourceRow of rightData) {
-            
-        // If user wants distinct rows in the target, then
-        // track if such a row has already been processed.
-        // If so, delete future rows in the target.  If not,
-        // just record that it has now been processed.
-        if (distinct) {  
-            let processedSource = processedSources.getBucket(sourceRow, sourceKeyFunc);
-            if (processedSource)
-                continue;
-            processedSources.addItem(sourceRow);
-        }
+    let rightBuckets = 
+        new hashBuckets(rightKeyFunc, distinct)
+        .addItems(rightData);
 
-        // Finds the bucket of existing rows matching the 
-        // source and 'crossMaps' them.  Returns a generator. 
-        let outputGenerator = existingBuckets.crossMapRow(
-            sourceRow, 
-            sourceKeyFunc,
-            mapper
-        );
+    // yield matches and left unmatched
+    for(let key of leftBuckets.keys()) {
 
-        // Flatten the output to ensure that a whole array
-        // is not returned.
-        for(let outputYield of outputGenerator) {
-            yield outputYield; 
-            if (distinct)
-                continue;
+        let leftBucket = leftBuckets.get(key);
+        let rightBucket = rightBuckets.get(key) || [undefined];
+
+        leftBuckets.delete(key);
+        rightBuckets.delete(key);
+
+        for(let leftItem of leftBucket)
+        for(let rightItem of rightBucket) {
+            let mapped = mapper(leftItem, rightItem);
+            if (mapped)
+                yield mapped;
         }
 
     }
 
+    // yield right unmatched
+    for(let key of rightBuckets.keys()) {
+        let rightBucket = rightBuckets.get(key);
+        rightBuckets.delete(key);
+        for(let rightItem of rightBucket) {
+            let mapped = mapper(undefined, rightItem);
+            if (mapped)
+                yield mapped;
+        }
+    }
 
 }
 
