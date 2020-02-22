@@ -38,25 +38,16 @@
         { "id": 912, "customer": 7, "product": 123457, "speed": 2, "rating": 6 } 
     ],    
 
-    "students": [
-        { "id": "a", "name": "Andrea" },
-        { "id": "b", "name": "Becky" },
-        { "id": "c", "name": "Colin" }
+    "philosophites": [
+        { "id": "a", "name": "Andrea", "subject": "Abelard" },
+        { "id": "b", "name": "Brielle", "subject": "Bentham" },
+        { "id": "c", "name": "Cathy", "subject": "Confucius"}
     ],
 
-    "foods": [
-        { "id": 1, "name": "tacos" },
-        { "id": 2, "name": "skittles" },
-        { "id": 3, "name": "flan" }
-    ],
-
-    "scores": [
-        {"id": 1, "student": "a", "score": 5 },
-        {"id": 2, "student": "b", "score": 7 },
-        {"id": 3, "student": "c", "score": 10 },
-        {"id": 4, "student": "a", "score": 0 },
-        {"id": 5, "student": "b", "score": 6 },
-        {"id": 6, "student": "c", "score": 9 }
+    "mathematicians": [
+        { "id": "c", "name": "Catherine", "term": "change" },
+        { "id": "d", "name": "Dennis", "term": "delta" },
+        { "id": "e", "name": "Eric", "term": "epsilon" }
     ]
 
 }
