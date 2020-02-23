@@ -74,7 +74,7 @@ class mergeTester {
                 m: data.mathematicians
             })
             .merge((p,m) => p.id == m.id, mapper)
-            .execute(p => p);
+            .get(p => p);
 
         return results;
 

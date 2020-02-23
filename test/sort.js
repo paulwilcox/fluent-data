@@ -11,7 +11,7 @@ async function test () {
             : o.rating < o2.rating ? 1
             : 0
         )
-        .execute(o => o);
+        .get(o => o);
 
     for(let i = 1; i < results.length; i++) {
 

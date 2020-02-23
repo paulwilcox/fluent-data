@@ -1354,158 +1354,6 @@ class connectorMongo extends connector {
 
 }
 
-class deferable {
-
-    constructor(initial) {
-        this.value = initial;
-        this.thens = [];
-        this.status = 'pending';
-        this.promisifyCondition; // whether this.value is should become a promise
-        this.promisifyConversion; // how to convert this.value into a promise
-    }
-
-    then(func) {
-        this.thens.push(func);
-        return this;
-    }
-
-    // for the user to set the catch logic
-    catch(func) {
-        this.catchFunc = func;
-        return this;
-    }
-
-    // for the developer to use the catch logic
-    catcher (error) { 
-        this.status = 'rejected';
-        if (!this.catchFunc)
-            throw error;
-        this.value = this.catchFunc(error);        
-    }    
-
-    execute(finalFunc) {
-
-        try {
-                
-            if (finalFunc != undefined)
-                this.thens.push(finalFunc);
-
-            for(let func of this.thens) {
-                
-                this.promisifyIfNecessary();
-
-                // process func on the value (different depending on whether 
-                // it's a promise or not, and whether there's a catch func or not).
-                this.value = 
-                    isPromise(this.value) && this.catchFunc ? this.value.then(func).catch(this.catchFunc)
-                    : isPromise(this.value) ? this.value.then(func)
-                    : func(this.value);
-   
-            }
-
-            this.status = isPromise(this.value) 
-                ? 'promisified' 
-                : 'resolved'; 
-            
-            this.promisifyIfNecessary();
-
-            return this.value;
-
-        }
-
-        catch(error) {
-            this.catcher(error);
-        }
-
-    }
-
-    promisifyIfNecessary() {
-
-        if (!isPromise(this.value) && this.promisifyCondition(this.value))
-            this.value = this.promisifyConversion(this.value);
-
-        else if (isPromise(this.value)) 
-            this.value = this.value.then(db => 
-                this.promisifyCondition(db)
-                    ? this.promisifyConversion(db)
-                    : db
-            );
-
-    }
-
-}
-
-class database {
-
-    constructor() {
-        this.datasets = {};
-    }
-
-    addDataset (key, data) { 
-        if (!data)
-            throw `Cannot pass ${key} as undefined in 'addDataset'`
-        this.datasets[key] = Array.isArray(data) 
-            ? new dataset(data) 
-            : data;
-        return this;
-    }    
-
-    addDatasets (obj) { 
-        for (let entry of Object.entries(obj)) 
-            this.addDataset(entry[0], entry[1]);
-        return this;
-    }
-
-    getDataset(arg) {
-        if (isString(arg))
-            return this.datasets[arg];
-        if (isFunction(arg)) {
-            let param = parser.parameters(arg)[0];
-            return this.datasets(param)[0];
-        }
-    }
-
-    getDatasets(arg) {
-
-        if (isString(arg))
-            return [this.getDataset(arg)];
-
-        // arg is then a function 
-        let datasets = [];
-        for(let param of parser.parameters(arg)) {
-            let ds = this.datasets[param];
-            datasets.push(ds);
-        }
-        return datasets;
-
-    }
-
-    // - execute a function on a dataset
-    // - determine which datasets based on user-passed parameters to the first function.
-    callOnDs(funcName, ...args) {
-
-        // user did not pass a reciever, so make the source dataset the reciever
-        if (isFunction(args[0])) {
-            let param = parser.parameters(args[0])[0];
-            args.unshift(param);
-        }
-
-        let reciever = args.shift(); // the dataset name to load the results into
-        let func = args.shift(); // the first function passed by the user
-        let funcDatasets = this.getDatasets(func); // the datasets referenced by that first function
-        let sourceDataset = funcDatasets.shift(); // the first of these which is where we'll call the functions
-        args.unshift(func); // pass the evaluated 'func' back to the front of the arguments
-        funcDatasets = funcDatasets.filter(ds => ds instanceof dataset); // get rid of non-dataset parameters 
-        funcDatasets = funcDatasets.map(ds => ds.data); // for the remaining datasets, just get the data
-        args.unshift(...funcDatasets); // pass any remaining datasets to the front of the arguments
-        let results = sourceDataset[funcName](...args); // execute the function
-        this.datasets[reciever] = results; // load the results into the reciever dataset
-        return this;  // fluently exit 
-
-    }
-
-}
-
 class connectorIdb extends connector {
 
     constructor (storeName, dbName) {
@@ -1711,62 +1559,113 @@ function $$(obj) {
     return new FluentDB().addDatasets(obj); 
 }
 
-class FluentDB extends deferable {
+class FluentDB {
 
     constructor() {
-
-        super(new database());
-
-        super.promisifyCondition = db => { 
-
-            // The final mapper in 'execute' will cause the 
-            // thenable to return a non-database
-            if(!(db instanceof database))
-                return false;
-
-            return 0 < 
-                Object.values(db.datasets)
-                .filter(ds => isPromise(ds))
-                .length;
-
-        };
-
-        super.promisifyConversion = db => {
-            let datasets = PromiseAllObjectEntries(db.datasets);
-            return Promise.all([db,datasets])
-                .then(obj => {
-                    let [db,datasets] = obj;
-                    db.datasets = datasets;
-                    return db;
-                });
-        };
-
-        this.addDatasets = obj => this.then(db => db.addDatasets(obj));
+        
+        this.datasets = {};
 
         let funcsToAttach = [
             'filter', 'map', 
-            'group', 'sort', 'reduce', 
-            'print', 'merge', 'import'
+            'group', 'reduce', 'sort', 
+            'print', 'merge'
         ];
 
         for(let funcName of funcsToAttach) 
-            this[funcName] = 
-                (...args) => this.then(db => db.callOnDs(funcName, ...args)); 
+            this[funcName] = (...args) => 
+                this._callOnDs(funcName, ...args); 
 
     }
 
-    // TODO: Close all connector connections
-    execute (finalMapper) {
+    addDataset (key, data) { 
+        if (!data)
+            throw `Cannot pass ${key} as undefined in 'addDataset'`
+        this.datasets[key] = Array.isArray(data) 
+            ? new dataset(data) 
+            : data;
+        return this;
+    }    
+
+    addDatasets (obj) { 
+        for (let entry of Object.entries(obj)) 
+            this.addDataset(entry[0], entry[1]);
+        return this;
+    }
+
+    getDataset(arg) {
+        if (isString(arg))
+            return this.datasets[arg];
+        if (isFunction(arg)) {
+            let param = parser.parameters(arg)[0];
+            return this.datasets(param)[0];
+        }
+    }
+
+    getDatasets(arg) {
+
+        let datasets = [];
         
-        if (finalMapper) {
-            this.map(finalMapper); // adds a mapping to this.thens
-            let param = parser.parameters(finalMapper)[0];
-            return super.execute(db => db.datasets[param].data); // just get the data
+        if (isString(arg))
+            datasets.push(this.getDataset(arg));
+
+        else for (let param of parser.parameters(arg)) 
+            datasets.push(this.datasets[param]);
+        
+        return datasets.filter(ds => ds !== undefined);
+
+    }
+
+    // .map(), except return the dataset instead
+    // of the calling FluentDB.
+    get(funcOrKey) {
+        if (isString(funcOrKey))
+            return this.datasets[funcOrKey];
+        let key = parser.parameters(funcOrKey)[0];
+        return this
+            ._callOnDs('map', funcOrKey)
+            .datasets[key]
+            .data;
+    }
+
+    // Execute a function on a dataset.  Determine which 
+    // dataset by looking at the first parameter, which
+    // should be a function, and matching the parameters
+    // of the function to dataset names.
+    _callOnDs(funcName, ...args) {
+
+        // User parameters should take the form of 
+        // 'targetDsName, lambda, ...args'.  But the user
+        // might omit 'targetDsName'.  If so, create one 
+        // now using the first parameter of 'lambda'.
+        if (isFunction(args[0])) {
+            let dsName = parser.parameters(args[0])[0];
+            args.unshift(dsName);
         }
 
-        return super.execute();
+        // The dataset name to load the result into.  
+        // The lambda to execute on a method of the dataset
+        // args is now the other args to execute on that method.
+        let targetDsName = args.shift(); 
+        let lambda = args.shift();
 
-    }
+        // Get the datasets referenced by 'lambda'.  The 
+        // first one you'll need the full dataset object,
+        // methods and all.  Subsequent ones you just want
+        // their data, to later pass to the first one.
+        let dataArgs = this.getDatasets(lambda);
+        let targetDs = dataArgs.shift(); 
+        dataArgs = dataArgs.map(ds => ds.data); 
+
+        // Execute the method on the target dataset 
+        this.datasets[targetDsName] = targetDs[funcName](
+            ...dataArgs, 
+            lambda, 
+            ...args
+        ); 
+
+        return this;  
+
+    }    
 
 }
 
