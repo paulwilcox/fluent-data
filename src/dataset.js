@@ -52,13 +52,13 @@ export default class dataset {
         return ds;
     }    
 
-    merge (incoming, matchingLogic, mapper, onDuplicate) {
+    merge (incoming, matchingLogic, mapper, distinct) {
         return new dataset([...mrg (
             this.data, 
             incoming, 
             matchingLogic, 
             mapper, 
-            onDuplicate
+            distinct
         )]);
     }
 
