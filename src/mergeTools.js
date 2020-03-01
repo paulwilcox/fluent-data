@@ -2,8 +2,140 @@ import parser from './parser.js';
 import hashBuckets from './hashBuckets.js';
 import * as g from './general.js';
 
-
 export function* merge (
+    leftData, 
+    rightData, 
+    matcher, 
+    mapper, 
+    distinct
+) {
+
+    let leftHasher;
+    let rightHasher;
+
+    if (!g.isFunction(matcher)) {
+        leftHashser = matcher.leftHasher;
+        rightHasher = matcher.rightHasher;
+        matcher = matcher.matcher;
+    }
+    else {
+        let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
+        leftHasher = hashers.leftFunc;
+        rightHasher = hashers.rightFunc;
+    }
+
+    // If no hashers are passed, then do full-on loop join
+    if (!leftHasher && !rightHasher) {
+        yield* loopMerge(
+            leftData, 
+            rightData, 
+            matcher,
+            normalizeMapper(mapper, matcher),
+        );
+        return;
+    }
+
+    yield* hashMerge(
+        leftData,
+        rightData,
+        leftHasher,
+        rightHasher,
+        matcher,
+        normalizeMapper(mapper, matcher),
+        distinct 
+    );
+
+}
+
+function* hashMerge (
+    leftData, 
+    rightData, 
+    leftHasher,
+    rightHasher,
+    matcher,
+    mapper,
+    distinct
+) {
+
+    let leftBuckets = 
+        new hashBuckets(leftHasher, distinct)
+        .addItems(leftData);
+
+    let rightBuckets = 
+        new hashBuckets(rightHasher, distinct)
+        .addItems(rightData);
+
+    // convenience function for extracting a bucket
+    let removeBucket = (buckets, key) => {
+        let bucket = buckets.get(key);
+        buckets.delete(key);
+        return bucket;
+    }
+
+    // yield matches and left unmatched
+    for(let key of leftBuckets.keys()) 
+        yield* loopMerge(
+            removeBucket(leftBuckets, key), 
+            removeBucket(rightBuckets, key) || [undefined], 
+            matcher, 
+            mapper
+        );
+
+    // yield right unmatched
+    for(let key of rightBuckets.keys()) 
+        for(let rightItem of removeBucket(rightBuckets, key)) {
+            let mapped = mapper(undefined, rightItem);
+            if (mapped)
+                yield mapped;
+        }
+
+}
+
+function* loopMerge (
+    leftData, 
+    rightData,
+    matcher,
+    mapper
+) {
+
+    let leftHits = new Set();
+    let rightHits = new Set();
+
+    for (let l in leftData)
+    for (let r in rightData) {
+        let leftItem = leftData[l];
+        let rightItem = rightData[r];
+        if (leftItem == undefined || rightItem == undefined)
+            continue;
+        if (matcher(leftItem, rightItem)) {
+            leftHits.add(l);
+            rightHits.add(r);
+            let mapped = mapper(leftItem, rightItem);
+            if (mapped)
+                yield mapped;
+        }
+    }
+
+    for (let l in leftData) {
+        if (leftHits.has(l))
+            continue;
+        let mapped = mapper(leftData[l], undefined);
+        if (mapped)
+            yield mapped;
+    }
+
+    for (let r in rightData) {
+        if (rightHits.has(r))
+            continue;
+        let mapped = mapper(undefined, rightData[r]);
+        if (mapped)
+            yield mapped;
+    }
+
+}
+
+
+export function* mergeOld (
     leftData, 
     rightData, 
     matchingLogic, 

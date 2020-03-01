@@ -45,10 +45,12 @@ class mergeTester {
         let resultIds = this.results.map(r => r.id);
         let rExcess = resultIds.some(r => !expectedIds.includes(r));
         let eExcess = expectedIds.some(e => !resultIds.includes(e));
-        if(rExcess || eExcess)
+        if(rExcess || eExcess) {
+            console.log(this.results);
             throw `Expected id's for '${this.mapperStr}' ` +
               `are '${expectedIds.join(',')}'; but actual ` + 
               `is '${resultIds.join(',')}'.`;
+        }
     }
 
     _checkTopic(rowId, topic) {

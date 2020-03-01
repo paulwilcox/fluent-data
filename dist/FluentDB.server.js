@@ -18,38 +18,6 @@ class connector {
 
 }
 
-let isSubsetOf = (sub, sup) =>  
-    setEquals (
-        new Set(
-            [...sub]
-            .filter(x => [...sup].indexOf(x) >= 0) // intersection
-        ), 
-        sub
-    );
-
-let asSet = obj => {
-
-    let s = 
-        obj instanceof Set ? obj
-        : isString(obj) ? new Set(obj)
-        : Array.isArray(obj) ? new Set(obj)
-        : undefined;
-
-    if (!s) 
-        throw "Could not convert object to set";
-    
-    return s;
-
-};
-
-// Max Leizerovich: stackoverflow.com/questions/31128855
-let setEquals = (a, b) =>
-    a.size === b.size 
-    && [...a].every(value => b.has(value));
-
-let isPromise = obj => 
-    Promise.resolve(obj) == obj;
-
 let stringifyObject = obj => {
 
     // todo: find out if this is bad.  But for now it's
@@ -86,18 +54,6 @@ let isString = input =>
 let isFunction = input => 
     typeof input === 'function';
 
-// array.flat not out in all browsers/node
-let flattenArray = array => {
-    let result = [];
-    for(let element of array) 
-        if (Array.isArray(element))
-            for(let nestedElement of element)
-                result.push(nestedElement);
-        else 
-            result.push(element);
-    return result;
-};
-
 let noUndefinedForFunc = mapper =>
 
     (...args) => {
@@ -114,35 +70,6 @@ let noUndefined = obj => {
     return obj;
 
 };
-
-// Convert an unpromised object with promises as
-// values to a promised object with regular values
-let PromiseAllObjectEntries = obj => 
-    Promise.all(
-        Object.entries(obj)
-        .map(entry => Promise.all(entry))
-    )
-    .then(entries => {
-        // use Object.fromEntries(entries) when node.js permits it
-        let obj = {};
-        for(let entry of entries) 
-            obj[entry[0]] = entry[1];
-        return obj;
-    });
-
-var g = /*#__PURE__*/Object.freeze({
-    isSubsetOf: isSubsetOf,
-    asSet: asSet,
-    setEquals: setEquals,
-    isPromise: isPromise,
-    stringifyObject: stringifyObject,
-    isString: isString,
-    isFunction: isFunction,
-    flattenArray: flattenArray,
-    noUndefinedForFunc: noUndefinedForFunc,
-    noUndefined: noUndefined,
-    PromiseAllObjectEntries: PromiseAllObjectEntries
-});
 
 class hashBuckets extends Map {
     
@@ -490,52 +417,131 @@ let runEmulators = function (
 function* merge (
     leftData, 
     rightData, 
-    matchingLogic, 
-    mapFunc, 
+    matcher, 
+    mapper, 
     distinct
 ) {
 
-    let mapper = normalizeMapper(mapFunc, matchingLogic);
+    let leftHasher;
+    let rightHasher;
 
-    let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-    let leftKeyFunc = keyFuncs.leftFunc;
-    let rightKeyFunc = keyFuncs.rightFunc;    
+    if (!isFunction(matcher)) {
+        leftHashser = matcher.leftHasher;
+        rightHasher = matcher.rightHasher;
+        matcher = matcher.matcher;
+    }
+    else {
+        let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
+        leftHasher = hashers.leftFunc;
+        rightHasher = hashers.rightFunc;
+    }
+
+    // If no hashers are passed, then do full-on loop join
+    if (!leftHasher && !rightHasher) {
+        yield* loopMerge(
+            leftData, 
+            rightData, 
+            matcher,
+            normalizeMapper(mapper, matcher),
+        );
+        return;
+    }
+
+    yield* hashMerge(
+        leftData,
+        rightData,
+        leftHasher,
+        rightHasher,
+        matcher,
+        normalizeMapper(mapper, matcher),
+        distinct 
+    );
+
+}
+
+function* hashMerge (
+    leftData, 
+    rightData, 
+    leftHasher,
+    rightHasher,
+    matcher,
+    mapper,
+    distinct
+) {
 
     let leftBuckets = 
-        new hashBuckets(leftKeyFunc, distinct)
+        new hashBuckets(leftHasher, distinct)
         .addItems(leftData);
 
     let rightBuckets = 
-        new hashBuckets(rightKeyFunc, distinct)
+        new hashBuckets(rightHasher, distinct)
         .addItems(rightData);
 
+    // convenience function for extracting a bucket
+    let removeBucket = (buckets, key) => {
+        let bucket = buckets.get(key);
+        buckets.delete(key);
+        return bucket;
+    };
+
     // yield matches and left unmatched
-    for(let key of leftBuckets.keys()) {
-
-        let leftBucket = leftBuckets.get(key);
-        let rightBucket = rightBuckets.get(key) || [undefined];
-
-        leftBuckets.delete(key);
-        rightBuckets.delete(key);
-
-        for(let leftItem of leftBucket)
-        for(let rightItem of rightBucket) {
-            let mapped = mapper(leftItem, rightItem);
-            if (mapped)
-                yield mapped;
-        }
-
-    }
+    for(let key of leftBuckets.keys()) 
+        yield* loopMerge(
+            removeBucket(leftBuckets, key), 
+            removeBucket(rightBuckets, key) || [undefined], 
+            matcher, 
+            mapper
+        );
 
     // yield right unmatched
-    for(let key of rightBuckets.keys()) {
-        let rightBucket = rightBuckets.get(key);
-        rightBuckets.delete(key);
-        for(let rightItem of rightBucket) {
+    for(let key of rightBuckets.keys()) 
+        for(let rightItem of removeBucket(rightBuckets, key)) {
             let mapped = mapper(undefined, rightItem);
             if (mapped)
                 yield mapped;
         }
+
+}
+
+function* loopMerge (
+    leftData, 
+    rightData,
+    matcher,
+    mapper
+) {
+
+    let leftHits = new Set();
+    let rightHits = new Set();
+
+    for (let l in leftData)
+    for (let r in rightData) {
+        let leftItem = leftData[l];
+        let rightItem = rightData[r];
+        if (leftItem == undefined || rightItem == undefined)
+            continue;
+        if (matcher(leftItem, rightItem)) {
+            leftHits.add(l);
+            rightHits.add(r);
+            let mapped = mapper(leftItem, rightItem);
+            if (mapped)
+                yield mapped;
+        }
+    }
+
+    for (let l in leftData) {
+        if (leftHits.has(l))
+            continue;
+        let mapped = mapper(leftData[l], undefined);
+        if (mapped)
+            yield mapped;
+    }
+
+    for (let r in rightData) {
+        if (rightHits.has(r))
+            continue;
+        let mapped = mapper(undefined, rightData[r]);
+        if (mapped)
+            yield mapped;
     }
 
 }
@@ -1182,13 +1188,13 @@ class dataset {
         return ds;
     }    
 
-    merge (incoming, matchingLogic, mapper, onDuplicate) {
+    merge (incoming, matchingLogic, mapper, distinct) {
         return new dataset([...merge (
             this.data, 
             incoming, 
             matchingLogic, 
             mapper, 
-            onDuplicate
+            distinct
         )]);
     }
 
@@ -1627,10 +1633,13 @@ class FluentDB {
             .data;
     }
 
-    // Execute a function on a dataset.  Determine which 
-    // dataset by looking at the first parameter, which
-    // should be a function, and matching the parameters
-    // of the function to dataset names.
+    // - Execute a function on a dataset, basically a proxy,
+    //   but you don't know what the target is.
+    // - Parse ...args -- which can be broken down into 
+    //   targetDsName, lambda, ...otherArgs -- to identify
+    //   targetDsName, ...dataArgs, lambda, ...otherArgs.
+    // - If targetDsName is not present, it is implied by
+    //   lambda.   
     _callOnDs(funcName, ...args) {
 
         // User parameters should take the form of 
