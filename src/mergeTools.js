@@ -134,60 +134,6 @@ function* loopMerge (
 
 }
 
-
-export function* mergeOld (
-    leftData, 
-    rightData, 
-    matchingLogic, 
-    mapFunc, 
-    distinct
-) {
-
-    let mapper = normalizeMapper(mapFunc, matchingLogic);
-
-    let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-    let leftKeyFunc = keyFuncs.leftFunc;
-    let rightKeyFunc = keyFuncs.rightFunc;    
-
-    let leftBuckets = 
-        new hashBuckets(leftKeyFunc, distinct)
-        .addItems(leftData);
-
-    let rightBuckets = 
-        new hashBuckets(rightKeyFunc, distinct)
-        .addItems(rightData);
-
-    // yield matches and left unmatched
-    for(let key of leftBuckets.keys()) {
-
-        let leftBucket = leftBuckets.get(key);
-        let rightBucket = rightBuckets.get(key) || [undefined];
-
-        leftBuckets.delete(key);
-        rightBuckets.delete(key);
-
-        for(let leftItem of leftBucket)
-        for(let rightItem of rightBucket) {
-            let mapped = mapper(leftItem, rightItem);
-            if (mapped)
-                yield mapped;
-        }
-
-    }
-
-    // yield right unmatched
-    for(let key of rightBuckets.keys()) {
-        let rightBucket = rightBuckets.get(key);
-        rightBuckets.delete(key);
-        for(let rightItem of rightBucket) {
-            let mapped = mapper(undefined, rightItem);
-            if (mapped)
-                yield mapped;
-        }
-    }
-
-}
-
 export function normalizeMapper (mapFunc, matchingLogic) {
 
     if (!mapFunc)
