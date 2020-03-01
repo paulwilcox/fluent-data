@@ -12,47 +12,47 @@ export function* merge (
 
     let leftHasher;
     let rightHasher;
+    let _mapper;
+    let algorithm;
 
-    if (!g.isFunction(matcher)) {
-        leftHashser = matcher.leftHasher;
-        rightHasher = matcher.rightHasher;
-        matcher = matcher.matcher;
+    if (!g.isFunction(mapper) && !g.isString(mapper)) {
+        leftHasher = mapper.leftHasher;
+        rightHasher = mapper.rightHasher;
+        _mapper = normalizeMapper(mapper.mapper, matcher);
+        algorithm = mapper.algorithm;
     }
     else {
         let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
         leftHasher = hashers.leftFunc;
         rightHasher = hashers.rightFunc;
+        _mapper = normalizeMapper(mapper, matcher);
     }
 
     // If no hashers are passed, then do full-on loop join
-    if (!leftHasher && !rightHasher) {
-        yield* loopMerge(
-            leftData, 
-            rightData, 
-            matcher,
-            normalizeMapper(mapper, matcher),
-        );
+    if (algorithm == 'loop') {
+        yield* loopMerge(leftData, rightData, matcher, _mapper);
         return;
     }
 
-    yield* hashMerge(
-        leftData,
-        rightData,
-        leftHasher,
-        rightHasher,
-        matcher,
-        normalizeMapper(mapper, matcher),
-        distinct 
-    );
+    if (algorithm == 'hash' || !algorithm)
+        yield* hashMerge(
+            leftData, 
+            rightData,
+            matcher,
+            leftHasher, 
+            rightHasher,
+            _mapper, 
+            distinct 
+        );
 
 }
 
 function* hashMerge (
     leftData, 
     rightData, 
+    matcher,
     leftHasher,
     rightHasher,
-    matcher,
     mapper,
     distinct
 ) {
