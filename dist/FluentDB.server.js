@@ -434,10 +434,18 @@ function* merge (
         algorithm = mapper.algorithm;
     }
     else {
-        let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
-        leftHasher = hashers.leftFunc;
-        rightHasher = hashers.rightFunc;
         _mapper = normalizeMapper(mapper, matcher);
+        let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
+        if (hashers == undefined && !algorithm) 
+            algorithm = 'loop';
+        else if (hashers == undefined && algorithm == 'hash') throw ` 
+            Cannot hash merge, "${matcher.toString()}" could 
+            not be parsed into functions that return objects 
+            for hashing.'`;
+        else {
+            leftHasher = hashers.leftFunc;
+            rightHasher = hashers.rightFunc;
+        }
     }
 
     // If no hashers are passed, then do full-on loop join
