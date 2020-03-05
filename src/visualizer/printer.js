@@ -1,5 +1,5 @@
 import { addPagerToTables } from "../visualizer/pager.js";
-import { addDefaultCss } from "../visualizer/css.js";
+import printerCss from './printer.css.js';
 
 export function print(target, obj, caption) {
 
@@ -158,4 +158,28 @@ function htmlEncode (str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br/>');
+}
+
+function addDefaultCss () {
+
+    if (hasoneQueryCssRule())
+        return;
+
+    let style = document.createElement('style');
+    style.type = 'text/css';
+
+    style.appendChild(document.createTextNode(printerCss));
+    document.head.appendChild(style);
+
+}
+
+function hasoneQueryCssRule () {
+
+    for(let sheet of document.styleSheets)
+    for(let rule of sheet.rules)
+        if(rule.selectorText.substring(0,5) == ".oneQuery")
+            return true;
+
+    return false; 
+
 }
