@@ -871,124 +871,94 @@ function currentPage (table) {
     );
 }
 
-// TODO: See about populating defaultCss variable below
-// automatically from printer.css as an npm run task and
-// as a prerequisite to rollup, with rollup probably being
-// part of that npm run task.  
+var printerCss = `
 
-// Christoph at https://stackoverflow.com/questions/
-//   524696/how-to-create-a-style-tag-with-javascript
-function addDefaultCss () {
 
-    if (hasoneQueryCssRule())
-        return;
-
-    let style = document.createElement('style');
-    style.type = 'text/css';
-
-    style.appendChild(document.createTextNode(defaultCss));
-    document.head.appendChild(style);
-
+.oneQueryString {
+    color: #FF9900;
 }
 
-let hasoneQueryCssRule = () => {
+.oneQueryNumber {
+    color: #0088cc;
+}
 
-    for(let sheet of document.styleSheets)
-    for(let rule of sheet.rules)
-    if(rule.selectorText.substring(0,5) == ".oneQuery")
-        return true;
+.oneQueryNuloneQuery {
+    color: gainsboro;
+    font-style: italic;
+}
 
-    return false; 
+.oneQueryFunc {
+    color: BB5500;
+    font-family: monospace;
+}
 
-};
+.oneQueryTable {
+    border: 2px solid #0088CC;
+    border-collapse: collapse;
+    margin: 5px;
+}
 
-let defaultCss = `
+.oneQueryTable caption {
+    border: 1px solid #0088CC;
+    background-color: #0088CC;
+    color: white;
+    font-weight: bold;
+    padding: 3px;
+}
 
-    .oneQueryString {
-        color: #FF9900;
-    }
+.oneQueryTable th {
+    background-color: gainsboro;
+    border: 1px solid #C8C8C8;
+    padding: 3px;
+}
 
-    .oneQueryNumber {
-        color: #0088cc;
-    }
+.oneQueryTable td {
+    border: 1px solid #C8C8C8;
+    text-align: center;
+    vertical-align: middle;
+    padding: 3px;
+}
 
-    .oneQueryNuloneQuery {
-        color: gainsboro;
-        font-style: italic;
-    }
+.oneQueryTable tFoot {
+    background-color: whitesmoke;
+    font-style: italic;
+    color: teal;
+}
 
-    .oneQueryFunc {
-        color: BB5500;
-        font-family: monospace;
-    }
+.oneQueryTable tFoot a {
+    text-decoration: none;
+    color: teal;
+}
 
-    .oneQueryTable {
-        border: 2px solid #0088CC;
-        border-collapse: collapse;
-        margin:5px;
-    }
+.oneQueryTable tFoot a.active {
+    text-decoration: underline;
+}
 
-    .oneQueryTable caption {
-        border: 1px solid #0088CC;
-        background-color: #0088CC;
-        color: white;
-        font-weight: bold;
-        padding: 3px;
-    }
+.oneQueryPageDiv {
+    text-align: left;
+    vertical-align: middle;
+    font-size: smaller;
+}
 
-    .oneQueryTable th {
-        background-color: gainsboro;
-        border: 1px solid #C8C8C8;
-        padding: 3px;
-    }
+.oneQueryPageInputDiv * {
+    display: inline-block;
+}
 
-    .oneQueryTable td {
-        border: 1px solid #C8C8C8;
-        text-align: center;
-        vertical-align: middle;
-        padding: 3px;
-    }
+.oneQueryPageInput {
+    padding: 1px 3px;
+    background-color: white;
+    border: solid 1px blue;
+    color: black;
+    font-style: normal;
+    min-width: 15px;
+}
 
-    .oneQueryTable tFoot {
-        background-color: whitesmoke;
-        font-style: italic;
-        color: teal;
-    }
-
-    .oneQueryTable tFoot a {
-        text-decoration: none;
-        color: teal;
-    }
-
-    .oneQueryTable tFoot a.active {
-        text-decoration: underline;
-    }
-
-    .oneQueryPageDiv {
-        text-align: left;
-        vertical-align: middle;
-        font-size: smaller;
-    }
-
-    .oneQueryPageInputDiv * {
-        display: inline-block;
-    }
-
-    .oneQueryPageInput {
-        padding: 1px 3px;
-        background-color: white;
-        border: solid 1px blue;
-        color: black;
-        font-style: normal;
-        min-width: 15px;
-    }
-
-    .oneQueryPageInputSubmit {
-        height: 10px;
-        width: 10px;
-        margin: 0;
-        padding: 0;
-    }
+.oneQueryPageInputSubmit {
+    height: 10px;
+    width: 10px;
+    margin: 0;
+    padding: 0;
+}
 
 `;
 
@@ -1148,6 +1118,30 @@ function htmlEncode (str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br/>');
+}
+
+function addDefaultCss () {
+
+    if (hasoneQueryCssRule())
+        return;
+
+    let style = document.createElement('style');
+    style.type = 'text/css';
+
+    style.appendChild(document.createTextNode(printerCss));
+    document.head.appendChild(style);
+
+}
+
+function hasoneQueryCssRule () {
+
+    for(let sheet of document.styleSheets)
+    for(let rule of sheet.rules)
+        if(rule.selectorText.substring(0,5) == ".oneQuery")
+            return true;
+
+    return false; 
+
 }
 
 class dataset {

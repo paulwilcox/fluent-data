@@ -22,19 +22,14 @@ function test () {
         (x,y) => x.a == y.a || y.b > 0
     ];
 
-    let expected = [
-        {
-            original: (x,y) => x.a == y.a && x.b == y.b,
-            leftExpect: x => ({x0: x.a, x1: x.b}),
-            rightExpect: y => ({x0: y.a, y0: y.b}),
-        },
-        {
-            original: x.a == y.a || x.a == y.b,
-            leftExpect: x => [{x0: x.a}, {x0: x.a}],
-            rightExpect: y => [{x0: y.a}, {x0: y.b}],
-            loopExpect: (x,y,matchResults) => matchResults[0] || matchResults[1]
-        }
-    ]
+    /*
+
+        - If there are any || at the top level, loop join only
+        - Any parentheses are not part of the hash part
+        - ==, ===, >=, and <= are okay for hash part
+        - Any comparison not between left and right not part of the hash part
+
+    */
 
     for(let lambdaIx in lambdas) {
         let funcs = objCreate(lambdas[lambdaIx]) || {};
