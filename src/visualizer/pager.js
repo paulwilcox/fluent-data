@@ -1,10 +1,6 @@
-
 /*
     jsFiddle paging:
-
-    anushree
-   - https://stackoverflow.com/questions/19605078/
-        how-to-use-pagination-on-html-tables
+   - https://stackoverflow.com/questions/19605078
    - https://jsfiddle.net/u9d1ewsh
 */
 
@@ -34,10 +30,13 @@ export function addPagerToTable(
 
     table.rowsPerPage = rowsPerPage;
     table.aTagMax = aTagMax;
-    let pages = numPages(table);
-    pageInputThreshold = pageInputThreshold || aTagMax;
+    table.pageInputThreshold = pageInputThreshold || aTagMax;
+    table.pages = Math.ceil( 
+        table.querySelectorAll(':scope > tBody > tr').length
+        / rowsPerPage
+    );    
 
-    if(pages == 1)
+    if(table.pages == 1)
         return;
 
     let colCount = 
@@ -50,12 +49,11 @@ export function addPagerToTable(
         </td>
     `;
 
-    let pageDiv = table.querySelector('.oneQueryPageDiv');
-    insertPageLinks(pageDiv, pages);
-    //insertPageInput(pageDiv, pages, pageInputThreshold);
-    //addPageInputListeners(table);
+    insertPageLinks(table);
+    insertPageInput(table);
+    addPageInputListeners(table);
 
-    changeToPage(table, 1, /*rowsPerPage,*/ pages/*, aTagMax*/);
+    changeToPage(table, 1);
 
 }
 
@@ -78,29 +76,24 @@ function anchorOnClick(e) {
 
     let table = e.target.closest('.oneQueryTable')
     let cPage = currentPage(table);
-    let pages = numPages(table);
     let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
     let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
     let rel = e.target.rel;
 
     let toPage = 
-        (hasLt && cPage == 1) ? pages
-        : (hasGt && cPage == pages) ? 1
+        (hasLt && cPage == 1) ? table.pages
+        : (hasGt && cPage == table.pages) ? 1
         : (hasLt && rel < 0) ? cPage - 1
         : (hasGt && rel < 0) ? cPage + 1
         : parseInt(rel) + 1;
 
-    changeToPage(
-        table, 
-        toPage,  
-        //rowsPerPage,
-        pages/*,
-        aTagMax*/
-    );
+    changeToPage(table, toPage);
     
 }
 
-function insertPageLinks(pageDiv, numPages, aTagMax) {
+function insertPageLinks(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
 
     let insertA = (rel,innerHtml) =>
         pageDiv.insertAdjacentHTML(
@@ -111,17 +104,19 @@ function insertPageLinks(pageDiv, numPages, aTagMax) {
     insertA(0,'<');
     insertA(-1,'<');
 
-    for(let page = 1; page <= numPages; page++) 
+    for(let page = 1; page <= table.pages; page++) 
         insertA(page - 1,page);
 
     insertA(-1,'>');
-    insertA(numPages - 1,'>');
+    insertA(table.pages - 1,'>');
 
 }
-/*
-function insertPageInput(pageDiv, numPages, pageInputThreshold) {
 
-    if (numPages < pageInputThreshold)
+function insertPageInput(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
+
+    if (table.pages < table.pageInputThreshold)
         return;
 
     pageDiv.insertAdjacentHTML(
@@ -132,19 +127,19 @@ function insertPageInput(pageDiv, numPages, pageInputThreshold) {
                 <div contenteditable='true' class='oneQueryPageInput'>1</div>
                 <button class='oneQueryPageInputSubmit'></button>
             </div>
-            <label class='oneQueryPageRatio'>${numPages} pages</label>
+            <label class='oneQueryPageRatio'>${table.pages} pages</label>
         `
     );
 
 }
-*/
+
 function showInputDiv (tbl, show) {
     if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
         return;
     tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = show ? 'inline-block' : 'none';
     tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = show ? 'none' : 'inline-block';
 }
-/*
+
 function addPageInputListeners (table) {
 
     if (!table.tFoot.querySelector('.oneQueryPageInputDiv'))
@@ -206,14 +201,8 @@ function addPageInputListeners (table) {
     );    
 
 }
-*/
-function changeToPage(
-    table, 
-    page, 
-    //rowsPerPage, 
-    numPages/*, 
-    aTagMax*/
-) {
+
+function changeToPage(table, page) {
 
     let startItem = (page - 1) * table.rowsPerPage;
     let endItem = startItem + table.rowsPerPage;
@@ -254,9 +243,4 @@ function currentPage (table) {
     return parseInt(
         table.querySelector('.oneQueryPageDiv a.active').innerHTML
     );
-}
-
-function numPages (table) {
-    let tBodyRows = table.querySelectorAll(':scope > tBody > tr');
-    return Math.ceil(tBodyRows.length/table.rowsPerPage);
 }
