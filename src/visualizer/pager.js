@@ -11,12 +11,11 @@ export function addPagerToTables(
     pageInputThreshold = null
 ) {
 
-    tables = 
-        typeof tables == "string"
+    tables = typeof tables == "string"
         ? document.querySelectorAll(tables)
         : tables;
 
-    for (let table of Array.from(tables)) 
+    for (let table of [...tables]) 
         addPagerToTable(table, rowsPerPage, aTagMax, pageInputThreshold);
 
 }
@@ -28,15 +27,15 @@ export function addPagerToTable(
     pageInputThreshold = null
 ) {
 
-    table.rowsPerPage = rowsPerPage;
-    table.aTagMax = aTagMax;
-    table.pageInputThreshold = pageInputThreshold || aTagMax;
-    table.pages = Math.ceil( 
+    tableSet(table, 'rowsPerPage', rowsPerPage);
+    tableSet(table, 'aTagMax', aTagMax);
+    tableSet(table, 'pageInputThreshold', pageInputThreshold || aTagMax);
+    tableSet(table, 'pages', Math.ceil( 
         table.querySelectorAll(':scope > tBody > tr').length
         / rowsPerPage
-    );    
+    ));    
 
-    if(table.pages == 1)
+    if(tableGet(table, 'pages') == 1)
         return;
 
     let colCount = 
@@ -52,7 +51,6 @@ export function addPagerToTable(
     insertPageLinks(table);
     insertPageInput(table);
     addPageInputListeners(table);
-
     changeToPage(table, 1);
 
 }
@@ -88,7 +86,7 @@ function anchorOnClick(e) {
         : parseInt(rel) + 1;
 
     changeToPage(table, toPage);
-    
+
 }
 
 function insertPageLinks(table) {
@@ -104,11 +102,11 @@ function insertPageLinks(table) {
     insertA(0,'<');
     insertA(-1,'<');
 
-    for(let page = 1; page <= table.pages; page++) 
+    for(let page = 1; page <= tableGet(table, 'pages'); page++) 
         insertA(page - 1,page);
 
     insertA(-1,'>');
-    insertA(table.pages - 1,'>');
+    insertA(tableGet(table, 'pages') - 1,'>');
 
 }
 
@@ -116,7 +114,7 @@ function insertPageInput(table) {
 
     let pageDiv = table.querySelector('.oneQueryPageDiv');
 
-    if (table.pages < table.pageInputThreshold)
+    if (tableGet(table, 'pages') < tableGet(table, 'pageInputThreshold'))
         return;
 
     pageDiv.insertAdjacentHTML(
@@ -127,7 +125,9 @@ function insertPageInput(table) {
                 <div contenteditable='true' class='oneQueryPageInput'>1</div>
                 <button class='oneQueryPageInputSubmit'></button>
             </div>
-            <label class='oneQueryPageRatio'>${table.pages} pages</label>
+            <label class='oneQueryPageRatio'>
+                ${tableGet(table, 'pages')} pages
+            </label>
         `
     );
 
@@ -136,8 +136,10 @@ function insertPageInput(table) {
 function showInputDiv (tbl, show) {
     if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
         return;
-    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = show ? 'inline-block' : 'none';
-    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = show ? 'none' : 'inline-block';
+    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = 
+        show ? 'inline-block' : 'none';
+    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = 
+        show ? 'none' : 'inline-block';
 }
 
 function addPageInputListeners (table) {
@@ -147,65 +149,45 @@ function addPageInputListeners (table) {
 
     let listen = (selector, event, callback) => 
         table.querySelector(selector)
-            .addEventListener(event, callback); 
+        .addEventListener(event, callback); 
 
-    table.addEventListener(
-        'mouseleave',
-        e => {
-            showInputDiv(e.target, false);
-            table.querySelector('.oneQueryPageInput').innerHTML = "";
-        }
-    );
+    table.addEventListener('mouseleave', e => {
+        showInputDiv(e.target, false);
+        table.querySelector('.oneQueryPageInput').innerHTML = "";
+    });
 
-    listen(
-        '.oneQueryPageRatio',
-        'mouseenter',
+    listen('.oneQueryPageRatio', 'mouseenter',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageRatio', 
-        'click',
+    listen('.oneQueryPageRatio', 'click',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageInput',
-        'mouseenter',
-        e => table.querySelector('.oneQueryPageInput').innerHTML = ""
+    listen('.oneQueryPageInput', 'mouseenter',
+        e => table.querySelector('.oneQueryPageInput').innerHTML = ''
     );
 
-    listen(
-        '.oneQueryPageInputSubmit',
-        'click',
-        e => {
+    listen('.oneQueryPageInputSubmit', 'click', e => {
 
-            let pInput = table.querySelector('.oneQueryPageInput');
-            let desiredPage = parseInt(pInput.innerHTML);
+        let pInput = table.querySelector('.oneQueryPageInput');
+        let desiredPage = parseInt(pInput.innerHTML);
 
-            if (isNaN(desiredPage)) {
-                pInput.innerHTML = "";
-                return;
-            }
-
-            changeToPage(
-                table,
-                desiredPage,
-                rowsPerPage,
-                numPages,
-                pageButtonDeviation
-            );
-
+        if (isNaN(desiredPage)) {
+            pInput.innerHTML = '';
+            return;
         }
 
-    );    
+        changeToPage(table, desiredPage);
+
+    });    
 
 }
 
 function changeToPage(table, page) {
 
-    let startItem = (page - 1) * table.rowsPerPage;
-    let endItem = startItem + table.rowsPerPage;
+    let startItem = (page - 1) * tableGet(table, 'rowsPerPage');
+    let endItem = startItem + tableGet(table, 'rowsPerPage');
     let pageAs = table.querySelectorAll('.oneQueryPageDiv a');
     let tBodyRows = [...table.tBodies].reduce((a,b) => a.concat(b)).rows;
 
@@ -214,19 +196,15 @@ function changeToPage(table, page) {
         let a = pageAs[pix];
         let aText = pageAs[pix].innerHTML;
         let aPage = parseInt(aText);
+        let halfMax = Math.ceil(tableGet(table, 'aTagMax') / 2.0);
 
-        if (page == aPage)
-            a.classList.add('active');
-        else 
-            a.classList.remove('active');
+        page == aPage
+            ? a.classList.add('active')
+            : a.classList.remove('active');
 
         a.style.display =
-            (
-                    aPage > page - Math.ceil(table.aTagMax / 2.0) 
-                && aPage < page + Math.ceil(table.aTagMax / 2.0)
-            )
-            || isNaN(aPage) 
-            ? 'inline-block'
+            isNaN(aPage) ? 'inline-block'
+            : aPage > page - halfMax && aPage < page + halfMax ? 'inline-block'
             : 'none';
 
         for (let trix = 0; trix < tBodyRows.length; trix++) 
@@ -243,4 +221,19 @@ function currentPage (table) {
     return parseInt(
         table.querySelector('.oneQueryPageDiv a.active').innerHTML
     );
+}
+
+function tableSet (
+    table,
+    dataAttributeName, 
+    value
+) {
+    table.setAttribute(`data-${dataAttributeName}`, value);
+}
+
+function tableGet(
+    table,
+    dataAttributeName
+) { 
+    return parseInt(table.getAttribute(`data-${dataAttributeName}`));
 }
