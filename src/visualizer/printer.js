@@ -1,7 +1,10 @@
-import { addPagerToTables } from "../visualizer/pager.js";
 import printerCss from './printer.css.js';
+import { addPagerToTables, addAnchorClickEvents } from './pager.js';
 
 export function print(target, obj, caption) {
+
+    addDefaultCss();
+    addAnchorClickEvents();
 
     document.querySelector(target).innerHTML +=
         makeHtml(obj, caption);
@@ -11,9 +14,7 @@ export function print(target, obj, caption) {
         .querySelectorAll('.oneQueryTable');
 
     if (maybeTables.length > 0)
-        addPagerToTables(maybeTables);
-
-    addDefaultCss();
+        addPagerToTables(maybeTables);        
 
 }
 
