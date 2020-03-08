@@ -614,6 +614,101 @@ function parametersAreEqual (a,b) {
 
 }
 
+class dataset {
+
+    constructor(data) {
+        this.data = data;
+    }
+
+    map (func) {    
+        return recurse (
+            data => data.map(noUndefinedForFunc(func)),
+            this.data, 
+        );
+    }
+
+    filter (func) {    
+        return recurse (
+            data => data.filter(func),
+            this.data, 
+        );
+    }
+
+    sort (func) {
+
+        let params = parser.parameters(func);
+
+        let outerFunc = 
+            params.length > 1 
+            ? data => data.sort(func)
+            : data => quickSort(data, func);
+        
+        return recurse(outerFunc, this.data);
+
+    } 
+
+    group (func) {
+        let b = new hashBuckets(func)
+            .addItems(this.data)
+            .getBuckets();
+        return new dataset(b);
+    }
+
+    reduce (func) {
+        let outerFunc = data => runEmulators(data, func);
+        let ds = recurse(outerFunc, this.data);
+        return ds;
+    }    
+
+    merge (incoming, matchingLogic, mapper, distinct) {
+        return new dataset([...merge (
+            this.data, 
+            incoming, 
+            matchingLogic, 
+            mapper, 
+            distinct
+        )]);
+    }
+
+    print (func, caption, target) {
+
+        let data = recurse (
+            data => data.map(noUndefinedForFunc(func)),
+            this.data, 
+        ).data;
+
+        /*if (target) 
+            prn(target, data, caption)*/
+        if (target && _.htmlPrinter)
+            _.htmlPrinter(target, data, caption);
+        else if(caption)
+            console.log(caption, data); 
+        else 
+            console.log(data); 
+
+        return this;
+        
+    }
+
+}
+
+
+function recurse (func, data) {
+
+    let isNested = Array.isArray(data[0]);
+
+    if (!isNested) 
+        return new dataset(func(data));    
+
+    let output = [];
+
+    for (let nested of data)  
+        output.push(func(nested));
+
+    return new dataset(output);
+
+}
+
 var printerCss = `
 
 
@@ -1125,99 +1220,6 @@ function hasoneQueryCssRule () {
             return true;
 
     return false; 
-
-}
-
-class dataset {
-
-    constructor(data) {
-        this.data = data;
-    }
-
-    map (func) {    
-        return recurse (
-            data => data.map(noUndefinedForFunc(func)),
-            this.data, 
-        );
-    }
-
-    filter (func) {    
-        return recurse (
-            data => data.filter(func),
-            this.data, 
-        );
-    }
-
-    sort (func) {
-
-        let params = parser.parameters(func);
-
-        let outerFunc = 
-            params.length > 1 
-            ? data => data.sort(func)
-            : data => quickSort(data, func);
-        
-        return recurse(outerFunc, this.data);
-
-    } 
-
-    group (func) {
-        let b = new hashBuckets(func)
-            .addItems(this.data)
-            .getBuckets();
-        return new dataset(b);
-    }
-
-    reduce (func) {
-        let outerFunc = data => runEmulators(data, func);
-        let ds = recurse(outerFunc, this.data);
-        return ds;
-    }    
-
-    merge (incoming, matchingLogic, mapper, distinct) {
-        return new dataset([...merge (
-            this.data, 
-            incoming, 
-            matchingLogic, 
-            mapper, 
-            distinct
-        )]);
-    }
-
-    print (func, caption, target) {
-
-        let data = recurse (
-            data => data.map(noUndefinedForFunc(func)),
-            this.data, 
-        ).data;
-
-        if (target) 
-            print(target, data, caption);
-        else if(caption)
-            console.log(caption, data); 
-        else 
-            console.log(data); 
-
-        return this;
-        
-    }
-
-}
-
-
-function recurse (func, data) {
-
-    let isNested = Array.isArray(data[0]);
-
-    if (!isNested) 
-        return new dataset(func(data));    
-
-    let output = [];
-
-    for (let nested of data)  
-        output.push(func(nested));
-
-    return new dataset(output);
 
 }
 

@@ -4,7 +4,7 @@ import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import { merge as mrg } from './mergeTools.js';
-import { print as prn } from './visualizer/printer.js';
+import fluentDb from './FluentDB.js';
 
 export default class dataset {
 
@@ -69,8 +69,8 @@ export default class dataset {
             this.data, 
         ).data;
 
-        if (target) 
-            prn(target, data, caption)
+        if (target && fluentDb.htmlPrinter)
+            fluentDb.htmlPrinter(target, data, caption)
         else if(caption)
             console.log(caption, data) 
         else 

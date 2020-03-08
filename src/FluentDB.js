@@ -64,3 +64,5 @@ _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
 _.connector = connector;
 _.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
+
+
