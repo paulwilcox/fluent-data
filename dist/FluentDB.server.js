@@ -711,10 +711,7 @@ var printerCss = `
 
 /*
     jsFiddle paging:
-
-    anushree
-   - https://stackoverflow.com/questions/19605078/
-        how-to-use-pagination-on-html-tables
+   - https://stackoverflow.com/questions/19605078
    - https://jsfiddle.net/u9d1ewsh
 */
 
@@ -725,14 +722,13 @@ function addPagerToTables(
     pageInputThreshold = null
 ) {
 
-    tables = 
-        typeof tables == "string"
+    tables = typeof tables == "string"
         ? document.querySelectorAll(tables)
         : tables;
 
-    for (let table of Array.from(tables)) 
+    for (let table of [...tables]) 
         addPagerToTable(table, rowsPerPage, aTagMax, pageInputThreshold);
-    
+
 }
 
 function addPagerToTable(
@@ -742,19 +738,19 @@ function addPagerToTable(
     pageInputThreshold = null
 ) {
 
-    let tBodyRows = table.querySelectorAll(':scope > tBody > tr');
-    let numPages = Math.ceil(tBodyRows.length/rowsPerPage);
-    
-    if (pageInputThreshold == null) 
-        pageInputThreshold = aTagMax;
+    tableSet(table, 'rowsPerPage', rowsPerPage);
+    tableSet(table, 'aTagMax', aTagMax);
+    tableSet(table, 'pageInputThreshold', pageInputThreshold || aTagMax);
+    tableSet(table, 'pages', Math.ceil( 
+        table.querySelectorAll(':scope > tBody > tr').length
+        / rowsPerPage
+    ));    
 
-    if(numPages == 1)
+    if(tableGet(table, 'pages') == 1)
         return;
 
     let colCount = 
-        Array.from(
-            table.querySelector('tr').cells
-        )
+        [...table.querySelector('tr').cells]
         .reduce((a,b) => a + parseInt(b.colSpan), 0);
 
     table.createTFoot().insertRow().innerHTML = `
@@ -763,74 +759,100 @@ function addPagerToTable(
         </td>
     `;
 
-    let pageDiv = table.querySelector('.oneQueryPageDiv');
-    insertPageLinks(pageDiv, numPages);
-    //insertPageInput(pageDiv, numPages, pageInputThreshold);
-    //addPageInputListeners(table);
+    insertPageLinks(table);
+    insertPageInput(table);
+    addPageInputListeners(table);
+    changeToPage(table, 1);
 
-    changeToPage(table, 1, rowsPerPage, numPages, aTagMax);
-
-    
-
-    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a')) {
-        console.log({pageA});
-        pageA.onclick = "(e) => { e.preventDefault(); alert('x'); }";
-        pageA.addEventListener('click', e => {
-            e.preventDefault();
-            alert('here at "a" click');
-        });
-    }
-
-/*
-    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a'))
-        pageA.addEventListener(
-            'click', 
-            e => {
-
-                let cPage = currentPage(table);
-                let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
-                let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
-                let rel = e.target.rel;
-
-                let toPage = 
-                    (hasLt && cPage == 1) ? numPages
-                    : (hasGt && cPage == numPages) ? 1
-                    : (hasLt && rel < 0) ? cPage - 1
-                    : (hasGt && rel < 0) ? cPage + 1
-                    : parseInt(rel) + 1;
-
-                changeToPage(
-                    table, 
-                    toPage,  
-                    rowsPerPage,
-                    numPages,
-                    aTagMax
-                );
-
-            }
-        );
-*/
 }
 
-function insertPageLinks(pageDiv, numPages, aTagMax) {
+function addAnchorClickEvents () {
+
+    if (document.hasAnchorClickEvents)
+        return;
+
+    document.addEventListener('click', e => {
+        if (!e.target.classList.contains('.oneQueryAnchor'))
+            return;
+        anchorOnClick(e);
+    });
+
+    document.hasAnchorClickEvents = true;
+
+}
+
+function anchorOnClick(e) {
+
+    let table = e.target.closest('.oneQueryTable');
+    let cPage = currentPage(table);
+    let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
+    let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
+    let rel = e.target.rel;
+
+    let toPage = 
+        (hasLt && cPage == 1) ? table.pages
+        : (hasGt && cPage == table.pages) ? 1
+        : (hasLt && rel < 0) ? cPage - 1
+        : (hasGt && rel < 0) ? cPage + 1
+        : parseInt(rel) + 1;
+
+    changeToPage(table, toPage);
+
+}
+
+function insertPageLinks(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
 
     let insertA = (rel,innerHtml) =>
         pageDiv.insertAdjacentHTML(
             'beforeend',
-            `<a href='#' rel="${rel}">${innerHtml}</a> ` 
+            `<a href='#' rel="${rel}" class='.oneQueryAnchor'>${innerHtml}</a> ` 
         );
 
     insertA(0,'<');
     insertA(-1,'<');
 
-    for(let page = 1; page <= numPages; page++) 
+    for(let page = 1; page <= tableGet(table, 'pages'); page++) 
         insertA(page - 1,page);
 
     insertA(-1,'>');
-    insertA(numPages - 1,'>');
+    insertA(tableGet(table, 'pages') - 1,'>');
 
 }
-/*
+
+function insertPageInput(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
+
+    if (tableGet(table, 'pages') < tableGet(table, 'pageInputThreshold'))
+        return;
+
+    pageDiv.insertAdjacentHTML(
+        'beforeend',
+        `
+            <br/>
+            <div class='oneQueryPageInputDiv' style='display:none;'>
+                <div contenteditable='true' class='oneQueryPageInput'>1</div>
+                <button class='oneQueryPageInputSubmit'></button>
+            </div>
+            <label class='oneQueryPageRatio'>
+                ${tableGet(table, 'pages')} pages
+            </label>
+        `
+    );
+
+}
+
+function showInputDiv (tbl, show) {
+    if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
+        return;
+    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = 
+        show ? 'inline-block' : 'none';
+    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = 
+        show ? 'none' : 'inline-block';
+}
+
 function addPageInputListeners (table) {
 
     if (!table.tFoot.querySelector('.oneQueryPageInputDiv'))
@@ -838,71 +860,45 @@ function addPageInputListeners (table) {
 
     let listen = (selector, event, callback) => 
         table.querySelector(selector)
-            .addEventListener(event, callback); 
+        .addEventListener(event, callback); 
 
-    table.addEventListener(
-        'mouseleave',
-        e => {
-            showInputDiv(e.target, false);
-            table.querySelector('.oneQueryPageInput').innerHTML = "";
-        }
-    );
+    table.addEventListener('mouseleave', e => {
+        showInputDiv(e.target, false);
+        table.querySelector('.oneQueryPageInput').innerHTML = "";
+    });
 
-    listen(
-        '.oneQueryPageRatio',
-        'mouseenter',
+    listen('.oneQueryPageRatio', 'mouseenter',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageRatio', 
-        'click',
+    listen('.oneQueryPageRatio', 'click',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageInput',
-        'mouseenter',
-        e => table.querySelector('.oneQueryPageInput').innerHTML = ""
+    listen('.oneQueryPageInput', 'mouseenter',
+        e => table.querySelector('.oneQueryPageInput').innerHTML = ''
     );
 
-    listen(
-        '.oneQueryPageInputSubmit',
-        'click',
-        e => {
+    listen('.oneQueryPageInputSubmit', 'click', e => {
 
-            let pInput = table.querySelector('.oneQueryPageInput');
-            let desiredPage = parseInt(pInput.innerHTML);
+        let pInput = table.querySelector('.oneQueryPageInput');
+        let desiredPage = parseInt(pInput.innerHTML);
 
-            if (isNaN(desiredPage)) {
-                pInput.innerHTML = "";
-                return;
-            }
-
-            changeToPage(
-                table,
-                desiredPage,
-                rowsPerPage,
-                numPages,
-                pageButtonDeviation
-            );
-
+        if (isNaN(desiredPage)) {
+            pInput.innerHTML = '';
+            return;
         }
 
-    );    
+        changeToPage(table, desiredPage);
+
+    });    
 
 }
-*/
-function changeToPage(
-    table, 
-    page, 
-    rowsPerPage, 
-    numPages, 
-    aTagMax
-) {
 
-    let startItem = (page - 1) * rowsPerPage;
-    let endItem = startItem + rowsPerPage;
+function changeToPage(table, page) {
+
+    let startItem = (page - 1) * tableGet(table, 'rowsPerPage');
+    let endItem = startItem + tableGet(table, 'rowsPerPage');
     let pageAs = table.querySelectorAll('.oneQueryPageDiv a');
     let tBodyRows = [...table.tBodies].reduce((a,b) => a.concat(b)).rows;
 
@@ -911,19 +907,15 @@ function changeToPage(
         let a = pageAs[pix];
         let aText = pageAs[pix].innerHTML;
         let aPage = parseInt(aText);
+        let halfMax = Math.ceil(tableGet(table, 'aTagMax') / 2.0);
 
-        if (page == aPage)
-            a.classList.add('active');
-        else 
-            a.classList.remove('active');
+        page == aPage
+            ? a.classList.add('active')
+            : a.classList.remove('active');
 
         a.style.display =
-            (
-                    aPage > page - Math.ceil(aTagMax / 2.0) 
-                && aPage < page + Math.ceil(aTagMax / 2.0)
-            )
-            || isNaN(aPage) 
-            ? 'inline-block'
+            isNaN(aPage) ? 'inline-block'
+            : aPage > page - halfMax && aPage < page + halfMax ? 'inline-block'
             : 'none';
 
         for (let trix = 0; trix < tBodyRows.length; trix++) 
@@ -935,18 +927,32 @@ function changeToPage(
     }
 
 }
-/*
+
 function currentPage (table) {
     return parseInt(
         table.querySelector('.oneQueryPageDiv a.active').innerHTML
     );
 }
 
-*/
+function tableSet (
+    table,
+    dataAttributeName, 
+    value
+) {
+    table.setAttribute(`data-${dataAttributeName}`, value);
+}
+
+function tableGet(
+    table,
+    dataAttributeName
+) { 
+    return parseInt(table.getAttribute(`data-${dataAttributeName}`));
+}
 
 function print(target, obj, caption) {
 
     addDefaultCss();
+    addAnchorClickEvents();
 
     document.querySelector(target).innerHTML +=
         makeHtml(obj, caption);
@@ -956,7 +962,7 @@ function print(target, obj, caption) {
         .querySelectorAll('.oneQueryTable');
 
     if (maybeTables.length > 0)
-        addPagerToTables(maybeTables);
+        addPagerToTables(maybeTables);        
 
 }
 
@@ -1545,11 +1551,7 @@ class connectorIdb extends connector {
 
 }
 
-function $$(obj) { 
-    return new FluentDB().addDatasets(obj); 
-}
-
-class FluentDB {
+class database {
 
     constructor() {
         
@@ -1662,41 +1664,45 @@ class FluentDB {
 
 }
 
-$$.reducer = reducer;
-$$.runEmulators = runEmulators;
+function _(obj) { 
+    return new database().addDatasets(obj); 
+}
 
-$$.reducer($$, 'first', v => v, array => array.reduce((a,b) => a || b));
-$$.reducer($$, 'last', v => v, array => array.reduce((a,b) => b || a));
-$$.reducer($$, 'sum', v => v, array => array.reduce((a,b) => a + b));
-$$.reducer($$, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+_.reducer = reducer;
+_.runEmulators = runEmulators;
 
-$$.reducer($$, 'avg', v => v, array => {
+_.reducer(_, 'first', v => v, array => array.reduce((a,b) => a || b));
+_.reducer(_, 'last', v => v, array => array.reduce((a,b) => b || a));
+_.reducer(_, 'sum', v => v, array => array.reduce((a,b) => a + b));
+_.reducer(_, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+
+_.reducer(_, 'avg', v => v, array => {
 
     let agg = runEmulators(array, val => ({
-        sum: $$.sum(val), 
-        count: $$.count(val)     
+        sum: _.sum(val), 
+        count: _.count(val)     
     }));
 
     return agg.sum / agg.count
 
 });
 
-$$.reducer($$, 'mad', v => v, array => {
+_.reducer(_, 'mad', v => v, array => {
 
-    let agg = runEmulators(array, val => $$.avg(val));
+    let agg = runEmulators(array, val => _.avg(val));
 
     for (let ix in array)
         array[ix] = Math.abs(array[ix] - agg);
 
-    return runEmulators(array, val => $$.avg(val));
+    return runEmulators(array, val => _.avg(val));
     
 });
 
-$$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
+_.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
-        xAvg: $$.avg(row.x), 
-        yAvg: $$.avg(row.y) 
+        xAvg: _.avg(row.x), 
+        yAvg: _.avg(row.y) 
     }));
 
     for(let ix in data) 
@@ -1706,20 +1712,20 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
         };
 
     agg = runEmulators(data, row => ({
-        xyDiff: $$.sum(row.xDiff * row.yDiff), 
-        xDiffSq: $$.sum(row.xDiff ** 2),
-        yDiffSq: $$.sum(row.yDiff ** 2)    
+        xyDiff: _.sum(row.xDiff * row.yDiff), 
+        xDiffSq: _.sum(row.xDiff ** 2),
+        yDiffSq: _.sum(row.yDiff ** 2)    
     }));
 
     return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
     
 });
 
-$$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+_.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
-$$.connector = connector;
-$$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
+_.connector = connector;
+_.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
 
-$$.mongo = (collectionName, url) => new connectorMongo(collectionName, url);
+_.mongo = (collectionName, url) => new connectorMongo(collectionName, url);
 
-module.exports = $$;
+module.exports = _;

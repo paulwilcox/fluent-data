@@ -1,162 +1,47 @@
-import * as g from './general.js';
-import parser from './parser.js';
-import dataset from './dataset.js';
 import { reducer, runEmulators } from './reducer.js';
 import connector from './connector.js';
 import connectorIdb from './connectorIdb.js';
+import database from './database.js';
 
-export default function $$(obj) { 
-    return new FluentDB().addDatasets(obj); 
+export default function _(obj) { 
+    return new database().addDatasets(obj); 
 }
 
-class FluentDB {
+_.reducer = reducer;
+_.runEmulators = runEmulators;
 
-    constructor() {
-        
-        this.datasets = {};
+_.reducer(_, 'first', v => v, array => array.reduce((a,b) => a || b));
+_.reducer(_, 'last', v => v, array => array.reduce((a,b) => b || a));
+_.reducer(_, 'sum', v => v, array => array.reduce((a,b) => a + b));
+_.reducer(_, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
 
-        let funcsToAttach = [
-            'filter', 'map', 
-            'group', 'reduce', 'sort', 
-            'print', 'merge'
-        ];
-
-        for(let funcName of funcsToAttach) 
-            this[funcName] = (...args) => 
-                this._callOnDs(funcName, ...args); 
-
-    }
-
-    addDataset (key, data) { 
-        if (!data)
-            throw `Cannot pass ${key} as undefined in 'addDataset'`
-        this.datasets[key] = Array.isArray(data) 
-            ? new dataset(data) 
-            : data;
-        return this;
-    }    
-
-    addDatasets (obj) { 
-        for (let entry of Object.entries(obj)) 
-            this.addDataset(entry[0], entry[1]);
-        return this;
-    }
-
-    getDataset(arg) {
-        if (g.isString(arg))
-            return this.datasets[arg];
-        if (g.isFunction(arg)) {
-            let param = parser.parameters(arg)[0];
-            return this.datasets(param)[0];
-        }
-    }
-
-    getDatasets(arg) {
-
-        let datasets = [];
-        
-        if (g.isString(arg))
-            datasets.push(this.getDataset(arg));
-
-        else for (let param of parser.parameters(arg)) 
-            datasets.push(this.datasets[param]);
-        
-        return datasets.filter(ds => ds !== undefined);
-
-    }
-
-    // .map(), except return the dataset instead
-    // of the calling FluentDB.
-    get(funcOrKey) {
-        if (g.isString(funcOrKey))
-            return this.datasets[funcOrKey];
-        let key = parser.parameters(funcOrKey)[0];
-        return this
-            ._callOnDs('map', funcOrKey)
-            .datasets[key]
-            .data;
-    }
-
-    // - Execute a function on a dataset, basically a proxy,
-    //   but you don't know what the target is.
-    // - Parse ...args -- which can be broken down into 
-    //   targetDsName, lambda, ...otherArgs -- to identify
-    //   targetDsName, ...dataArgs, lambda, ...otherArgs.
-    // - If targetDsName is not present, it is implied by
-    //   lambda.   
-    _callOnDs(funcName, ...args) {
-
-        // User parameters should take the form of 
-        // 'targetDsName, lambda, ...args'.  But the user
-        // might omit 'targetDsName'.  If so, create one 
-        // now using the first parameter of 'lambda'.
-        if (g.isFunction(args[0])) {
-            let dsName = parser.parameters(args[0])[0];
-            args.unshift(dsName)
-        }
-
-        // The dataset name to load the result into.  
-        // The lambda to execute on a method of the dataset
-        // args is now the other args to execute on that method.
-        let targetDsName = args.shift(); 
-        let lambda = args.shift();
-
-        // Get the datasets referenced by 'lambda'.  The 
-        // first one you'll need the full dataset object,
-        // methods and all.  Subsequent ones you just want
-        // their data, to later pass to the first one.
-        let dataArgs = this.getDatasets(lambda);
-        let targetDs = dataArgs.shift(); 
-        dataArgs = dataArgs.map(ds => ds.data); 
-
-        // Execute the method on the target dataset 
-        this.datasets[targetDsName] = targetDs[funcName](
-            ...dataArgs, 
-            lambda, 
-            ...args
-        ); 
-
-        return this;  
-
-    }    
-
-}
-
-$$.reducer = reducer;
-$$.runEmulators = runEmulators;
-
-$$.reducer($$, 'first', v => v, array => array.reduce((a,b) => a || b));
-$$.reducer($$, 'last', v => v, array => array.reduce((a,b) => b || a));
-$$.reducer($$, 'sum', v => v, array => array.reduce((a,b) => a + b));
-$$.reducer($$, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
-
-$$.reducer($$, 'avg', v => v, array => {
+_.reducer(_, 'avg', v => v, array => {
 
     let agg = runEmulators(array, val => ({
-        sum: $$.sum(val), 
-        count: $$.count(val)     
+        sum: _.sum(val), 
+        count: _.count(val)     
     }));
 
     return agg.sum / agg.count
 
 });
 
-$$.reducer($$, 'mad', v => v, array => {
+_.reducer(_, 'mad', v => v, array => {
 
-    let agg = runEmulators(array, val => $$.avg(val));
+    let agg = runEmulators(array, val => _.avg(val));
 
     for (let ix in array)
         array[ix] = Math.abs(array[ix] - agg);
 
-    return runEmulators(array, val => $$.avg(val));
+    return runEmulators(array, val => _.avg(val));
     
 });
 
-$$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
+_.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
-        xAvg: $$.avg(row.x), 
-        yAvg: $$.avg(row.y) 
+        xAvg: _.avg(row.x), 
+        yAvg: _.avg(row.y) 
     }));
 
     for(let ix in data) 
@@ -166,16 +51,16 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
         };
 
     agg = runEmulators(data, row => ({
-        xyDiff: $$.sum(row.xDiff * row.yDiff), 
-        xDiffSq: $$.sum(row.xDiff ** 2),
-        yDiffSq: $$.sum(row.yDiff ** 2)    
+        xyDiff: _.sum(row.xDiff * row.yDiff), 
+        xDiffSq: _.sum(row.xDiff ** 2),
+        yDiffSq: _.sum(row.yDiff ** 2)    
     }));
 
     return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
     
 });
 
-$$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
+_.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
-$$.connector = connector;
-$$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
+_.connector = connector;
+_.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);

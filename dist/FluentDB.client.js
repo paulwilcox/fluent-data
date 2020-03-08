@@ -7,6 +7,80 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// rowMaker takes the passed in parameters 
+// and turns the into a row in the dataset.
+// In other words, it will shape your rows.
+let reducer = (obj, name, rowMaker, processor) => {
+    let p = processor;
+    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
+    return p;
+};
+
+// Aggregators such as 'sum' or 'avg' operate on
+// columnar data.  But the values passed to the
+// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
+// are point data.  'emulator' stores the row value,
+// but it also stores the the intented function (the 
+// one it emulates), for later loading into a master 
+// aggregators object.    
+class emulator {
+    constructor(processor, rowValue) {
+        this.rowValue = rowValue;
+        this.processor = processor;
+    }
+}
+
+// 'emulatorsFunc' is what the user will pass in.
+let runEmulators = function (
+    dataset,
+    emulatorsFunc
+) {
+
+    let keyStores = {};
+    let isNaked = false;
+
+    for (let row of dataset) {
+
+        let emulators = emulatorsFunc(row);
+        
+        if (emulators instanceof emulator) {
+            isNaked = true;
+            emulators = { x: emulators };
+        }
+
+        for (let key of Object.keys(emulators)) {
+
+            let rowValue = emulators[key].rowValue;
+
+            if (!keyStores[key]) 
+                keyStores[key] = {
+                    processor: emulators[key].processor,
+                    data: []
+                };
+
+            keyStores[key].data.push(rowValue);
+
+        }
+
+    }
+
+    for (let key of Object.keys(keyStores)) 
+        keyStores[key] = keyStores[key].processor(keyStores[key].data);
+
+    if (isNaked)
+        keyStores = keyStores.x;
+
+    return keyStores;
+
+};
+
+class connector {
+
+    import() { throw "Please override 'import'." }
+    merge() { throw "Please override 'merge'." }
+
+}
+
 let stringifyObject = obj => {
 
     // todo: find out if this is bad.  But for now it's
@@ -57,125 +131,6 @@ let noUndefined = obj => {
             delete result[key];
 
     return obj;
-
-};
-
-class parser {
-
-    // Parse function into argument names and body
-    constructor (func) {
-
-        this.parameters = [];
-        this.body = "";
-
-        let lr = this.splitLeftAndRight(func);
-
-        this.parameters = 
-            lr.left
-            .replace(/[()\s]/g, '')
-            .split(',');
-
-        this.body =
-            lr.right
-            .replace(/^\s*\{|\}\s*$/g,'')
-            .replace(/^\s*|\s*$/g,'');
-
-    }
-
-    splitLeftAndRight (func) {
-
-        let uncommented = 
-            func.toString() 
-            .replace(/[/][/].*$/mg,'') // strip single-line comments
-            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
-	
-        let arrowIx = uncommented.indexOf('=>');
-        let braceIx = uncommented.indexOf('{');	
-
-        if (arrowIx == -1 && braceIx == -1) {
-            console.trace();
-            throw "it seems that a non-function was passed to 'parser'";
-        }
-
-        let splitIx = 
-            braceIx == -1 ? arrowIx
-            : arrowIx == -1 ? braceIx
-            : arrowIx < braceIx ? arrowIx 
-            : braceIx;
-
-        let isArrow = splitIx == arrowIx;
-
-        let left = uncommented.slice(0,splitIx);
-        let right = uncommented.slice(splitIx);
-
-        if(isArrow)
-            right = right.slice(2); // get rid of the arrow
-        else {
-            let parenIx = left.indexOf('(');
-            left = left.slice(parenIx);
-        }
-        
-        return { left, right };
-
-    }
-
-}
-
-parser.parse = function (func) {
-    return new parser(func);
-};
-
-parser.parameters = function(func) {
-    return new parser(func).parameters;
-};
-
-// Converts (v,w) => v.a = w.a && v.b == w.b 
-// into v => { x0 = v.a, x1 = v.b }
-// and w => { x0 = w.a, x1 = w.b }
-parser.pairEqualitiesToObjectSelectors = function(func) {
-
-    let parsed = new parser(func);
-    let leftParam = parsed.parameters[0];
-    let rightParam = parsed.parameters[1];
-    let leftEqualities = [];
-    let rightEqualities = [];
-    let splitBodyByAnds = parsed.body.split(/&&|&/);
-
-    for (let aix in splitBodyByAnds) {
-
-        let andPart = splitBodyByAnds[aix];
-        let eqParts = andPart.split(/===|==|=/);
-        let leftEq;
-        let rightEq;
-
-        if (eqParts.length != 2)
-            return;
-
-        for (let eix in eqParts) {
-
-            let ep = eqParts[eix].trim();
-
-            if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                return;
-
-            if (ep.startsWith(`${leftParam}.`))
-                leftEq = ep;
-            else if (ep.startsWith(`${rightParam}.`))
-                rightEq = ep;
-            else
-                return; 
-
-        }	    
-
-        leftEqualities[aix] = `x${aix}: ${leftEq}`;
-        rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-    }
-
-    return {
-        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
-        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
-    };
 
 };
 
@@ -336,70 +291,122 @@ let decideOrder = (
 
 };
 
-// rowMaker takes the passed in parameters 
-// and turns the into a row in the dataset.
-// In other words, it will shape your rows.
-let reducer = (obj, name, rowMaker, processor) => {
-    let p = processor;
-    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
-    return p;
-};
+class parser {
 
-// Aggregators such as 'sum' or 'avg' operate on
-// columnar data.  But the values passed to the
-// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
-// are point data.  'emulator' stores the row value,
-// but it also stores the the intented function (the 
-// one it emulates), for later loading into a master 
-// aggregators object.    
-class emulator {
-    constructor(processor, rowValue) {
-        this.rowValue = rowValue;
-        this.processor = processor;
+    // Parse function into argument names and body
+    constructor (func) {
+
+        this.parameters = [];
+        this.body = "";
+
+        let lr = this.splitLeftAndRight(func);
+
+        this.parameters = 
+            lr.left
+            .replace(/[()\s]/g, '')
+            .split(',');
+
+        this.body =
+            lr.right
+            .replace(/^\s*\{|\}\s*$/g,'')
+            .replace(/^\s*|\s*$/g,'');
+
     }
+
+    splitLeftAndRight (func) {
+
+        let uncommented = 
+            func.toString() 
+            .replace(/[/][/].*$/mg,'') // strip single-line comments
+            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
+	
+        let arrowIx = uncommented.indexOf('=>');
+        let braceIx = uncommented.indexOf('{');	
+
+        if (arrowIx == -1 && braceIx == -1) {
+            console.trace();
+            throw "it seems that a non-function was passed to 'parser'";
+        }
+
+        let splitIx = 
+            braceIx == -1 ? arrowIx
+            : arrowIx == -1 ? braceIx
+            : arrowIx < braceIx ? arrowIx 
+            : braceIx;
+
+        let isArrow = splitIx == arrowIx;
+
+        let left = uncommented.slice(0,splitIx);
+        let right = uncommented.slice(splitIx);
+
+        if(isArrow)
+            right = right.slice(2); // get rid of the arrow
+        else {
+            let parenIx = left.indexOf('(');
+            left = left.slice(parenIx);
+        }
+        
+        return { left, right };
+
+    }
+
 }
 
-// 'emulatorsFunc' is what the user will pass in.
-let runEmulators = function (
-    dataset,
-    emulatorsFunc
-) {
+parser.parse = function (func) {
+    return new parser(func);
+};
 
-    let keyStores = {};
-    let isNaked = false;
+parser.parameters = function(func) {
+    return new parser(func).parameters;
+};
 
-    for (let row of dataset) {
+// Converts (v,w) => v.a = w.a && v.b == w.b 
+// into v => { x0 = v.a, x1 = v.b }
+// and w => { x0 = w.a, x1 = w.b }
+parser.pairEqualitiesToObjectSelectors = function(func) {
 
-        let emulators = emulatorsFunc(row);
-        
-        if (emulators instanceof emulator) {
-            isNaked = true;
-            emulators = { x: emulators };
-        }
+    let parsed = new parser(func);
+    let leftParam = parsed.parameters[0];
+    let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
 
-        for (let key of Object.keys(emulators)) {
+    for (let aix in splitBodyByAnds) {
 
-            let rowValue = emulators[key].rowValue;
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
 
-            if (!keyStores[key]) 
-                keyStores[key] = {
-                    processor: emulators[key].processor,
-                    data: []
-                };
+        if (eqParts.length != 2)
+            return;
 
-            keyStores[key].data.push(rowValue);
+        for (let eix in eqParts) {
 
-        }
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
+                return;
+
+            if (ep.startsWith(`${leftParam}.`))
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`))
+                rightEq = ep;
+            else
+                return; 
+
+        }	    
+
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
 
     }
 
-    for (let key of Object.keys(keyStores)) 
-        keyStores[key] = keyStores[key].processor(keyStores[key].data);
-
-    if (isNaked)
-        keyStores = keyStores.x;
-
-    return keyStores;
+    return {
+        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
+        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
+    };
 
 };
 
@@ -700,10 +707,7 @@ var printerCss = `
 
 /*
     jsFiddle paging:
-
-    anushree
-   - https://stackoverflow.com/questions/19605078/
-        how-to-use-pagination-on-html-tables
+   - https://stackoverflow.com/questions/19605078
    - https://jsfiddle.net/u9d1ewsh
 */
 
@@ -714,14 +718,13 @@ function addPagerToTables(
     pageInputThreshold = null
 ) {
 
-    tables = 
-        typeof tables == "string"
+    tables = typeof tables == "string"
         ? document.querySelectorAll(tables)
         : tables;
 
-    for (let table of Array.from(tables)) 
+    for (let table of [...tables]) 
         addPagerToTable(table, rowsPerPage, aTagMax, pageInputThreshold);
-    
+
 }
 
 function addPagerToTable(
@@ -731,19 +734,19 @@ function addPagerToTable(
     pageInputThreshold = null
 ) {
 
-    let tBodyRows = table.querySelectorAll(':scope > tBody > tr');
-    let numPages = Math.ceil(tBodyRows.length/rowsPerPage);
-    
-    if (pageInputThreshold == null) 
-        pageInputThreshold = aTagMax;
+    tableSet(table, 'rowsPerPage', rowsPerPage);
+    tableSet(table, 'aTagMax', aTagMax);
+    tableSet(table, 'pageInputThreshold', pageInputThreshold || aTagMax);
+    tableSet(table, 'pages', Math.ceil( 
+        table.querySelectorAll(':scope > tBody > tr').length
+        / rowsPerPage
+    ));    
 
-    if(numPages == 1)
+    if(tableGet(table, 'pages') == 1)
         return;
 
     let colCount = 
-        Array.from(
-            table.querySelector('tr').cells
-        )
+        [...table.querySelector('tr').cells]
         .reduce((a,b) => a + parseInt(b.colSpan), 0);
 
     table.createTFoot().insertRow().innerHTML = `
@@ -752,74 +755,100 @@ function addPagerToTable(
         </td>
     `;
 
-    let pageDiv = table.querySelector('.oneQueryPageDiv');
-    insertPageLinks(pageDiv, numPages);
-    //insertPageInput(pageDiv, numPages, pageInputThreshold);
-    //addPageInputListeners(table);
+    insertPageLinks(table);
+    insertPageInput(table);
+    addPageInputListeners(table);
+    changeToPage(table, 1);
 
-    changeToPage(table, 1, rowsPerPage, numPages, aTagMax);
-
-    
-
-    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a')) {
-        console.log({pageA});
-        pageA.onclick = "(e) => { e.preventDefault(); alert('x'); }";
-        pageA.addEventListener('click', e => {
-            e.preventDefault();
-            alert('here at "a" click');
-        });
-    }
-
-/*
-    for (let pageA of table.querySelectorAll('.oneQueryPageDiv a'))
-        pageA.addEventListener(
-            'click', 
-            e => {
-
-                let cPage = currentPage(table);
-                let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
-                let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
-                let rel = e.target.rel;
-
-                let toPage = 
-                    (hasLt && cPage == 1) ? numPages
-                    : (hasGt && cPage == numPages) ? 1
-                    : (hasLt && rel < 0) ? cPage - 1
-                    : (hasGt && rel < 0) ? cPage + 1
-                    : parseInt(rel) + 1;
-
-                changeToPage(
-                    table, 
-                    toPage,  
-                    rowsPerPage,
-                    numPages,
-                    aTagMax
-                );
-
-            }
-        );
-*/
 }
 
-function insertPageLinks(pageDiv, numPages, aTagMax) {
+function addAnchorClickEvents () {
+
+    if (document.hasAnchorClickEvents)
+        return;
+
+    document.addEventListener('click', e => {
+        if (!e.target.classList.contains('.oneQueryAnchor'))
+            return;
+        anchorOnClick(e);
+    });
+
+    document.hasAnchorClickEvents = true;
+
+}
+
+function anchorOnClick(e) {
+
+    let table = e.target.closest('.oneQueryTable');
+    let cPage = currentPage(table);
+    let hasLt = e.target.innerHTML.substring(0,3) == '&lt';
+    let hasGt = e.target.innerHTML.substring(0,3) == '&gt';
+    let rel = e.target.rel;
+
+    let toPage = 
+        (hasLt && cPage == 1) ? table.pages
+        : (hasGt && cPage == table.pages) ? 1
+        : (hasLt && rel < 0) ? cPage - 1
+        : (hasGt && rel < 0) ? cPage + 1
+        : parseInt(rel) + 1;
+
+    changeToPage(table, toPage);
+
+}
+
+function insertPageLinks(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
 
     let insertA = (rel,innerHtml) =>
         pageDiv.insertAdjacentHTML(
             'beforeend',
-            `<a href='#' rel="${rel}">${innerHtml}</a> ` 
+            `<a href='#' rel="${rel}" class='.oneQueryAnchor'>${innerHtml}</a> ` 
         );
 
     insertA(0,'<');
     insertA(-1,'<');
 
-    for(let page = 1; page <= numPages; page++) 
+    for(let page = 1; page <= tableGet(table, 'pages'); page++) 
         insertA(page - 1,page);
 
     insertA(-1,'>');
-    insertA(numPages - 1,'>');
+    insertA(tableGet(table, 'pages') - 1,'>');
 
 }
-/*
+
+function insertPageInput(table) {
+
+    let pageDiv = table.querySelector('.oneQueryPageDiv');
+
+    if (tableGet(table, 'pages') < tableGet(table, 'pageInputThreshold'))
+        return;
+
+    pageDiv.insertAdjacentHTML(
+        'beforeend',
+        `
+            <br/>
+            <div class='oneQueryPageInputDiv' style='display:none;'>
+                <div contenteditable='true' class='oneQueryPageInput'>1</div>
+                <button class='oneQueryPageInputSubmit'></button>
+            </div>
+            <label class='oneQueryPageRatio'>
+                ${tableGet(table, 'pages')} pages
+            </label>
+        `
+    );
+
+}
+
+function showInputDiv (tbl, show) {
+    if (!tbl.tFoot.querySelector('.oneQueryPageInputDiv'))
+        return;
+    tbl.tFoot.querySelector('.oneQueryPageInputDiv').style.display = 
+        show ? 'inline-block' : 'none';
+    tbl.tFoot.querySelector('.oneQueryPageRatio').style.display = 
+        show ? 'none' : 'inline-block';
+}
+
 function addPageInputListeners (table) {
 
     if (!table.tFoot.querySelector('.oneQueryPageInputDiv'))
@@ -827,71 +856,45 @@ function addPageInputListeners (table) {
 
     let listen = (selector, event, callback) => 
         table.querySelector(selector)
-            .addEventListener(event, callback); 
+        .addEventListener(event, callback); 
 
-    table.addEventListener(
-        'mouseleave',
-        e => {
-            showInputDiv(e.target, false);
-            table.querySelector('.oneQueryPageInput').innerHTML = "";
-        }
-    );
+    table.addEventListener('mouseleave', e => {
+        showInputDiv(e.target, false);
+        table.querySelector('.oneQueryPageInput').innerHTML = "";
+    });
 
-    listen(
-        '.oneQueryPageRatio',
-        'mouseenter',
+    listen('.oneQueryPageRatio', 'mouseenter',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageRatio', 
-        'click',
+    listen('.oneQueryPageRatio', 'click',
         e => showInputDiv(table, true)
     );
 
-    listen(
-        '.oneQueryPageInput',
-        'mouseenter',
-        e => table.querySelector('.oneQueryPageInput').innerHTML = ""
+    listen('.oneQueryPageInput', 'mouseenter',
+        e => table.querySelector('.oneQueryPageInput').innerHTML = ''
     );
 
-    listen(
-        '.oneQueryPageInputSubmit',
-        'click',
-        e => {
+    listen('.oneQueryPageInputSubmit', 'click', e => {
 
-            let pInput = table.querySelector('.oneQueryPageInput');
-            let desiredPage = parseInt(pInput.innerHTML);
+        let pInput = table.querySelector('.oneQueryPageInput');
+        let desiredPage = parseInt(pInput.innerHTML);
 
-            if (isNaN(desiredPage)) {
-                pInput.innerHTML = "";
-                return;
-            }
-
-            changeToPage(
-                table,
-                desiredPage,
-                rowsPerPage,
-                numPages,
-                pageButtonDeviation
-            );
-
+        if (isNaN(desiredPage)) {
+            pInput.innerHTML = '';
+            return;
         }
 
-    );    
+        changeToPage(table, desiredPage);
+
+    });    
 
 }
-*/
-function changeToPage(
-    table, 
-    page, 
-    rowsPerPage, 
-    numPages, 
-    aTagMax
-) {
 
-    let startItem = (page - 1) * rowsPerPage;
-    let endItem = startItem + rowsPerPage;
+function changeToPage(table, page) {
+
+    let startItem = (page - 1) * tableGet(table, 'rowsPerPage');
+    let endItem = startItem + tableGet(table, 'rowsPerPage');
     let pageAs = table.querySelectorAll('.oneQueryPageDiv a');
     let tBodyRows = [...table.tBodies].reduce((a,b) => a.concat(b)).rows;
 
@@ -900,19 +903,15 @@ function changeToPage(
         let a = pageAs[pix];
         let aText = pageAs[pix].innerHTML;
         let aPage = parseInt(aText);
+        let halfMax = Math.ceil(tableGet(table, 'aTagMax') / 2.0);
 
-        if (page == aPage)
-            a.classList.add('active');
-        else 
-            a.classList.remove('active');
+        page == aPage
+            ? a.classList.add('active')
+            : a.classList.remove('active');
 
         a.style.display =
-            (
-                    aPage > page - Math.ceil(aTagMax / 2.0) 
-                && aPage < page + Math.ceil(aTagMax / 2.0)
-            )
-            || isNaN(aPage) 
-            ? 'inline-block'
+            isNaN(aPage) ? 'inline-block'
+            : aPage > page - halfMax && aPage < page + halfMax ? 'inline-block'
             : 'none';
 
         for (let trix = 0; trix < tBodyRows.length; trix++) 
@@ -924,18 +923,32 @@ function changeToPage(
     }
 
 }
-/*
+
 function currentPage (table) {
     return parseInt(
         table.querySelector('.oneQueryPageDiv a.active').innerHTML
     );
 }
 
-*/
+function tableSet (
+    table,
+    dataAttributeName, 
+    value
+) {
+    table.setAttribute(`data-${dataAttributeName}`, value);
+}
+
+function tableGet(
+    table,
+    dataAttributeName
+) { 
+    return parseInt(table.getAttribute(`data-${dataAttributeName}`));
+}
 
 function print(target, obj, caption) {
 
     addDefaultCss();
+    addAnchorClickEvents();
 
     document.querySelector(target).innerHTML +=
         makeHtml(obj, caption);
@@ -945,7 +958,7 @@ function print(target, obj, caption) {
         .querySelectorAll('.oneQueryTable');
 
     if (maybeTables.length > 0)
-        addPagerToTables(maybeTables);
+        addPagerToTables(maybeTables);        
 
 }
 
@@ -1208,13 +1221,6 @@ function recurse (func, data) {
 
 }
 
-class connector {
-
-    import() { throw "Please override 'import'." }
-    merge() { throw "Please override 'merge'." }
-
-}
-
 class connectorIdb extends connector {
 
     constructor (storeName, dbName) {
@@ -1416,11 +1422,7 @@ class connectorIdb extends connector {
 
 }
 
-function $$(obj) { 
-    return new FluentDB().addDatasets(obj); 
-}
-
-class FluentDB {
+class database {
 
     constructor() {
         
@@ -1533,41 +1535,45 @@ class FluentDB {
 
 }
 
-$$.reducer = reducer;
-$$.runEmulators = runEmulators;
+function _(obj) { 
+    return new database().addDatasets(obj); 
+}
 
-$$.reducer($$, 'first', v => v, array => array.reduce((a,b) => a || b));
-$$.reducer($$, 'last', v => v, array => array.reduce((a,b) => b || a));
-$$.reducer($$, 'sum', v => v, array => array.reduce((a,b) => a + b));
-$$.reducer($$, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+_.reducer = reducer;
+_.runEmulators = runEmulators;
 
-$$.reducer($$, 'avg', v => v, array => {
+_.reducer(_, 'first', v => v, array => array.reduce((a,b) => a || b));
+_.reducer(_, 'last', v => v, array => array.reduce((a,b) => b || a));
+_.reducer(_, 'sum', v => v, array => array.reduce((a,b) => a + b));
+_.reducer(_, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+
+_.reducer(_, 'avg', v => v, array => {
 
     let agg = runEmulators(array, val => ({
-        sum: $$.sum(val), 
-        count: $$.count(val)     
+        sum: _.sum(val), 
+        count: _.count(val)     
     }));
 
     return agg.sum / agg.count
 
 });
 
-$$.reducer($$, 'mad', v => v, array => {
+_.reducer(_, 'mad', v => v, array => {
 
-    let agg = runEmulators(array, val => $$.avg(val));
+    let agg = runEmulators(array, val => _.avg(val));
 
     for (let ix in array)
         array[ix] = Math.abs(array[ix] - agg);
 
-    return runEmulators(array, val => $$.avg(val));
+    return runEmulators(array, val => _.avg(val));
     
 });
 
-$$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
+_.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
-        xAvg: $$.avg(row.x), 
-        yAvg: $$.avg(row.y) 
+        xAvg: _.avg(row.x), 
+        yAvg: _.avg(row.y) 
     }));
 
     for(let ix in data) 
@@ -1577,18 +1583,18 @@ $$.reducer($$, 'cor', (x,y) => ({ x, y }), data => {
         };
 
     agg = runEmulators(data, row => ({
-        xyDiff: $$.sum(row.xDiff * row.yDiff), 
-        xDiffSq: $$.sum(row.xDiff ** 2),
-        yDiffSq: $$.sum(row.yDiff ** 2)    
+        xyDiff: _.sum(row.xDiff * row.yDiff), 
+        xDiffSq: _.sum(row.xDiff ** 2),
+        yDiffSq: _.sum(row.yDiff ** 2)    
     }));
 
     return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
     
 });
 
-$$.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+_.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
-$$.connector = connector;
-$$.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
+_.connector = connector;
+_.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
 
-export default $$;
+export default _;
