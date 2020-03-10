@@ -1,18 +1,16 @@
-import { print as prn } from '../src/visualizer/printer.js';
+import { print } from '../node_modules/glimp/dist/glimp.js';
 
 async function test () {
 
+    $$.htmlPrinter = print;
     document.body.innerHTML += `<div id='result'></div><br/>`
-
-    $$.htmlPrinter = prn;
-
     let data = await sample('orders');
 
+
     let results = 
-        $$({
-            o: data.orders
-        })
-        .print(o => o, 'orders', '#result');
+        $$({o: data.orders})
+        .with(o => print('#result', o, 'orders'))
+        .with(o => console.log(o));
 
     return true;
 

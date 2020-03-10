@@ -3,7 +3,6 @@ import { MongoClient } from 'mongodb';
 import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 import parser from './parser.js';
-import { print as prn } from './visualizer/printer.js';
 import { normalizeMapper } from './mergeTools.js';
 
 export default class extends connector {
@@ -35,7 +34,8 @@ export default class extends connector {
 
     }
 
-    print(mapFunc, caption, target) {
+    // TODO: Do we need to implement .with() here as well?
+    print(mapFunc, caption) {
             
         this.client = this.client.then(async client => {
 
@@ -46,8 +46,8 @@ export default class extends connector {
                 .find()
                 .forEach(record => results.push(mapFunc(record)));
 
-            target ? prn(target, results, caption)
-                : caption ? console.log(caption, results) 
+            caption 
+                ? console.log(caption, results) 
                 : console.log(results);
 
             return client;

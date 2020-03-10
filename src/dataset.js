@@ -4,7 +4,7 @@ import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import { merge as mrg } from './mergeTools.js';
-import fluentDb from './FluentDB.js';
+//mport fluentDb from './FluentDB.js';
 
 export default class dataset {
 
@@ -62,22 +62,27 @@ export default class dataset {
         )]);
     }
 
-    print (func, caption, target) {
+    // TODO: with the addition of .with(), does it 
+    // make sense to have print anymore?
+    print (func, caption) {
 
         let data = recurse (
             data => data.map(g.noUndefinedForFunc(func)),
             this.data, 
         ).data;
 
-        if (target && fluentDb.htmlPrinter)
-            fluentDb.htmlPrinter(target, data, caption)
-        else if(caption)
+        if(caption)
             console.log(caption, data) 
         else 
             console.log(data); 
 
         return this;
         
+    }
+
+    with (func) {
+        func(this.data);
+        return this;
     }
 
 }

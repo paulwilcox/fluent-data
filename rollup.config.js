@@ -1,5 +1,4 @@
 import license from 'rollup-plugin-license';
-import fs from 'fs';
 
 // Run license() here, not in the objects of the exported 
 // array.  Otherwise, the third party licence file gets 
@@ -11,12 +10,6 @@ let licensePlugin = license({
         includePrivate: true
     }
 });
-
-let printerCss = fs.readFileSync('./src/visualizer/printer.css');
-fs.writeFileSync(
-    './src/visualizer/printer.css.js', 
-    `export default \`\n\n${printerCss}\n\n\``
-)
 
 export default [{
     input: 'src/FluentDB.server.js',

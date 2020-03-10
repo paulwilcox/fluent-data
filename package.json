@@ -41,9 +41,11 @@
   },
   "devDependencies": {
     "console.table": "^0.10.0",
+    "glimp": "0.0.3",
     "puppeteer": "^1.19.0",
     "rollup": "^1.32.0",
     "rollup-plugin-license": "^0.13.0",
-    "sampledb": "0.0.9"
+    "sampledb": "0.0.9",
+    "sctester": "0.0.21"
   }
 }

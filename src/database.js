@@ -11,7 +11,7 @@ export default class {
         let funcsToAttach = [
             'filter', 'map', 
             'group', 'reduce', 'sort', 
-            'print', 'merge'
+            'print', 'merge', 'with'
         ];
 
         for(let funcName of funcsToAttach) 

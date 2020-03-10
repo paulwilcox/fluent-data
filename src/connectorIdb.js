@@ -2,7 +2,6 @@ import connector from './connector.js';
 import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 import parser from './parser.js';
-import { print as prn } from './visualizer/printer.js';
 import { normalizeMapper } from './mergeTools.js';
 
 export default class extends connector {
@@ -35,15 +34,16 @@ export default class extends connector {
 
     }
 
-    print(mapFunc, caption, target) {
+    print(mapFunc, caption) {
             
         let results = [];
 
         return this.curse(cursor => {
 
             if (!cursor) {
-                target ? prn(target, results, caption)
-                    : caption ? console.log(caption, results) 
+                // TODO: Do I need to implement .with() here?
+                caption 
+                    ? console.log(caption, results) 
                     : console.log(results);
                 return this;
             }             
