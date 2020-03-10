@@ -4,7 +4,6 @@ import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import { merge as mrg } from './mergeTools.js';
-//mport fluentDb from './FluentDB.js';
 
 export default class dataset {
 
@@ -78,6 +77,10 @@ export default class dataset {
 
         return this;
         
+    }
+
+    get (func) {
+        return this.map(func).data;
     }
 
     with (func) {

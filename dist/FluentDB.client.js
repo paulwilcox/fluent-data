@@ -614,8 +614,6 @@ function parametersAreEqual (a,b) {
 
 }
 
-//mport fluentDb from './FluentDB.js';
-
 class dataset {
 
     constructor(data) {
@@ -688,6 +686,10 @@ class dataset {
 
         return this;
         
+    }
+
+    get (func) {
+        return this.map(func).data;
     }
 
     with (func) {
@@ -1030,7 +1032,9 @@ class database {
 }
 
 function _(obj) { 
-    return new database().addDatasets(obj); 
+    return Array.isArray(obj)
+        ? new dataset(obj)
+        : new database().addDatasets(obj); 
 }
 
 _.reducer = reducer;
