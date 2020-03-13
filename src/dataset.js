@@ -46,33 +46,14 @@ export default class dataset {
             .addItems(data)
             .getBuckets();
         return new dataset(
-            recurseForGroup(outerFunc, this.data)
+            recurse(outerFunc, this.data)
         );
     }
 
     ungroup (func) {
-
-        let _recurse = data => {
-        
-            let output = [];            
-            let isEnd = 
-                Array.isArray(data[0])
-                && !Array.isArray(data[0][0]);
-                    
-            if (!isEnd) 
-                for (let item of data)
-                    output.push(_recurse(item));
-            else 
-                for (let item of data)
-                for (let nested of item)
-                    output.push(func(nested));
-            
-            return output;
-
-        }
-
-        return new dataset(_recurse(this.data));
-
+        return new dataset(
+            recurseForUngroup(func, this.data)
+        );
     }
 
     reduce (func) {
@@ -135,7 +116,9 @@ export default class dataset {
 function recurse (func, data) {
 
     let output = [];
-    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
+    let isEnd = 
+        Array.isArray(data) && 
+        !Array.isArray(data[0]);
 
     if (!isEnd) {
         for (let item of data)
@@ -147,33 +130,22 @@ function recurse (func, data) {
 
 }
 
-function recurseForGroup (func, data) {
-
-    let output = [];
-    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
-
-    if (!isEnd) {
+function recurseForUngroup (func, data) {
+        
+    let output = [];            
+    let isEnd = 
+        Array.isArray(data) &&
+        Array.isArray(data[0]) && 
+        !Array.isArray(data[0][0]);
+            
+    if (!isEnd) 
         for (let item of data)
-            output.push(recurseForGroup(func, item));
-        return output;
-    }
+            output.push(recurseForUngroup(func, item));
     else 
-        return func(data);
-
-}
-
-function recurse2 (func, data) {
-
-    let isNested = Array.isArray(data[0]);
-
-    if (!isNested) 
-        return new dataset(func(data));    
-
-    let output = [];
-
-    for (let nested of data)  
-        output.push(func(nested));
-
-    return new dataset(output);
+        for (let item of data)
+        for (let nested of item)
+            output.push(func(nested));
+    
+    return output;
 
 }

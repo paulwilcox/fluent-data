@@ -666,33 +666,14 @@ class dataset {
             .addItems(data)
             .getBuckets();
         return new dataset(
-            recurseForGroup(outerFunc, this.data)
+            recurse(outerFunc, this.data)
         );
     }
 
     ungroup (func) {
-
-        let _recurse = data => {
-        
-            let output = [];            
-            let isEnd = 
-                Array.isArray(data[0])
-                && !Array.isArray(data[0][0]);
-                    
-            if (!isEnd) 
-                for (let item of data)
-                    output.push(_recurse(item));
-            else 
-                for (let item of data)
-                for (let nested of item)
-                    output.push(func(nested));
-            
-            return output;
-
-        };
-
-        return new dataset(_recurse(this.data));
-
+        return new dataset(
+            recurseForUngroup(func, this.data)
+        );
     }
 
     reduce (func) {
@@ -755,7 +736,9 @@ class dataset {
 function recurse (func, data) {
 
     let output = [];
-    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
+    let isEnd = 
+        Array.isArray(data) && 
+        !Array.isArray(data[0]);
 
     if (!isEnd) {
         for (let item of data)
@@ -767,18 +750,23 @@ function recurse (func, data) {
 
 }
 
-function recurseForGroup (func, data) {
-
-    let output = [];
-    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
-
-    if (!isEnd) {
+function recurseForUngroup (func, data) {
+        
+    let output = [];            
+    let isEnd = 
+        Array.isArray(data) &&
+        Array.isArray(data[0]) && 
+        !Array.isArray(data[0][0]);
+            
+    if (!isEnd) 
         for (let item of data)
-            output.push(recurseForGroup(func, item));
-        return output;
-    }
+            output.push(recurseForUngroup(func, item));
     else 
-        return func(data);
+        for (let item of data)
+        for (let nested of item)
+            output.push(func(nested));
+    
+    return output;
 
 }
 
