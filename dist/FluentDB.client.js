@@ -662,6 +662,31 @@ class dataset {
         return new recurse(outerFunc, this.data);
     }
 
+    ungroup (func) {
+
+        let _recurse = data => {
+        
+            let output = [];            
+            let isEnd = 
+                Array.isArray(data[0])
+                && !Array.isArray(data[0][0]);
+                    
+            if (!isEnd) 
+                for (let item of data)
+                    output.push(_recurse(item));
+            else 
+                for (let item of data)
+                for (let nested of item)
+                    output.push(func(nested));
+            
+            return output;
+
+        };
+
+        return new dataset(_recurse(this.data));
+
+    }
+
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
         let ds = recurse(outerFunc, this.data);
@@ -943,7 +968,7 @@ class database {
 
         let funcsToAttach = [
             'filter', 'map', 
-            'group', 
+            'group', 'ungroup', 
             'distinct', 'reduce', 
             'sort', 'print', 'merge', 'with'
         ];

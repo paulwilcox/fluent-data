@@ -10,7 +10,7 @@ export default class {
 
         let funcsToAttach = [
             'filter', 'map', 
-            'group', 
+            'group', 'ungroup', 
             'distinct', 'reduce', 
             'sort', 'print', 'merge', 'with'
         ];
