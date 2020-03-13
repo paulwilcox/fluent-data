@@ -661,11 +661,28 @@ class dataset {
         return new dataset(b);
     }
 
+    ungroup (func) {
+        let ungrouped = [];
+        for(let group of this.data) 
+        for (let item of group)
+            ungrouped.push(item);
+        return new dataset(ungrouped);
+    }
+
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
         let ds = recurse(outerFunc, this.data);
         return ds;
     }    
+
+    distinct (func) {
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
+            .getBuckets()
+            .map(bucket => func(bucket[0]));
+        return recurse(outerFunc, this.data);
+    }
 
     merge (incoming, matchingLogic, mapper, distinct) {
         return new dataset([...merge (
@@ -933,8 +950,9 @@ class database {
 
         let funcsToAttach = [
             'filter', 'map', 
-            'group', 'reduce', 'sort', 
-            'print', 'merge', 'with'
+            'group', 'ungroup', 
+            'distinct', 'reduce', 
+            'sort', 'print', 'merge', 'with'
         ];
 
         for(let funcName of funcsToAttach) 

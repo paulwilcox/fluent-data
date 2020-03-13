@@ -51,6 +51,15 @@ export default class dataset {
         return ds;
     }    
 
+    distinct (func) {
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
+            .getBuckets()
+            .map(bucket => func(bucket[0]));
+        return recurse(outerFunc, this.data);
+    }
+
     merge (incoming, matchingLogic, mapper, distinct) {
         return new dataset([...mrg (
             this.data, 
