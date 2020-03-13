@@ -659,18 +659,11 @@ class dataset {
     } 
 
     group (func) {
-        let b = new hashBuckets(func)
-            .addItems(this.data)
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
             .getBuckets();
-        return new dataset(b);
-    }
-
-    ungroup (func) {
-        let ungrouped = [];
-        for(let group of this.data) 
-        for (let item of group)
-            ungrouped.push(item);
-        return new dataset(ungrouped);
+        return new recurse(outerFunc, this.data);
     }
 
     reduce (func) {
@@ -1080,7 +1073,7 @@ class database {
 
         let funcsToAttach = [
             'filter', 'map', 
-            'group', 'ungroup', 
+            'group', 
             'distinct', 'reduce', 
             'sort', 'print', 'merge', 'with'
         ];

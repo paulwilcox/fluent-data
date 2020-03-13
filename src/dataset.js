@@ -39,10 +39,11 @@ export default class dataset {
     } 
 
     group (func) {
-        let b = new hashBuckets(func)
-            .addItems(this.data)
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
             .getBuckets();
-        return new dataset(b);
+        return new recurse(outerFunc, this.data);
     }
 
     reduce (func) {
