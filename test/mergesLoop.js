@@ -77,7 +77,8 @@ class mergeTester {
             })
             .merge(
                 (p,m) => p.id == m.id, 
-                {mapper, algorithm: 'loop'}
+                mapper,
+                $$.mergeMethod.loop
             )
             .get(p => p);
 

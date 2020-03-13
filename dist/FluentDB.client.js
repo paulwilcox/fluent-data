@@ -410,31 +410,38 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
 
 };
 
+let mergeMethod = {
+    hash: 'hash',
+    loop: 'loop',
+    hashDistinct: 'hashDistinct'
+};
+
 function* merge (
     leftData, 
     rightData, 
     matcher, 
     mapper, 
-    distinct
+    method
 ) {
 
     let leftHasher;
     let rightHasher;
-    let _mapper;
-    let algorithm;
+    let _mapper = normalizeMapper(mapper, matcher);
+
+    if (method && !Object.keys(mergeMethod).includes(method)) throw `
+        method '${method}' is not recognized.  Leave undefined or
+        use one of: ${Object.keys(mergeMethod).join(', ')}.
+    `;
 
     if (!isFunction(mapper) && !isString(mapper)) {
         leftHasher = mapper.leftHasher;
         rightHasher = mapper.rightHasher;
-        _mapper = normalizeMapper(mapper.mapper, matcher);
-        algorithm = mapper.algorithm;
     }
     else {
-        _mapper = normalizeMapper(mapper, matcher);
         let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
-        if (hashers == undefined && !algorithm) 
-            algorithm = 'loop';
-        else if (hashers == undefined && algorithm == 'hash') throw ` 
+        if (hashers == undefined && !method) 
+            method = 'loop';
+        else if (hashers == undefined && method == 'hash') throw ` 
             Cannot hash merge, "${matcher.toString()}" could 
             not be parsed into functions that return objects 
             for hashing.'`;
@@ -445,12 +452,12 @@ function* merge (
     }
 
     // If no hashers are passed, then do full-on loop join
-    if (algorithm == 'loop') {
+    if (method == 'loop') {
         yield* loopMerge(leftData, rightData, matcher, _mapper);
         return;
     }
 
-    if (algorithm == 'hash' || !algorithm)
+    if (!method || ['hash', 'hashDistinct'].includes(method))
         yield* hashMerge(
             leftData, 
             rightData,
@@ -458,7 +465,7 @@ function* merge (
             leftHasher, 
             rightHasher,
             _mapper, 
-            distinct 
+            method == 'hashDistinct' 
         );
 
 }
@@ -470,15 +477,15 @@ function* hashMerge (
     leftHasher,
     rightHasher,
     mapper,
-    distinct
+    hashDistinct
 ) {
 
     let leftBuckets = 
-        new hashBuckets(leftHasher, distinct)
+        new hashBuckets(leftHasher, hashDistinct)
         .addItems(leftData);
 
     let rightBuckets = 
-        new hashBuckets(rightHasher, distinct)
+        new hashBuckets(rightHasher, hashDistinct)
         .addItems(rightData);
 
     // convenience function for extracting a bucket
@@ -1036,6 +1043,8 @@ function _(obj) {
         ? new dataset(obj)
         : new database().addDatasets(obj); 
 }
+
+_.mergeMethod = mergeMethod;
 
 _.reducer = reducer;
 _.runEmulators = runEmulators;

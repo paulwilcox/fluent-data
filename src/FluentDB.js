@@ -3,12 +3,15 @@ import connector from './connector.js';
 import connectorIdb from './connectorIdb.js';
 import database from './database.js';
 import dataset from './dataset.js';
+import { mergeMethod } from './mergeTools.js';
 
 export default function _(obj) { 
     return Array.isArray(obj)
         ? new dataset(obj)
         : new database().addDatasets(obj); 
 }
+
+_.mergeMethod = mergeMethod;
 
 _.reducer = reducer;
 _.runEmulators = runEmulators;
