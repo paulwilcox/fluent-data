@@ -632,17 +632,17 @@ class dataset {
     }
 
     map (func) {    
-        return recurse (
+        return new dataset(recurse (
             data => data.map(noUndefinedForFunc(func)),
             this.data, 
-        );
+        ));
     }
 
     filter (func) {    
-        return recurse (
+        return new dataset(recurse (
             data => data.filter(func),
             this.data, 
-        );
+        ));
     }
 
     sort (func) {
@@ -654,7 +654,9 @@ class dataset {
             ? data => data.sort(func)
             : data => quickSort(data, func);
         
-        return recurse(outerFunc, this.data);
+        return new dataset(
+            recurse(outerFunc, this.data)
+        );
 
     } 
 
@@ -663,7 +665,9 @@ class dataset {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        return new recurse(outerFunc, this.data);
+        return new dataset(
+            recurseForGroup(outerFunc, this.data)
+        );
     }
 
     ungroup (func) {
@@ -693,8 +697,9 @@ class dataset {
 
     reduce (func) {
         let outerFunc = data => runEmulators(data, func);
-        let ds = recurse(outerFunc, this.data);
-        return ds;
+        return new dataset( 
+            recurse(outerFunc, this.data)
+        );
     }    
 
     distinct (func) {
@@ -703,7 +708,9 @@ class dataset {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        return recurse(outerFunc, this.data);
+        return new dataset(
+            recurse(outerFunc, this.data)
+        );
     }
 
     merge (incoming, matchingLogic, mapper, distinct) {
@@ -745,20 +752,33 @@ class dataset {
 
 }
 
-
 function recurse (func, data) {
 
-    let isNested = Array.isArray(data[0]);
+    let output = [];
+    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
 
-    if (!isNested) 
-        return new dataset(func(data));    
+    if (!isEnd) {
+        for (let item of data)
+            output.push(recurse(func, item));
+        return output;
+    }
+    else 
+        return func(data);
+
+}
+
+function recurseForGroup (func, data) {
 
     let output = [];
+    let isEnd = Array.isArray(data) && !Array.isArray(data[0]);
 
-    for (let nested of data)  
-        output.push(func(nested));
-
-    return new dataset(output);
+    if (!isEnd) {
+        for (let item of data)
+            output.push(recurseForGroup(func, item));
+        return output;
+    }
+    else 
+        return func(data);
 
 }
 

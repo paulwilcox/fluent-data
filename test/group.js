@@ -7,8 +7,11 @@ async function test () {
     let results = 
         $$({ o: data.orders })
         .group(o => o.customer) 
-        .get(o => o);
+        .map(o => o);
 
+    console.log(results.datasets['o'])
+
+/*
     if (results.length != 3)
         return false;
 
@@ -36,7 +39,7 @@ async function test () {
 
     document.body.innerHTML += `<div id='results'></div><br/>`
     print('#results', results, 'results');
-
+*/
     return true;
 
 }
