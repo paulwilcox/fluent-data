@@ -1,5 +1,5 @@
 // rowMaker takes the passed in parameters 
-// and turns the into a row in the dataset.
+// and turns them into a row in the dataset.
 // In other words, it will shape your rows.
 export let reducer = (obj, name, rowMaker, processor) => {
     let p = processor;

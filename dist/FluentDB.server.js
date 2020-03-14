@@ -348,7 +348,7 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
 };
 
 // rowMaker takes the passed in parameters 
-// and turns the into a row in the dataset.
+// and turns them into a row in the dataset.
 // In other words, it will shape your rows.
 let reducer = (obj, name, rowMaker, processor) => {
     let p = processor;
@@ -687,11 +687,30 @@ class dataset {
         );
     }
 
-    reduce (func) {
-        let outerFunc = data => runEmulators(data, func);
-        return new dataset( 
-            recurse(outerFunc, this.data)
+    reduce (
+        func, 
+        keepGrouped = false
+    ) {
+
+        // Reduce expects grouped input.
+        // If it's not grouped, wrap it in a trivial group.
+        // When done, if desired (keepGrouped), return
+        // the reulting singleton object, not the one-item
+        // array. 
+
+        let isUngrouped = 
+            this.data.length > 0 
+            && !Array.isArray(this.data[0]);
+
+        let result = recurse(
+            data => runEmulators(data, func), 
+            isUngrouped ? [this.data] : this.data
         );
+
+        return !isUngrouped || keepGrouped 
+            ? new dataset(result)
+            : result[0];
+
     }    
 
     distinct (func) {
@@ -713,24 +732,6 @@ class dataset {
             mapper, 
             distinct
         )]);
-    }
-
-    // TODO: with the addition of .with(), does it 
-    // make sense to have print anymore?
-    print (func, caption) {
-
-        let data = recurse (
-            data => data.map(noUndefinedForFunc(func)),
-            this.data, 
-        ).data;
-
-        if(caption)
-            console.log(caption, data); 
-        else 
-            console.log(data); 
-
-        return this;
-        
     }
 
     get (func) {

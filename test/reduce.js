@@ -4,6 +4,21 @@ async function test () {
 
     let results = 
         $$({ o: data.orders })
+        .reduce(o => ({
+            firstCustomer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
+            speed_cor: $$.cor(o.speed, o.rating),
+            n: $$.count(o.id)
+        }))
+        .get('o');
+
+    if(results.n != 12) throw `
+        results.n does not equal 12
+    `;
+
+    results = 
+        $$({ o: data.orders })
         .group(o => o.customer) 
         .reduce(o => ({
             customer: $$.first(o.customer), 

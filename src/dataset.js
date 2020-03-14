@@ -56,11 +56,30 @@ export default class dataset {
         );
     }
 
-    reduce (func) {
-        let outerFunc = data => runEmulators(data, func);
-        return new dataset( 
-            recurse(outerFunc, this.data)
+    reduce (
+        func, 
+        keepGrouped = false
+    ) {
+
+        // Reduce expects grouped input.
+        // If it's not grouped, wrap it in a trivial group.
+        // When done, if desired (keepGrouped), return
+        // the reulting singleton object, not the one-item
+        // array. 
+
+        let isUngrouped = 
+            this.data.length > 0 
+            && !Array.isArray(this.data[0]);
+
+        let result = recurse(
+            data => runEmulators(data, func), 
+            isUngrouped ? [this.data] : this.data
         );
+
+        return !isUngrouped || keepGrouped 
+            ? new dataset(result)
+            : result[0];
+
     }    
 
     distinct (func) {
