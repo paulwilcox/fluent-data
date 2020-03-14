@@ -908,10 +908,9 @@ class connectorMongo extends connector {
 
 }
 
-class connectorIdb extends connector {
+class connectorIdb {
 
     constructor (storeName, dbName) {
-        super();
         this.dbName = dbName;
         this.storeName = storeName;
     }

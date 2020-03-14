@@ -778,10 +778,9 @@ function recurseForUngroup (func, data) {
 
 }
 
-class connectorIdb extends connector {
+class connectorIdb {
 
     constructor (storeName, dbName) {
-        super();
         this.dbName = dbName;
         this.storeName = storeName;
     }

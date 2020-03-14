@@ -1,13 +1,11 @@
-import connector from './connector.js';
 import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
 import parser from './parser.js';
 import { normalizeMapper } from './mergeTools.js';
 
-export default class extends connector {
+export default class {
 
     constructor (storeName, dbName) {
-        super();
         this.dbName = dbName;
         this.storeName = storeName;
     }

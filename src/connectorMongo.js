@@ -1,4 +1,3 @@
-import connector from './connector.js';
 import { MongoClient } from 'mongodb';
 import dataset from './dataset.js';
 import hashBuckets from './hashBuckets.js';
@@ -8,7 +7,6 @@ import { normalizeMapper } from './mergeTools.js';
 export default class extends connector {
 
     constructor (collectionName, url) {
-        super();
         this.collectionName = collectionName;
         this.client = MongoClient.connect(url, {useNewUrlParser: true});
     }
