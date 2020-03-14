@@ -416,44 +416,55 @@ let mergeMethod = {
     hashDistinct: 'hashDistinct'
 };
 
+// Options can be a mapper function,
+// it can be a keyword representing a mapper function,
+// or it can be, as the term implies, an object 
+// of paramters for passing options 
 function* merge (
     leftData, 
     rightData, 
     matcher, 
-    mapper, 
+    options, 
     method
 ) {
 
     let leftHasher;
     let rightHasher;
-    let _mapper = normalizeMapper(mapper, matcher);
+    let mapper;
 
     if (method && !Object.keys(mergeMethod).includes(method)) throw `
         method '${method}' is not recognized.  Leave undefined or
         use one of: ${Object.keys(mergeMethod).join(', ')}.
     `;
 
-    if (!isFunction(mapper) && !isString(mapper)) {
-        leftHasher = mapper.leftHasher;
-        rightHasher = mapper.rightHasher;
+    // if options is an object with properties 
+    if (!isFunction(options) && !isString(options)) {
+        leftHasher = options.leftHasher || options.hasher;
+        rightHasher = options.rightHasher || options.hasher;
+        mapper = normalizeMapper(options.mapper, matcher);
     }
+    // if options is a function or a string
     else {
+
+        mapper = normalizeMapper(options, matcher);
         let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
-        if (hashers == undefined && !method) 
-            method = 'loop';
-        else if (hashers == undefined && method == 'hash') throw ` 
-            Cannot hash merge, "${matcher.toString()}" could 
-            not be parsed into functions that return objects 
-            for hashing.'`;
+
+        if(!hashers) {
+            method = method || 'loop';
+            if (method != 'loop') throw ` 
+                Must loop merge, "${_matcher}" could not be parsed 
+                into functions that return objects for hashing.`;
+        }
         else {
             leftHasher = hashers.leftFunc;
             rightHasher = hashers.rightFunc;
         }
+
     }
 
     // If no hashers are passed, then do full-on loop join
     if (method == 'loop') {
-        yield* loopMerge(leftData, rightData, matcher, _mapper);
+        yield* loopMerge(leftData, rightData, matcher, mapper);
         return;
     }
 
@@ -464,7 +475,7 @@ function* merge (
             matcher,
             leftHasher, 
             rightHasher,
-            _mapper, 
+            mapper, 
             method == 'hashDistinct' 
         );
 

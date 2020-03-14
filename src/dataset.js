@@ -84,24 +84,6 @@ export default class dataset {
         )]);
     }
 
-    // TODO: with the addition of .with(), does it 
-    // make sense to have print anymore?
-    print (func, caption) {
-
-        let data = recurse (
-            data => data.map(g.noUndefinedForFunc(func)),
-            this.data, 
-        ).data;
-
-        if(caption)
-            console.log(caption, data) 
-        else 
-            console.log(data); 
-
-        return this;
-        
-    }
-
     get (func) {
         return this.map(func).data;
     }
