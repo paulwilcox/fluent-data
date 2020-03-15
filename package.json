@@ -1,7 +1,7 @@
 {
   "name": "fluentdb",
   "version": "0.0.43",
-  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, foldings (aggregations), visualizations and similar operations on plain old javascript memory, indexedDb, mongoDb, or hybrid structures.  A 'Dataset' is an array of objects with named properties.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
+  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, mergings, reducings (aggregations), and similar operations on datast style objects.  A 'Dataset' is an array of objects with named properties.  This code is NOT ready for production.  Inspired by c# linq method syntax.",
   "main": ".dist/FluentDB.server.next.js",
   "directories": {
     "example": "example"
@@ -17,21 +17,13 @@
     "url": "https://github.com/paulwilcox/FluentDB"
   },
   "keywords": [
-    "linq",
-    "join",
-    "merge",
-    "fold",
-    "aggregate",
-    "order",
-    "group",
     "dataset",
-    "print",
-    "display",
-    "visualize",
-    "filter",
-    "map",
-    "IndexedDb",
-    "MongoDB"
+    "map", "filter",
+    "merge", "join",
+    "fold", "reduce", "aggregate",
+    "order", "sort",
+    "group", "ungroup",
+    "linq"
   ],
   "author": "Paul Wilcox",
   "license": "ISC",
