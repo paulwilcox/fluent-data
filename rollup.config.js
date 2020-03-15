@@ -12,7 +12,7 @@ let licensePlugin = license({
 });
 
 export default [{
-    input: 'src/FluentDB.server.js',
+    input: 'src/FluentDB.js',
     output: {
         file: 'dist/FluentDB.server.js',
         format: 'cjs'

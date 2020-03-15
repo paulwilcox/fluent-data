@@ -1,13 +1,11 @@
-** **I am close to release of Version 1!  Go to [The Future](The-Future) and check out 'Before Version 1 Release'.** **
+** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
 
 Work with datasets (arrays of objects) by chaining methods -- similar to c# linq method syntax, though in many ways more pleasant. 
 
-Includes connectors for indexedDb, and mongoDb (and in the future, for other sources) that utilize the same syntax for interacting with them. 
-
-- To get up and running, see [Prerequisites](Prerequisites)
+- To get up and running, see [Prerequisites](https://github.com/paulwilcox/FluentDB/wiki/Prerequisites)
 - To better understand what kind of data this package is intended for, see the [SampleDB](https://github.com/paulwilcox/SampleDB) GitHub page.
 
-## Syntax
+## Database Syntax
 
 Operations on **_FluentDB_** datasets typically involve arrow functions inside chained method calls.  The return value of most methods is the **_FluentDB_** instance calling the method.  This chaining approach is often referred to as 'fluent' syntax.  Hence the name 'FluentDB'.
 
@@ -46,39 +44,27 @@ These features promote concise syntax:
 
 The example above will produce an array of objects grouped by customer, with other properties aggregating information about their ordering behavior. 
 
-Perhaps instead of the console, you wish to display in a browser div:
+## Dataset Syntax
 
-    <div id='printDiv'></div>
+If the database mentality is not desired, there is also a syntax that allows you to work at the dataset level.  Instead of passing an object of arrays, just pass an array:
 
-The example below cleans the data a bit, and then 'prints' it to the div.
+    result = 
+        $$(sample.orders)
+        .merge(sample.products, (o,p) => o.product == p.id, 'both null') 
+        .get(o => ({o.customerId, o.rating}));
 
-    $$({ r: result })
-    .map(r => ({
-        ...r,
-        price: $$.round(r.price, 2) || '',
-        speed: $$.round(r.speed, 2) || '',
-        rating: $$.round(r.rating, 2) || '',
-        ['correlation (s:r)']: $$.round(r.correlation, 2) || '',
-        correlation: undefined
-    }))
-    .print(r => r, '#printDiv', 'Analysis of Customer Orders');
-
-Which will display:
-
-![Results](https://github.com/paulwilcox/FluentDB/blob/master/images/AnalysisOfOrders.png)
+In this syntax, the parameters don't serve as aliases for anything, so you are free to use any labels you like.  For any method, if a second dataset is referenced in the aliases of the database syntax, the actual dataset is passed as a parameter before the lambda.
 
 ## Operations and Features
 
 The following operations are available on **_FluentDB_**:
 
-* [filter](Using-filter()): Eliminate rows from a dataset. 
-* [map](Using-map()): Replace each row in a dataset with the result of a function called on each row. 
-* [sort](Using-sort()): Sort a dataset.  Supports multi-level sorting.
-* [join](Using-join()): Horizontally join rows from two datasets.  Can do inner, left, right, and full joins. Will use hash algorithm (default) or loop algorithm.
-* [group](Using-group()): Group rows of a dataset into nested arrays internally sharing a common criteria.
-* [reduce](Using-reduce()-and-reducer()): Aggregate a dataset.  Custom aggregations are possible.
-* [print](Using-print()): Show a dataset as an html table. 
-* [merge](Using-merge()): Merge values from a source dataset into a target dataset.  
-* [get](Using-get()): Execution of all functions above are deferred until execute() is run.
-
-_FluentDB_ also has helper methods to [connect](Using-Connectors) to external datasources such as IndexedDB and MongoDB using similar syntax between them.
+* [filter](https://github.com/paulwilcox/FluentDB/wiki/Using-filter()): Eliminate rows from a dataset. 
+* [map](https://github.com/paulwilcox/FluentDB/wiki/Using-map()): Replace each row in a dataset with the result of a function called on each row. 
+* [sort](https://github.com/paulwilcox/FluentDB/wiki/Using-sort()): Sort a dataset.  Supports multi-level sorting.
+* [join](https://github.com/paulwilcox/FluentDB/wiki/Using-join()): Horizontally join rows from two datasets.  Can do inner, left, right, and full joins. Will use hash algorithm (default) or loop algorithm.
+* [group](https://github.com/paulwilcox/FluentDB/wiki/Using-[un]group()): Group rows of a dataset into nested arrays internally sharing a common criteria.
+* [reduce](https://github.com/paulwilcox/FluentDB/wiki/Using-reduce[r](https://github.com/paulwilcox/FluentDB/wiki/)): Aggregate a dataset.  Custom aggregations are possible.
+* [merge](https://github.com/paulwilcox/FluentDB/wiki/Using-merge()): Merge values from a source dataset into a target dataset.  
+* [with](https://github.com/paulwilcox/FluentDB/wiki/Using-with()): Work with a dataset without breaking the fluency/chaining syntax. 
+* [get](https://github.com/paulwilcox/FluentDB/wiki/Using-get()): Outputs the dataset in question.

@@ -9,14 +9,72 @@
 
 'use strict';
 
-var mongodb = require('mongodb');
+// rowMaker takes the passed in parameters 
+// and turns them into a row in the dataset.
+// In other words, it will shape your rows.
+let reducer = (obj, name, rowMaker, processor) => {
+    let p = processor;
+    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
+    return p;
+};
 
-class connector {
-
-    import() { throw "Please override 'import'." }
-    merge() { throw "Please override 'merge'." }
-
+// Aggregators such as 'sum' or 'avg' operate on
+// columnar data.  But the values passed to the
+// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
+// are point data.  'emulator' stores the row value,
+// but it also stores the the intented function (the 
+// one it emulates), for later loading into a master 
+// aggregators object.    
+class emulator {
+    constructor(processor, rowValue) {
+        this.rowValue = rowValue;
+        this.processor = processor;
+    }
 }
+
+// 'emulatorsFunc' is what the user will pass in.
+let runEmulators = function (
+    dataset,
+    emulatorsFunc
+) {
+
+    let keyStores = {};
+    let isNaked = false;
+
+    for (let row of dataset) {
+
+        let emulators = emulatorsFunc(row);
+        
+        if (emulators instanceof emulator) {
+            isNaked = true;
+            emulators = { x: emulators };
+        }
+
+        for (let key of Object.keys(emulators)) {
+
+            let rowValue = emulators[key].rowValue;
+
+            if (!keyStores[key]) 
+                keyStores[key] = {
+                    processor: emulators[key].processor,
+                    data: []
+                };
+
+            keyStores[key].data.push(rowValue);
+
+        }
+
+    }
+
+    for (let key of Object.keys(keyStores)) 
+        keyStores[key] = keyStores[key].processor(keyStores[key].data);
+
+    if (isNaked)
+        keyStores = keyStores.x;
+
+    return keyStores;
+
+};
 
 let stringifyObject = obj => {
 
@@ -68,6 +126,125 @@ let noUndefined = obj => {
             delete result[key];
 
     return obj;
+
+};
+
+class parser {
+
+    // Parse function into argument names and body
+    constructor (func) {
+
+        this.parameters = [];
+        this.body = "";
+
+        let lr = this.splitLeftAndRight(func);
+
+        this.parameters = 
+            lr.left
+            .replace(/[()\s]/g, '')
+            .split(',');
+
+        this.body =
+            lr.right
+            .replace(/^\s*\{|\}\s*$/g,'')
+            .replace(/^\s*|\s*$/g,'');
+
+    }
+
+    splitLeftAndRight (func) {
+
+        let uncommented = 
+            func.toString() 
+            .replace(/[/][/].*$/mg,'') // strip single-line comments
+            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
+	
+        let arrowIx = uncommented.indexOf('=>');
+        let braceIx = uncommented.indexOf('{');	
+
+        if (arrowIx == -1 && braceIx == -1) {
+            console.trace();
+            throw "it seems that a non-function was passed to 'parser'";
+        }
+
+        let splitIx = 
+            braceIx == -1 ? arrowIx
+            : arrowIx == -1 ? braceIx
+            : arrowIx < braceIx ? arrowIx 
+            : braceIx;
+
+        let isArrow = splitIx == arrowIx;
+
+        let left = uncommented.slice(0,splitIx);
+        let right = uncommented.slice(splitIx);
+
+        if(isArrow)
+            right = right.slice(2); // get rid of the arrow
+        else {
+            let parenIx = left.indexOf('(');
+            left = left.slice(parenIx);
+        }
+        
+        return { left, right };
+
+    }
+
+}
+
+parser.parse = function (func) {
+    return new parser(func);
+};
+
+parser.parameters = function(func) {
+    return new parser(func).parameters;
+};
+
+// Converts (v,w) => v.a = w.a && v.b == w.b 
+// into v => { x0 = v.a, x1 = v.b }
+// and w => { x0 = w.a, x1 = w.b }
+parser.pairEqualitiesToObjectSelectors = function(func) {
+
+    let parsed = new parser(func);
+    let leftParam = parsed.parameters[0];
+    let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
+
+    for (let aix in splitBodyByAnds) {
+
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
+
+        if (eqParts.length != 2)
+            return;
+
+        for (let eix in eqParts) {
+
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
+                return;
+
+            if (ep.startsWith(`${leftParam}.`))
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`))
+                rightEq = ep;
+            else
+                return; 
+
+        }	    
+
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
+
+    }
+
+    return {
+        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
+        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
+    };
 
 };
 
@@ -225,192 +402,6 @@ let decideOrder = (
     }
 
     return 0;
-
-};
-
-class parser {
-
-    // Parse function into argument names and body
-    constructor (func) {
-
-        this.parameters = [];
-        this.body = "";
-
-        let lr = this.splitLeftAndRight(func);
-
-        this.parameters = 
-            lr.left
-            .replace(/[()\s]/g, '')
-            .split(',');
-
-        this.body =
-            lr.right
-            .replace(/^\s*\{|\}\s*$/g,'')
-            .replace(/^\s*|\s*$/g,'');
-
-    }
-
-    splitLeftAndRight (func) {
-
-        let uncommented = 
-            func.toString() 
-            .replace(/[/][/].*$/mg,'') // strip single-line comments
-            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
-	
-        let arrowIx = uncommented.indexOf('=>');
-        let braceIx = uncommented.indexOf('{');	
-
-        if (arrowIx == -1 && braceIx == -1) {
-            console.trace();
-            throw "it seems that a non-function was passed to 'parser'";
-        }
-
-        let splitIx = 
-            braceIx == -1 ? arrowIx
-            : arrowIx == -1 ? braceIx
-            : arrowIx < braceIx ? arrowIx 
-            : braceIx;
-
-        let isArrow = splitIx == arrowIx;
-
-        let left = uncommented.slice(0,splitIx);
-        let right = uncommented.slice(splitIx);
-
-        if(isArrow)
-            right = right.slice(2); // get rid of the arrow
-        else {
-            let parenIx = left.indexOf('(');
-            left = left.slice(parenIx);
-        }
-        
-        return { left, right };
-
-    }
-
-}
-
-parser.parse = function (func) {
-    return new parser(func);
-};
-
-parser.parameters = function(func) {
-    return new parser(func).parameters;
-};
-
-// Converts (v,w) => v.a = w.a && v.b == w.b 
-// into v => { x0 = v.a, x1 = v.b }
-// and w => { x0 = w.a, x1 = w.b }
-parser.pairEqualitiesToObjectSelectors = function(func) {
-
-    let parsed = new parser(func);
-    let leftParam = parsed.parameters[0];
-    let rightParam = parsed.parameters[1];
-    let leftEqualities = [];
-    let rightEqualities = [];
-    let splitBodyByAnds = parsed.body.split(/&&|&/);
-
-    for (let aix in splitBodyByAnds) {
-
-        let andPart = splitBodyByAnds[aix];
-        let eqParts = andPart.split(/===|==|=/);
-        let leftEq;
-        let rightEq;
-
-        if (eqParts.length != 2)
-            return;
-
-        for (let eix in eqParts) {
-
-            let ep = eqParts[eix].trim();
-
-            if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                return;
-
-            if (ep.startsWith(`${leftParam}.`))
-                leftEq = ep;
-            else if (ep.startsWith(`${rightParam}.`))
-                rightEq = ep;
-            else
-                return; 
-
-        }	    
-
-        leftEqualities[aix] = `x${aix}: ${leftEq}`;
-        rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-    }
-
-    return {
-        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
-        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
-    };
-
-};
-
-// rowMaker takes the passed in parameters 
-// and turns them into a row in the dataset.
-// In other words, it will shape your rows.
-let reducer = (obj, name, rowMaker, processor) => {
-    let p = processor;
-    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
-    return p;
-};
-
-// Aggregators such as 'sum' or 'avg' operate on
-// columnar data.  But the values passed to the
-// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
-// are point data.  'emulator' stores the row value,
-// but it also stores the the intented function (the 
-// one it emulates), for later loading into a master 
-// aggregators object.    
-class emulator {
-    constructor(processor, rowValue) {
-        this.rowValue = rowValue;
-        this.processor = processor;
-    }
-}
-
-// 'emulatorsFunc' is what the user will pass in.
-let runEmulators = function (
-    dataset,
-    emulatorsFunc
-) {
-
-    let keyStores = {};
-    let isNaked = false;
-
-    for (let row of dataset) {
-
-        let emulators = emulatorsFunc(row);
-        
-        if (emulators instanceof emulator) {
-            isNaked = true;
-            emulators = { x: emulators };
-        }
-
-        for (let key of Object.keys(emulators)) {
-
-            let rowValue = emulators[key].rowValue;
-
-            if (!keyStores[key]) 
-                keyStores[key] = {
-                    processor: emulators[key].processor,
-                    data: []
-                };
-
-            keyStores[key].data.push(rowValue);
-
-        }
-
-    }
-
-    for (let key of Object.keys(keyStores)) 
-        keyStores[key] = keyStores[key].processor(keyStores[key].data);
-
-    if (isNaked)
-        keyStores = keyStores.x;
-
-    return keyStores;
 
 };
 
@@ -782,333 +773,6 @@ function recurseForUngroup (func, data) {
 
 }
 
-class connectorMongo extends connector {
-
-    constructor (collectionName, url) {
-        super();
-        this.collectionName = collectionName;
-        this.client = mongodb.MongoClient.connect(url, {useNewUrlParser: true});
-    }
-
-    import(mapFunc, filterFunc) {
-            
-        return this.client.then(async client => {
-                
-            filterFunc = filterFunc || (x => true);
-            let db = client.db();
-            let results = [];
-
-            await db.collection(this.collectionName)
-                .find()
-                .forEach(record => {
-                    if (filterFunc(record))
-                        results.push(mapFunc(record));
-                });
-            
-            return new dataset(results);
-
-        });
-
-    }
-
-    // TODO: Do we need to implement .with() here as well?
-    print(mapFunc, caption) {
-            
-        this.client = this.client.then(async client => {
-
-            let db = client.db();
-            let results = [];
-
-            await db.collection(this.collectionName)
-                .find()
-                .forEach(record => results.push(mapFunc(record)));
-
-            caption 
-                ? console.log(caption, results) 
-                : console.log(results);
-
-            return client;
-
-        });
-
-        return this;
-
-    }    
-
-    merge (
-        incoming, 
-        matchingLogic, 
-        mapFunc, 
-        distinct = false
-    ) {
-
-        let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-        let targetKeyFunc = keyFuncs.leftFunc;
-        let sourceKeyFunc = keyFuncs.rightFunc;    
-        let processedTargets = new hashBuckets(targetKeyFunc, true);
-        let mapper = normalizeMapper(mapFunc);
-
-        let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, distinct)
-            .addItems(incoming);
-
-        this.client = this.client.then(async client => {
-
-            let db = client.db();
-            let col = await db.collection(this.collectionName);
-
-            await col.find().forEach(record => {
-
-                // If user wants distinct rows in the target, then
-                // track if such a row has already been processed.
-                // If so, delete future rows in the target.  If not,
-                // just record that it has now been processed.
-                if (distinct) {  
-                    let processedTarget = processedTargets.getBucket(record, targetKeyFunc);
-                    if (processedTarget) {
-                        col.removeOne( { _id: record._id });
-                        return;
-                    }
-                    processedTargets.addItem(record);
-                }
-
-                // Finds the bucket of incoming rows matching the 
-                // target and 'crossMaps' them.  Returns a generator. 
-                let outputGenerator = incomingBuckets.crossMapRow(
-                    record, 
-                    targetKeyFunc,
-                    mapper
-                );
-
-                // For the first match, delete or update. based on
-                // whether there's a match or not.
-                let outputYield = outputGenerator.next();
-                (outputYield.done) 
-                    ? col.removeOne({ _id: record._id })
-                    : col.replaceOne({ _id: record._id }, outputYield.value);
-
-                // For additional matches, insert them to the collection.
-                outputYield = outputGenerator.next();
-                while (outputYield.done === false) {
-                    delete outputYield.value._id; // needs a new id
-                    col.insertOne(outputYield.value);
-                    outputYield = outputGenerator.next();
-                }
-
-            });
-  
-            return client;
-
-        });
-
-        return this;
-
-    }
-    
-
-}
-
-class connectorIdb {
-
-    constructor (storeName, dbName) {
-        this.dbName = dbName;
-        this.storeName = storeName;
-    }
-
-    // A converter to a dataset for consumption in FluentDB
-    import(mapFunc, filterFunc) {
-
-        filterFunc = filterFunc || (x => true);                
-        let results = [];
-
-        return this.curse(cursor => {
-
-            if (!cursor) 
-                return new dataset(results);
-
-            if (filterFunc(cursor.value))
-                results.push(
-                    mapFunc(cursor.value)
-                );
-
-            cursor.continue();
-
-        });
-
-    }
-
-    print(mapFunc, caption) {
-            
-        let results = [];
-
-        return this.curse(cursor => {
-
-            if (!cursor) {
-                // TODO: Do I need to implement .with() here?
-                caption 
-                    ? console.log(caption, results) 
-                    : console.log(results);
-                return this;
-            }             
-
-            results.push(
-                mapFunc(cursor.value)
-            );
-
-            cursor.continue();
-
-        });
-
-    }
-
-    merge (
-        incoming, 
-        matchingLogic, 
-        mapFunc, 
-        distinct = false
-    ) {
-
-        let keyFuncs = parser.pairEqualitiesToObjectSelectors(matchingLogic);
-        let targetKeyFunc = keyFuncs.leftFunc;
-        let sourceKeyFunc = keyFuncs.rightFunc;    
-        let rowsToAdd = []; 
-        let processedTargets = new hashBuckets(targetKeyFunc, true);
-        let mapper = normalizeMapper(mapFunc);
-
-        let incomingBuckets = 
-            new hashBuckets(sourceKeyFunc, distinct)
-            .addItems(incoming);
-
-        return this.curse((cursor, store) => {
-
-            // When you've finished looping the target, add 
-            // any excess rows to the store.  Then resolve. 
-            if (!cursor) {        
-                console.log({rowsToAdd});                   
-                for(let row of rowsToAdd) {
-                    let addRequest = store.add(row);
-                    addRequest.onerror = event => { 
-                        throw event.target.error; 
-                    }; 
-                }
-                return this;
-            }
-
-            // If user wants distinct rows in the target, then
-            // track if such a row has already been processed.
-            // If so, delete future rows in the target.  If not,
-            // just record that it has now been processed.
-            if (distinct) {  
-                let processedTarget = processedTargets.getBucket(cursor.value, targetKeyFunc);
-                if (processedTarget) {
-                    cursor.delete();
-                    cursor.continue();
-                    return;
-                }
-                processedTargets.addItem(cursor.value);
-            }
-
-            // Finds the bucket of incoming rows matching the 
-            // target and 'crossMaps' them.  Returns a generator. 
-            let outputGenerator = incomingBuckets.crossMapRow(
-                cursor.value, 
-                targetKeyFunc,
-                mapper
-            );
-
-            // For the first match, delete or update. based on
-            // whether there's a match or not.
-            let outputYield = outputGenerator.next();
-
-            try {
-                outputYield.done 
-                    ? cursor.delete()
-                    : cursor.update(outputYield.value);
-            }
-            catch(err) {
-                let isKeyError = 
-                    err.message.includes('cursor uses in-line keys')
-                    && err.message.includes('different value than the cursor\'s effective key');
-                if (!isKeyError)
-                    throw err;
-                let newErr = new Error(
-                    'The error message below means that you are trying ' + 
-                    'to update a row in IndexedDB with another row ' + 
-                    'where the primary keys are not the same.  Are ' +
-                    'you matching on keys with different names?  If so ' +
-                    'try changing the name (using .map()) of the incoming ' +
-                    'foreign key to match the target\'s primary key. \n\n' +
-                    'Otherwise, play around with the in-line/out-of-line ' +
-                    'and auto-incrementing features of your store.  And ' +
-                    'it may also be possible that in its present state, ' +
-                    'this library cannot support the structure of your ' +
-                    'store. \n\n-- expand to see stack --\n\n' + 
-                    '------------- \n\n' +
-                    err.message
-                );
-                newErr.originalError = err;
-                throw newErr;
-            }
-
-            // For additional matches, add them to the rowsToAdd array.
-            outputYield = outputGenerator.next();
-            while (outputYield.done === false) {
-                rowsToAdd.push(outputYield.value); // I (psw) don't know if store.add is safe here
-                outputYield = outputGenerator.next();
-            }
-
-            cursor.continue();
-
-        }, 'readwrite');
-        
-    }
-    
-    curse ( 
-        func,
-        transactionMode = 'readonly'
-    ) {
-
-        return new Promise((resolve, reject) => {
-
-            let dbCon = window.indexedDB.open(this.dbName);
-            dbCon.onerror = event => reject(event); 
-    
-            dbCon.onsuccess = () => {
-    
-                let db = dbCon.result;
-                let tx;
-                
-                try {
-                    tx = db.transaction(this.storeName, transactionMode);
-                }
-                catch(err) {
-                    throw err.name == "NotFoundError" 
-                        ? `${this.storeName} not found in ${this.dbName}`
-                        : err
-                }
-
-                tx.oncomplete = () => db.close();
-                tx.onerror = event => reject(event); 
-    
-                let store = tx.objectStore(this.storeName);
-    
-                let storeCursor = store.openCursor();
-                storeCursor.onerror = event => reject(event); 
-                storeCursor.onsuccess = event => {
-                    let cursor = event.target.result;    
-                    let completionResult = func(cursor, store);
-                    if (completionResult !== undefined)
-                        resolve(completionResult);
-                };
-
-            };
-
-        });
-
-    }
-
-}
-
 class database {
 
     constructor() {
@@ -1285,10 +949,5 @@ _.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
 });
 
 _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
-
-_.connector = connector;
-_.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
-
-_.mongo = (collectionName, url) => new connectorMongo(collectionName, url);
 
 module.exports = _;

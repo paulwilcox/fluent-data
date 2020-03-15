@@ -1,6 +1,4 @@
 import { reducer, runEmulators } from './reducer.js';
-import connector from './connector.js';
-import connectorIdb from './connectorIdb.js';
 import database from './database.js';
 import dataset from './dataset.js';
 import { mergeMethod } from './mergeTools.js';
@@ -67,8 +65,4 @@ _.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
 });
 
 _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
-
-_.connector = connector;
-_.idb = (storeName, dbName) => new connectorIdb(storeName, dbName);
-
 
