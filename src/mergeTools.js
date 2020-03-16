@@ -44,7 +44,7 @@ export function* merge (
         if(!hashers) {
             method = method || 'loop';
             if (method != 'loop') throw ` 
-                Must loop merge, "${_matcher}" could not be parsed 
+                Must loop merge, "${matcher}" could not be parsed 
                 into functions that return objects for hashing.`;
         }
         else {

@@ -90,7 +90,7 @@ export let noUndefined = obj => {
     
     for(let key of Object.keys(obj))
         if (obj[key] === undefined) 
-            delete result[key];
+            delete obj[key];
 
     return obj;
 

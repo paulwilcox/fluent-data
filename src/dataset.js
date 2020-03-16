@@ -104,15 +104,16 @@ export default class dataset extends Array {
     }
 
     merge (incoming, matchingLogic, mapper, distinct) {
-        let merged = [...mrg (
-            this, 
+        let outerFunc = data => [...mrg (
+            data, 
             incoming, 
             matchingLogic, 
             mapper, 
             distinct
         )];
-        Object.setPrototypeOf(merged, dataset.prototype);
-        return merged;
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     with (func) {

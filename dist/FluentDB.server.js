@@ -123,7 +123,7 @@ let noUndefined = obj => {
     
     for(let key of Object.keys(obj))
         if (obj[key] === undefined) 
-            delete result[key];
+            delete obj[key];
 
     return obj;
 
@@ -447,7 +447,7 @@ function* merge (
         if(!hashers) {
             method = method || 'loop';
             if (method != 'loop') throw ` 
-                Must loop merge, "${_matcher}" could not be parsed 
+                Must loop merge, "${matcher}" could not be parsed 
                 into functions that return objects for hashing.`;
         }
         else {
@@ -726,15 +726,16 @@ class dataset extends Array {
     }
 
     merge (incoming, matchingLogic, mapper, distinct) {
-        let merged = [...merge (
-            this, 
+        let outerFunc = data => [...merge (
+            data, 
             incoming, 
             matchingLogic, 
             mapper, 
             distinct
         )];
-        Object.setPrototypeOf(merged, dataset.prototype);
-        return merged;
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     with (func) {
