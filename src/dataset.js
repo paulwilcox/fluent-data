@@ -5,38 +5,47 @@ import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import { merge as mrg } from './mergeTools.js';
 
-export default class dataset {
+export default class dataset extends Array {
 
-    constructor(data) {
-        this.data = data;
+    constructor(...data) {
+        super(...data);
     }
 
     map (func) {    
-        return new dataset(recurse (
-            data => data.map(g.noUndefinedForFunc(func)),
-            this.data, 
-        ));
+        let recursed = recurse(
+            data => Array.prototype.map.call(
+                data, 
+                g.noUndefinedForFunc(func)
+            ),
+            this 
+        );
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     filter (func) {    
-        return new dataset(recurse (
-            data => data.filter(func),
-            this.data, 
-        ));
+        let recursed = recurse(
+            data => Array.prototype.filter.call(
+                data,
+                func
+            ),
+            this, 
+        );
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     sort (func) {
 
         let params = parser.parameters(func);
 
-        let outerFunc = 
-            params.length > 1 
-            ? data => data.sort(func)
+        let outerFunc = params.length > 1 
+            ? data => Array.prototype.sort.call(data, func)
             : data => quickSort(data, func);
         
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
 
     } 
 
@@ -45,15 +54,15 @@ export default class dataset {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     ungroup (func) {
-        return new dataset(
-            recurseForUngroup(func, this.data)
-        );
+        let recursed = recurseForUngroup(func, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     reduce (
@@ -68,17 +77,18 @@ export default class dataset {
         // array. 
 
         let isUngrouped = 
-            this.data.length > 0 
-            && !Array.isArray(this.data[0]);
+            this.length > 0 
+            && !Array.isArray(this[0]);
 
-        let result = recurse(
+        let recursed = recurse(
             data => runEmulators(data, func), 
-            isUngrouped ? [this.data] : this.data
+            isUngrouped ? [this] : this
         );
+        Object.setPrototypeOf(recursed, dataset.prototype);
 
         return !isUngrouped || keepGrouped 
-            ? new dataset(result)
-            : result[0];
+            ? recursed
+            : recursed[0];
 
     }    
 
@@ -88,27 +98,25 @@ export default class dataset {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     merge (incoming, matchingLogic, mapper, distinct) {
-        return new dataset([...mrg (
-            this.data, 
+        let merged = [...mrg (
+            this, 
             incoming, 
             matchingLogic, 
             mapper, 
             distinct
-        )]);
-    }
-
-    get (func) {
-        return this.map(func).data;
+        )];
+        Object.setPrototypeOf(merged, dataset.prototype);
+        return merged;
     }
 
     with (func) {
-        func(this.data);
+        func(this);
         return this;
     }
 

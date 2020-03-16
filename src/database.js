@@ -21,11 +21,13 @@ export default class {
 
     }
 
+    // TODO: determine whether we want to keep clone, 
+    // or to implement pass by reference, or give option.
     addDataset (key, data) { 
         if (!data)
             throw `Cannot pass ${key} as undefined in 'addDataset'`
         this.datasets[key] = Array.isArray(data) 
-            ? new dataset(data) 
+            ? new dataset(...data) 
             : data;
         return this;
     }    
@@ -67,8 +69,7 @@ export default class {
         let key = parser.parameters(funcOrKey)[0];
         return this
             ._callOnDs('map', funcOrKey)
-            .datasets[key]
-            .data;
+            .datasets[key];
     }
 
     // - Execute a function on a dataset, basically a proxy,
@@ -96,12 +97,9 @@ export default class {
         let lambda = args.shift();
 
         // Get the datasets referenced by 'lambda'.  The 
-        // first one you'll need the full dataset object,
-        // methods and all.  Subsequent ones you just want
-        // their data, to later pass to the first one.
+        // first one is the 'target' of operations.
         let dataArgs = this.getDatasets(lambda);
         let targetDs = dataArgs.shift(); 
-        dataArgs = dataArgs.map(ds => ds.data); 
 
         // Execute the method on the target dataset 
         this.datasets[targetDsName] = targetDs[funcName](

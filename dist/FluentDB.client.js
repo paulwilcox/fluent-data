@@ -625,38 +625,47 @@ function parametersAreEqual (a,b) {
 
 }
 
-class dataset {
+class dataset extends Array {
 
-    constructor(data) {
-        this.data = data;
+    constructor(...data) {
+        super(...data);
     }
 
     map (func) {    
-        return new dataset(recurse (
-            data => data.map(noUndefinedForFunc(func)),
-            this.data, 
-        ));
+        let recursed = recurse(
+            data => Array.prototype.map.call(
+                data, 
+                noUndefinedForFunc(func)
+            ),
+            this 
+        );
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     filter (func) {    
-        return new dataset(recurse (
-            data => data.filter(func),
-            this.data, 
-        ));
+        let recursed = recurse(
+            data => Array.prototype.filter.call(
+                data,
+                func
+            ),
+            this, 
+        );
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     sort (func) {
 
         let params = parser.parameters(func);
 
-        let outerFunc = 
-            params.length > 1 
-            ? data => data.sort(func)
+        let outerFunc = params.length > 1 
+            ? data => Array.prototype.sort.call(data, func)
             : data => quickSort(data, func);
         
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
 
     } 
 
@@ -665,15 +674,15 @@ class dataset {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     ungroup (func) {
-        return new dataset(
-            recurseForUngroup(func, this.data)
-        );
+        let recursed = recurseForUngroup(func, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     reduce (
@@ -688,17 +697,18 @@ class dataset {
         // array. 
 
         let isUngrouped = 
-            this.data.length > 0 
-            && !Array.isArray(this.data[0]);
+            this.length > 0 
+            && !Array.isArray(this[0]);
 
-        let result = recurse(
+        let recursed = recurse(
             data => runEmulators(data, func), 
-            isUngrouped ? [this.data] : this.data
+            isUngrouped ? [this] : this
         );
+        Object.setPrototypeOf(recursed, dataset.prototype);
 
         return !isUngrouped || keepGrouped 
-            ? new dataset(result)
-            : result[0];
+            ? recursed
+            : recursed[0];
 
     }    
 
@@ -708,27 +718,25 @@ class dataset {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        return new dataset(
-            recurse(outerFunc, this.data)
-        );
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
     }
 
     merge (incoming, matchingLogic, mapper, distinct) {
-        return new dataset([...merge (
-            this.data, 
+        let merged = [...merge (
+            this, 
             incoming, 
             matchingLogic, 
             mapper, 
             distinct
-        )]);
-    }
-
-    get (func) {
-        return this.map(func).data;
+        )];
+        Object.setPrototypeOf(merged, dataset.prototype);
+        return merged;
     }
 
     with (func) {
-        func(this.data);
+        func(this);
         return this;
     }
 
@@ -790,11 +798,13 @@ class database {
 
     }
 
+    // TODO: determine whether we want to keep clone, 
+    // or to implement pass by reference, or give option.
     addDataset (key, data) { 
         if (!data)
             throw `Cannot pass ${key} as undefined in 'addDataset'`
         this.datasets[key] = Array.isArray(data) 
-            ? new dataset(data) 
+            ? new dataset(...data) 
             : data;
         return this;
     }    
@@ -836,8 +846,7 @@ class database {
         let key = parser.parameters(funcOrKey)[0];
         return this
             ._callOnDs('map', funcOrKey)
-            .datasets[key]
-            .data;
+            .datasets[key];
     }
 
     // - Execute a function on a dataset, basically a proxy,
@@ -865,12 +874,9 @@ class database {
         let lambda = args.shift();
 
         // Get the datasets referenced by 'lambda'.  The 
-        // first one you'll need the full dataset object,
-        // methods and all.  Subsequent ones you just want
-        // their data, to later pass to the first one.
+        // first one is the 'target' of operations.
         let dataArgs = this.getDatasets(lambda);
         let targetDs = dataArgs.shift(); 
-        dataArgs = dataArgs.map(ds => ds.data); 
 
         // Execute the method on the target dataset 
         this.datasets[targetDsName] = targetDs[funcName](
@@ -886,9 +892,11 @@ class database {
 }
 
 function _(obj) { 
-    return Array.isArray(obj)
-        ? new dataset(obj)
-        : new database().addDatasets(obj); 
+    if (Array.isArray(obj)) {
+        Object.setPrototypeOf(obj, dataset.prototype);
+        return obj;
+    }
+    return new database().addDatasets(obj); 
 }
 
 _.mergeMethod = mergeMethod;

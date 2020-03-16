@@ -4,9 +4,11 @@ import dataset from './dataset.js';
 import { mergeMethod } from './mergeTools.js';
 
 export default function _(obj) { 
-    return Array.isArray(obj)
-        ? new dataset(obj)
-        : new database().addDatasets(obj); 
+    if (Array.isArray(obj)) {
+        Object.setPrototypeOf(obj, dataset.prototype);
+        return obj;
+    }
+    return new database().addDatasets(obj); 
 }
 
 _.mergeMethod = mergeMethod;
