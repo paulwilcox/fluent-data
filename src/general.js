@@ -96,6 +96,31 @@ export let noUndefined = obj => {
 
 }
 
+function equateByVals (obj1, obj2) {
+
+    if (g.isString(obj1) && g.isString(obj2))
+        return obj1 == obj2;
+
+    let obj1Keys = Object.keys(obj1);
+    let obj2Keys = Object.keys(obj2);
+    
+    if (obj1Keys.length != obj2Keys.length)
+        return false;
+
+    if (obj1Keys.length == 0 && obj2Keys.length == 0)
+        return obj1 == obj2;
+
+    for(let key of obj1Keys) {
+        
+        if(!equateByVals(obj1[key], obj2[key]))
+            return false;
+        
+    }
+
+    return true;
+
+}
+
 // Convert an unpromised object with promises as
 // values to a promised object with regular values
 export let PromiseAllObjectEntries = obj => 

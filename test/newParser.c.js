@@ -1,5 +1,5 @@
 import parser from '../src/parser.js';
-import hashBuckets from '../src/hashBuckets.js';
+import * as g from '../src/general.js';
 
 /*
 
@@ -13,14 +13,25 @@ import hashBuckets from '../src/hashBuckets.js';
 
 */
 
+
+
 function test () {
 
-    let parsed = parser.pairEqualitiesToObjectSelectors((x,y) => x == y);
+    let obj1 = { 
+        a: 'eigh', 
+        b: 'bee', 
+        c: { d: 'dee', e: 'ee' }, 
+        f: ['ef', { g: 'gee' }, { h: 'eich' }]
+    };
     
-    let buckets = new hashBuckets(x => x, false)
-        .addItems([{a: 'eigh', b: 'bee'}, {a: 'eigh', b: 'bee'}]);
+    let obj2 = { 
+        a: 'eigh', 
+        b: 'bee', 
+        c: { d: 'dee', e: 'ee' }, 
+        f: ['ef', { g: 'gee' }, { h: 'eich' }]
+    };    
 
-    console.log(buckets);
+    console.log(equateByVals(obj1, obj2))
 
     return true;
     

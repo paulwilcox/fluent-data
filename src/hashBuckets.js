@@ -9,7 +9,7 @@ export default class extends Map {
         super();
         this.distinct = distinct;
         this.hashKeySelector = hashKeySelector;
-    }
+    }  
  
     addItems(items) {
         for(let item of items) 
