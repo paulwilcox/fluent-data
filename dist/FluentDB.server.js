@@ -756,12 +756,53 @@ class dataset extends Array {
         return recursed;
     }
 
-    merge (incoming, matchingLogic, mapper, method) {
+    merge (incoming, matcher, options, method) {
+
+        let matcherReturnsString = false;
+        try {matcherReturnsString = isString(matcher());}
+        catch {}
+
+        // user is trying to use shortcut syntax that 
+        // uses full object equality by value
+        if (matcherReturnsString) {
+
+            let keyword = matcher();
+            if(!Object.keys(mergeMethod).includes(keyword)) throw `
+                'matcher' param in 'merge' returns a string, but 
+                this string is not represented in the 'mergeMethod'
+                enumeration.  Choose one of ${mergeMethod}.
+            `;
+
+            method = keyword;
+            matcher = (l,r) => eq(l,r);
+            options = { 
+                mapper: options,
+                hasher: x => x
+            }; 
+
+        }
+
         let outerFunc = data => [...merge (
             data, 
             incoming, 
-            matchingLogic, 
-            mapper, 
+            matcher, 
+            options, 
+            method
+        )];
+
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
+
+    }
+
+
+    mergeOld (incoming, matcher, options, method) {
+        let outerFunc = data => [...merge (
+            data, 
+            incoming, 
+            matcher, 
+            options, 
             method
         )];
         let recursed = recurse(outerFunc, this);
@@ -769,16 +810,16 @@ class dataset extends Array {
         return recursed;
     }
 
-    mergeByVals(incoming, mapper, method) {
-        if (isString(mapper()))
-            mapper = mapper();
+    mergeByVals(incoming, options, method) {
+        if (isString(options()))
+            options = options();
         let outerFunc = data => [...merge (
             data, 
             incoming, 
             (l,r) => eq(l,r), 
             {
                 hasher: x => x,
-                mapper
+                mapper: options
             }, 
             method
         )];
@@ -950,8 +991,6 @@ function _(obj) {
     }
     return new database().addDatasets(obj); 
 }
-
-_.eq = eq;
 
 _.mergeMethod = mergeMethod;
 

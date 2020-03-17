@@ -3,7 +3,7 @@ import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
-import { merge as mrg } from './mergeTools.js';
+import { merge as mrg, mergeMethod } from './mergeTools.js';
 
 export default class dataset extends Array {
 
@@ -103,35 +103,44 @@ export default class dataset extends Array {
         return recursed;
     }
 
-    merge (incoming, matchingLogic, mapper, method) {
-        let outerFunc = data => [...mrg (
-            data, 
-            incoming, 
-            matchingLogic, 
-            mapper, 
-            method
-        )];
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
-    }
+    merge (incoming, matcher, options, method) {
 
-    mergeByVals(incoming, mapper, method) {
-        if (g.isString(mapper()))
-            mapper = mapper();
+        let matcherReturnsString = false;
+        try {matcherReturnsString = g.isString(matcher());}
+        catch {}
+
+        // user is trying to use shortcut syntax that 
+        // uses full object equality by value
+        if (matcherReturnsString) {
+
+            let keyword = matcher();
+            if(!Object.keys(mergeMethod).includes(keyword)) throw `
+                'matcher' param in 'merge' returns a string, but 
+                this string is not represented in the 'mergeMethod'
+                enumeration.  Choose one of ${mergeMethod}.
+            `;
+
+            method = keyword;
+            matcher = (l,r) => g.eq(l,r);
+            options = { 
+                mapper: options,
+                hasher: x => x
+            }; 
+
+        }
+
         let outerFunc = data => [...mrg (
             data, 
             incoming, 
-            (l,r) => g.eq(l,r), 
-            {
-                hasher: x => x,
-                mapper
-            }, 
+            matcher, 
+            options, 
             method
         )];
+
         let recursed = recurse(outerFunc, this);
         Object.setPrototypeOf(recursed, dataset.prototype);
         return recursed;
+
     }
 
     with (func) {

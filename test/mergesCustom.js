@@ -91,20 +91,42 @@ async function test () {
             for '${sourceTag}'.
         `;
 
-    // TODO: Merge on full object equality
+    // Full object equality syntax (symmetric difference)
+
+        sourceTag = 'set theoreticals' 
 
         results = 
             $$({
                 pc: data.potentialCustomers,
                 s: data.shoplifters
             })
-            .mergeByVals((pc, s) => 'null both'
-                //, $$.mergeMethod.hashDistinct // omit for union all
-            )
+            .merge((pc, s) => 'hash', 'null both')
             .get(pc => pc);
 
-        console.log(results);
+        if (
+            results.filter(row => [2,3,5].includes(row.id)).length != 3 ||
+            results.filter(row => ![2,3,5].includes(row.id)).length != 0 
+        ) throw `
+            The results do not seem to reflect a symmetric difference
+            for '${sourceTag}'.
+        `;
 
+        results = 
+            $$({
+                pc: data.potentialCustomers,
+                s: data.shoplifters
+            })
+            .merge((pc, s) => 'hash', 'both null')
+            .get(pc => pc);
+
+        if (
+            results.length != 1 ||
+            results[0].id != 4 
+        ) throw `
+            The results do not seem to reflect a union 
+            for '${sourceTag}'.
+        `;
+    
     return true;
 
 }
