@@ -2,7 +2,6 @@ import { reducer, runEmulators } from './reducer.js';
 import database from './database.js';
 import dataset from './dataset.js';
 import { mergeMethod } from './mergeTools.js';
-import { eq } from './general.js';
 
 export default function _(obj) { 
     if (Array.isArray(obj)) {
@@ -11,8 +10,6 @@ export default function _(obj) {
     }
     return new database().addDatasets(obj); 
 }
-
-_.eq = eq;
 
 _.mergeMethod = mergeMethod;
 

@@ -98,10 +98,8 @@ async function test () {
                 pc: data.potentialCustomers,
                 s: data.shoplifters
             })
-            .merge(
-                (pc,s) => pc == s, 
-                'both both', 
-                $$.mergeMethod.hashDistinct // omit for union all
+            .mergeByVals((pc, s) => 'null both'
+                //, $$.mergeMethod.hashDistinct // omit for union all
             )
             .get(pc => pc);
 

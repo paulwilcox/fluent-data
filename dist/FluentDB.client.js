@@ -754,13 +754,31 @@ class dataset extends Array {
         return recursed;
     }
 
-    merge (incoming, matchingLogic, mapper, distinct) {
+    merge (incoming, matchingLogic, mapper, method) {
         let outerFunc = data => [...merge (
             data, 
             incoming, 
             matchingLogic, 
             mapper, 
-            distinct
+            method
+        )];
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
+    }
+
+    mergeByVals(incoming, mapper, method) {
+        if (isString(mapper()))
+            mapper = mapper();
+        let outerFunc = data => [...merge (
+            data, 
+            incoming, 
+            (l,r) => eq(l,r), 
+            {
+                hasher: x => x,
+                mapper
+            }, 
+            method
         )];
         let recursed = recurse(outerFunc, this);
         Object.setPrototypeOf(recursed, dataset.prototype);
@@ -821,7 +839,7 @@ class database {
             'filter', 'map', 
             'group', 'ungroup', 
             'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'with'
+            'sort', 'print', 'merge', 'mergeByVals', 'with'
         ];
 
         for(let funcName of funcsToAttach) 

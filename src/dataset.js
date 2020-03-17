@@ -103,13 +103,31 @@ export default class dataset extends Array {
         return recursed;
     }
 
-    merge (incoming, matchingLogic, mapper, distinct) {
+    merge (incoming, matchingLogic, mapper, method) {
         let outerFunc = data => [...mrg (
             data, 
             incoming, 
             matchingLogic, 
             mapper, 
-            distinct
+            method
+        )];
+        let recursed = recurse(outerFunc, this);
+        Object.setPrototypeOf(recursed, dataset.prototype);
+        return recursed;
+    }
+
+    mergeByVals(incoming, mapper, method) {
+        if (g.isString(mapper()))
+            mapper = mapper();
+        let outerFunc = data => [...mrg (
+            data, 
+            incoming, 
+            (l,r) => g.eq(l,r), 
+            {
+                hasher: x => x,
+                mapper
+            }, 
+            method
         )];
         let recursed = recurse(outerFunc, this);
         Object.setPrototypeOf(recursed, dataset.prototype);

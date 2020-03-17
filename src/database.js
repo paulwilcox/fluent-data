@@ -12,7 +12,7 @@ export default class {
             'filter', 'map', 
             'group', 'ungroup', 
             'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'with'
+            'sort', 'print', 'merge', 'mergeByVals', 'with'
         ];
 
         for(let funcName of funcsToAttach) 
