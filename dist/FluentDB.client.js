@@ -127,6 +127,36 @@ let noUndefined = obj => {
 
 };
 
+// equality by values
+let eq = (obj1, obj2) => {
+
+    if (obj1 == undefined && obj2 != undefined) return false;
+    if (obj1 != undefined && obj2 == undefined) return false;
+    if (obj1 == undefined && obj2 == undefined) return true;
+
+    if (isString(obj1) && isString(obj2))
+        return obj1 == obj2;
+
+    let obj1Keys = Object.keys(obj1);
+    let obj2Keys = Object.keys(obj2);
+    
+    if (obj1Keys.length != obj2Keys.length)
+        return false;
+
+    if (obj1Keys.length == 0 && obj2Keys.length == 0)
+        return obj1 == obj2;
+
+    for(let key of obj1Keys) {
+        
+        if(!eq(obj1[key], obj2[key]))
+            return false;
+        
+    }
+
+    return true;
+
+};
+
 class parser {
 
     // Parse function into argument names and body
@@ -256,7 +286,7 @@ class hashBuckets extends Map {
         super();
         this.distinct = distinct;
         this.hashKeySelector = hashKeySelector;
-    }
+    }  
  
     addItems(items) {
         for(let item of items) 
@@ -470,7 +500,7 @@ function* merge (
             leftHasher, 
             rightHasher,
             mapper, 
-            method == 'hashDistinct' 
+            method 
         );
 
 }
@@ -482,15 +512,15 @@ function* hashMerge (
     leftHasher,
     rightHasher,
     mapper,
-    hashDistinct
+    method
 ) {
 
     let leftBuckets = 
-        new hashBuckets(leftHasher, hashDistinct)
+        new hashBuckets(leftHasher, method == 'hashDistinct')
         .addItems(leftData);
 
     let rightBuckets = 
-        new hashBuckets(rightHasher, hashDistinct)
+        new hashBuckets(rightHasher, method == 'hashDistinct')
         .addItems(rightData);
 
     // convenience function for extracting a bucket
@@ -900,6 +930,8 @@ function _(obj) {
     }
     return new database().addDatasets(obj); 
 }
+
+_.eq = eq;
 
 _.mergeMethod = mergeMethod;
 

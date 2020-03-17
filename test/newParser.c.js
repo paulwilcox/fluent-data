@@ -1,9 +1,11 @@
 import parser from '../src/parser.js';
-import * as g from '../src/general.js';
 
 /*
 
     .merge((p,m) => p.id == m.id, 'left left')
+
+    .merge((p,m) => p.id == m.id, 'both left')
+
 
     .merge(
         p => p.id, -- hash part
@@ -12,8 +14,6 @@ import * as g from '../src/general.js';
     )
 
 */
-
-
 
 function test () {
 
@@ -31,7 +31,7 @@ function test () {
         f: ['ef', { g: 'gee' }, { h: 'eich' }]
     };    
 
-    console.log(equateByVals(obj1, obj2))
+    console.log($$.eq(obj1, obj2))
 
     return true;
     

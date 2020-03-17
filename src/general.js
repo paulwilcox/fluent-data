@@ -96,9 +96,14 @@ export let noUndefined = obj => {
 
 }
 
-function equateByVals (obj1, obj2) {
+// equality by values
+export let eq = (obj1, obj2) => {
 
-    if (g.isString(obj1) && g.isString(obj2))
+    if (obj1 == undefined && obj2 != undefined) return false;
+    if (obj1 != undefined && obj2 == undefined) return false;
+    if (obj1 == undefined && obj2 == undefined) return true;
+
+    if (isString(obj1) && isString(obj2))
         return obj1 == obj2;
 
     let obj1Keys = Object.keys(obj1);
@@ -112,7 +117,7 @@ function equateByVals (obj1, obj2) {
 
     for(let key of obj1Keys) {
         
-        if(!equateByVals(obj1[key], obj2[key]))
+        if(!eq(obj1[key], obj2[key]))
             return false;
         
     }
