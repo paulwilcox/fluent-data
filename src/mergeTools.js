@@ -68,7 +68,7 @@ export function* merge (
             leftHasher, 
             rightHasher,
             mapper, 
-            method == 'hashDistinct' 
+            method 
         );
 
 }
@@ -80,15 +80,15 @@ function* hashMerge (
     leftHasher,
     rightHasher,
     mapper,
-    hashDistinct
+    method
 ) {
 
     let leftBuckets = 
-        new hashBuckets(leftHasher, hashDistinct)
+        new hashBuckets(leftHasher, method == 'hashDistinct')
         .addItems(leftData);
 
     let rightBuckets = 
-        new hashBuckets(rightHasher, hashDistinct)
+        new hashBuckets(rightHasher, method == 'hashDistinct')
         .addItems(rightData);
 
     // convenience function for extracting a bucket

@@ -32,7 +32,8 @@ class parser {
 
         if (arrowIx == -1 && braceIx == -1) {
             console.trace();
-            throw "it seems that a non-function was passed to 'parser'";
+            throw   `it seems that a non-lambda function 
+                    was passed to 'parser'`;
         }
 
         let splitIx = 
@@ -96,9 +97,9 @@ parser.pairEqualitiesToObjectSelectors = function(func) {
             if (/[^A-Za-z0-9_. ]/.test(ep)) 
                 return;
 
-            if (ep.startsWith(`${leftParam}.`))
+            if (ep.startsWith(`${leftParam}.`) || ep == leftParam)
                 leftEq = ep;
-            else if (ep.startsWith(`${rightParam}.`))
+            else if (ep.startsWith(`${rightParam}.`) || ep == rightParam)
                 rightEq = ep;
             else
                 return; 

@@ -1,4 +1,5 @@
 import parser from '../src/parser.js';
+import hashBuckets from '../src/hashBuckets.js';
 
 /*
 
@@ -14,6 +15,15 @@ import parser from '../src/parser.js';
 
 function test () {
 
+    let parsed = parser.pairEqualitiesToObjectSelectors((x,y) => x == y);
+    
+    let buckets = new hashBuckets(x => x, false)
+        .addItems([{a: 'eigh', b: 'bee'}, {a: 'eigh', b: 'bee'}]);
+
+    console.log(buckets);
+
+    return true;
+    
     let lambdas = [
         (x,y) => x.a == y.a && x.b == y.b,
         (x,y) => x.b >= y.a && x.b <= y.c,
