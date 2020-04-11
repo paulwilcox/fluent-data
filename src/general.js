@@ -84,6 +84,21 @@ export let flattenArray = array => {
     return result;
 }
 
+// peek function for iterables.  Returns
+// a peeked value and a rebuilt iterator
+// that you can iterate again as if 
+// you never peeked in it.
+export function peeker(iterator) {
+    let peeked = iterator.next();
+    let rebuiltIterator = function*() {
+        if(peeked.done)
+            return;
+        yield peeked.value;
+        yield* iterator;
+    }
+    return { peeked, rebuiltIterator };
+}
+
 export let noUndefinedForFunc = mapper =>
 
     (...args) => {
