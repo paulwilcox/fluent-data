@@ -5,48 +5,37 @@ import parser from './parser.js';
 import { runEmulators } from './reducer.js';
 import { merge as mrg, mergeMethod } from './mergeTools.js';
 
-export default class dataset extends Array {
+export default class dataset {
 
-    constructor(...data) {
-        super(...data);
+    constructor(data) {
+        this.data = data;
     }
 
     map (func) {    
-        let recursed = recurse(
-            data => Array.prototype.map.call(
-                data, 
-                g.noUndefinedForFunc(func)
-            ),
-            this 
-        );
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        let _map = function* (data) {
+            for(let row of data)
+                yield g.noUndefined(func(row));
+        }
+        this.data = recurse(_map, this.data);
+        return this;
     }
 
     filter (func) {    
-        let recursed = recurse(
-            data => Array.prototype.filter.call(
-                data,
-                func
-            ),
-            this, 
-        );
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        let _filter = function* (data) {
+            for(let row of data)
+            if(func(row))
+                yield row;
+        }
+        this.data = recurse(_filter, this.data);
+        return this;
     }
 
     sort (func) {
-
-        let params = parser.parameters(func);
-
-        let outerFunc = params.length > 1 
-            ? data => Array.prototype.sort.call(data, func)
+        let outerFunc = parser.parameters(func) > 1 
+            ? data => data.sort(func)
             : data => quickSort(data, func);
-        
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
-
+        this.data = recurse(outerFunc, this.data);
+        return this;
     } 
 
     group (func) {
@@ -54,15 +43,13 @@ export default class dataset extends Array {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurse(outerFunc, this.data);
+        return this.data;
     }
 
     ungroup (func) {
-        let recursed = recurseForUngroup(func, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurseForUngroup(func, this.data);
+        return this;
     }
 
     reduce (
@@ -78,13 +65,12 @@ export default class dataset extends Array {
 
         let isUngrouped = 
             this.length > 0 
-            && !Array.isArray(this[0]);
+            && !Array.isArray(this.data[0]);
 
         let recursed = recurse(
             data => runEmulators(data, func), 
-            isUngrouped ? [this] : this
+            isUngrouped ? [this.data] : this.data
         );
-        Object.setPrototypeOf(recursed, dataset.prototype);
 
         return !isUngrouped || keepGrouped 
             ? recursed
@@ -148,24 +134,42 @@ export default class dataset extends Array {
         return this;
     }
 
-}
-
-function recurse (func, data) {
-
-    let output = [];
-    let isEnd = 
-        Array.isArray(data) && 
-        !Array.isArray(data[0]);
-
-    if (!isEnd) {
-        for (let item of data)
-            output.push(recurse(func, item));
-        return output;
+    get (func) {
+        if(func)
+            this.map(func);
+        return Array.from(this.data);
     }
-    else 
-        return func(data);
 
 }
+
+function* recurse (func, data) {
+
+    // func() should be used when 'data' is an unnested iterable
+
+    if (!g.isIterable(data)) {
+        console.trace()
+        throw 'data passed to recurse is not iterable.';
+    }
+
+    for (let item of data) {
+
+        // If the first item is not iterable, then
+        // you are touching base records.  So 
+        // stop everything and just run the passed
+        // in function non-recursively.
+        if(!g.isIterable(item)) {
+            yield* func(data);
+            return;
+        }
+
+        // If you are not touching base 
+        // records, then recurse. 
+        yield* recurse(func, item);
+
+    }
+
+}
+
 
 function recurseForUngroup (func, data) {
         
