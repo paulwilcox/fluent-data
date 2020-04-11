@@ -67,6 +67,11 @@ export let isString = input =>
 export let isFunction = input => 
     typeof input === 'function';
 
+// Thanks domino at https://stackoverflow.com/questions/18884249
+export let isIterable = (input, includeStrings = false) => 
+    !includeStrings && isString(includeStrings) ? false
+    : Symbol.iterator in Object(input);
+
 // array.flat not out in all browsers/node
 export let flattenArray = array => {
     let result = [];
