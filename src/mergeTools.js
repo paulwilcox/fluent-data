@@ -137,7 +137,7 @@ function* loopMerge (
             leftHits.add(l);
             rightHits.add(r);
             let mapped = mapper(leftItem, rightItem);
-            if (mapped)
+            if (mapped) 
                 yield mapped;
         }
     }

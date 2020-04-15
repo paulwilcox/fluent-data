@@ -11,6 +11,10 @@ export default class dataset {
         this.data = data;
     }
 
+    *[Symbol.iterator]() { 
+        yield* this.data;
+    }
+
     map (func) {    
         let _map = function* (data) {
             for(let row of data)
@@ -39,6 +43,7 @@ export default class dataset {
     } 
 
     group (func) {
+        console.log('here')
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
@@ -63,18 +68,23 @@ export default class dataset {
         // the reulting singleton object, not the one-item
         // array. 
 
+        let p = g.peeker(this.data);
+        this.data = p.rebuiltIterator;
+
         let isUngrouped = 
-            this.length > 0 
-            && !Array.isArray(this.data[0]);
+            !p.peeked.done  
+            && !g.isIterable(p.peeked.value);
 
         let recursed = recurse(
             data => runEmulators(data, func), 
             isUngrouped ? [this.data] : this.data
         );
 
-        return !isUngrouped || keepGrouped 
+        this.data = !isUngrouped || keepGrouped 
             ? recursed
             : recursed[0];
+
+        return this;
 
     }    
 
@@ -84,9 +94,8 @@ export default class dataset {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurse(outerFunc, this.data);
+        return this;
     }
 
     merge (incoming, matcher, options, method) {
@@ -117,20 +126,31 @@ export default class dataset {
 
         let outerFunc = data => [...mrg (
             data, 
-            incoming, 
+            incoming.data, 
             matcher, 
             options, 
             method
         )];
 
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        // TODO: Consider below:
+        // Recursion when dealing with multiple datasets
+        // is not advised.  Code not functional in this
+        // case but even if it was I would quesiton wether
+        // it wouldn't be confusing, as it would consume
+        // a dataset you're not seeking to manipulate.
+        // Maybe we can rescue this at the dataset level
+        // by forcing Array.from against the incoming data
+        // at the dataset level.
+        // this.data = recurse(outerFunc, this.data);
+        this.data = outerFunc(this.data); 
+        return this;
 
     }
 
+    // TODO: Since we're dealing with an iterable, this 
+    // take this.data to a 'done' state before we're ready
     with (func) {
-        func(this);
+        func(this.data);
         return this;
     }
 
@@ -151,21 +171,26 @@ function* recurse (func, data) {
         throw 'data passed to recurse is not iterable.';
     }
 
-    for (let item of data) {
+    let iterator = function* () { yield* data; }();
 
-        // If the first item is not iterable, then
-        // you are touching base records.  So 
-        // stop everything and just run the passed
-        // in function non-recursively.
-        if(!g.isIterable(item)) {
-            yield* func(data);
-            return;
-        }
+    // This works properly:             yield* func(data); return;
+    // This does not work properly:     yield* func(iterator); return;
 
+    let peeker = g.peeker(iterator);
+
+    // If the first item is not iterable, then
+    // you are touching base records.  So 
+    // stop everything and just run the passed
+    // in function non-recursively.
+    if(!g.isIterable(peeker.peeked)) {
+        yield* func(peeker.rebuiltIterator());
+        return;
+    }
+
+    for (let item of peeker.rebuiltIterator()) {
         // If you are not touching base 
         // records, then recurse. 
         yield* recurse(func, item);
-
     }
 
 }

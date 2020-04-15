@@ -12,7 +12,7 @@ export default class extends Map {
     }  
  
     addItems(items) {
-        for(let item of items) 
+        for(let item of items)
             this.addItem(item);
         return this;
     }

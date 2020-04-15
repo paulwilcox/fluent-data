@@ -21,14 +21,10 @@ export default class {
 
     }
 
-    // TODO: determine whether we want to keep clone, 
-    // or to implement pass by reference, or give option.
     addDataset (key, data) { 
-        if (!data)
-            throw `Cannot pass ${key} as undefined in 'addDataset'`
-        this.datasets[key] = Array.isArray(data) 
-            ? new dataset(...data) 
-            : data;
+        if (!g.isIterable(data))
+            throw `Cannot add dataset ${key} because it is not iterable.`
+        this.datasets[key] = new dataset(data);
         return this;
     }    
 
@@ -68,7 +64,7 @@ export default class {
             return this.datasets[funcOrKey];
         let key = parser.parameters(funcOrKey)[0];
         return this
-            ._callOnDs('map', funcOrKey)
+            ._callOnDs('get', funcOrKey)
             .datasets[key];
     }
 
