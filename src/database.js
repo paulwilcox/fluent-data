@@ -52,7 +52,7 @@ export default class {
 
         else for (let param of parser.parameters(arg)) 
             datasets.push(this.datasets[param]);
-        
+
         return datasets.filter(ds => ds !== undefined);
 
     }

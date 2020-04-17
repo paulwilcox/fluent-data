@@ -43,13 +43,12 @@ export default class dataset {
     } 
 
     group (func) {
-        console.log('here')
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
         this.data = recurse(outerFunc, this.data);
-        return this.data;
+        return this;
     }
 
     ungroup (func) {
