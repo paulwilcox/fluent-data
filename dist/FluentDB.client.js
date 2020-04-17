@@ -712,7 +712,7 @@ class dataset {
             .addItems(data)
             .getBuckets();
         this.data = recurse(outerFunc, this.data);
-        return this.data;
+        return this;
     }
 
     ungroup (func) {
@@ -929,7 +929,7 @@ class database {
 
         else for (let param of parser.parameters(arg)) 
             datasets.push(this.datasets[param]);
-        
+
         return datasets.filter(ds => ds !== undefined);
 
     }
