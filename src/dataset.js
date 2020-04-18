@@ -154,9 +154,10 @@ export default class dataset {
     }
 
     get (func) {
-        if(func)
-            this.map(func);
-        return Array.from(this.data);
+        return recurseToArray(
+            func || function(x) { return x }, 
+            this.data
+        );
     }
 
 }
@@ -171,29 +172,40 @@ function* recurse (func, data) {
     }
 
     let iterator = function* () { yield* data; }();
-
-    // This works properly:             yield* func(data); return;
-    // This does not work properly:     yield* func(iterator); return;
-
     let peeker = g.peeker(iterator);
 
-    // If the first item is not iterable, then
-    // you are touching base records.  So 
-    // stop everything and just run the passed
-    // in function non-recursively.
-    if(!g.isIterable(peeker.peeked)) {
+    // data is base records
+    if(!g.isIterable(peeker.peeked.value)) {
         yield* func(peeker.rebuiltIterator());
         return;
     }
 
-    for (let item of peeker.rebuiltIterator()) {
-        // If you are not touching base 
-        // records, then recurse. 
-        yield* recurse(func, item);
-    }
+    // data is nested group 
+    for (let item of peeker.rebuiltIterator()) 
+        yield recurse(func, item);
 
 }
 
+function recurseToArray (func, data) {
+
+    if (!g.isIterable(data)) {
+        console.trace()
+        throw 'data passed to get() is not iterable.';
+    }
+
+    let iterator = function* () { yield* data; }();
+    let peeker = g.peeker(iterator);
+
+    let list = [];
+    for(let item of peeker.rebuiltIterator())
+        list.push(
+            g.isIterable(peeker.peeked.value)                
+            ? recurseToArray(func, item)
+            : func(item)
+        );
+    return list;    
+
+}
 
 function recurseForUngroup (func, data) {
         

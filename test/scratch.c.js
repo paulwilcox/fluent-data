@@ -7,9 +7,9 @@ async function test () {
         $$({ o: data.orders })
         .group(o => o.customer)
         .group(o => o.rating >= 10) 
-        //.get(o => o);
+        .get(o => o);
 
-    console.log(Array.from(results.datasets['o'].data));
+    console.log(results);
 
     return true;
 
