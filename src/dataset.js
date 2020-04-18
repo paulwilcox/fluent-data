@@ -67,21 +67,20 @@ export default class dataset {
         // the reulting singleton object, not the one-item
         // array. 
 
-        let p = g.peeker(this.data);
-        this.data = p.rebuiltIterator;
+        let iter = g.peekable(data);
 
         let isUngrouped = 
-            !p.peeked.done  
-            && !g.isIterable(p.peeked.value);
+            !iter.peek().done  
+            && !g.isIterable(iter.peek().value);
 
         let recursed = recurse(
             data => runEmulators(data, func), 
-            isUngrouped ? [this.data] : this.data
+            isUngrouped ? [iter] : iter
         );
 
         this.data = !isUngrouped || keepGrouped 
             ? recursed
-            : recursed[0];
+            : recursed.next().value; 
 
         return this;
 
@@ -166,40 +165,59 @@ function* recurse (func, data) {
 
     // func() should be used when 'data' is an unnested iterable
 
-    if (!g.isIterable(data)) {
-        console.trace()
-        throw 'data passed to recurse is not iterable.';
-    }
-
-    let iterator = function* () { yield* data; }();
-    let peeker = g.peeker(iterator);
+    verifyRecursable(data);
+    let iter = g.peekable(data);
 
     // data is base records
-    if(!g.isIterable(peeker.peeked.value)) {
-        yield* func(peeker.rebuiltIterator());
+    if(!g.isIterable(iter.peek().value)) {
+        yield* func(iter);
         return;
     }
 
     // data is nested group 
-    for (let item of peeker.rebuiltIterator()) 
+    for (let item of iter) 
         yield recurse(func, item);
 
 }
 
-function recurseToArray (func, data) {
+/*
+function recurseForUngroup (func, data) {
+        
+    let isEnd = false;
 
-    if (!g.isIterable(data)) {
-        console.trace()
-        throw 'data passed to get() is not iterable.';
-    }
+    verifyRecursable(data);
 
     let iterator = function* () { yield* data; }();
     let peeker = g.peeker(iterator);
+        
+
+    let output = [];            
+    let isEnd = 
+        Array.isArray(data) &&
+        Array.isArray(data[0]) && 
+        !Array.isArray(data[0][0]); 
+            
+    if (!isEnd) 
+        for (let item of data)
+            output.push(recurseForUngroup(func, item));
+    else 
+        for (let item of data)
+        for (let nested of item)
+            output.push(func(nested));
+    
+    return output;
+
+}
+*/
+function recurseToArray (func, data) {
+
+    verifyRecursable(data);
+    let iter = g.peekable(data);
 
     let list = [];
-    for(let item of peeker.rebuiltIterator())
+    for(let item of iter)
         list.push(
-            g.isIterable(peeker.peeked.value)                
+            g.isIterable(iter.peek().value)                
             ? recurseToArray(func, item)
             : func(item)
         );
@@ -207,6 +225,14 @@ function recurseToArray (func, data) {
 
 }
 
+function verifyRecursable (data) {
+    if (g.isIterable(data)) 
+        return;
+    console.trace();
+    throw 'Data is not iterable.  Cannot use for recursion.';
+}
+
+/*
 function recurseForUngroup (func, data) {
         
     let output = [];            
@@ -226,3 +252,4 @@ function recurseForUngroup (func, data) {
     return output;
 
 }
+*/

@@ -87,6 +87,9 @@ export let flattenArray = array => {
 // thanks shlang (8382469) at stackoverflow.com/questions/61164230
 export function peekable(iterator) {
 
+    if (Array.isArray(iterator))
+        iterator = (function*(i) { yield* i; })(iterator);
+
     let peeked = iterator.next();
     let prev = { value: undefined, done: false, beforeStart: true };
   
@@ -104,21 +107,6 @@ export function peekable(iterator) {
     wrapped.prev = () => prev;
     return wrapped;
     
-}
-
-// peek function for iterables.  Returns
-// a peeked value and a rebuilt iterator
-// that you can iterate again as if 
-// you never peeked in it.
-export function peeker(iterator) {
-    let peeked = iterator.next();
-    let rebuiltIterator = function*() {
-        if(peeked.done)
-            return;
-        yield peeked.value;
-        yield* iterator;
-    }
-    return { peeked, rebuiltIterator };
 }
 
 export let noUndefinedForFunc = mapper =>

@@ -117,6 +117,31 @@ let isIterable = (input, includeStrings = false) =>
     !includeStrings && isString(includeStrings) ? false
     : Symbol.iterator in Object(input);
 
+// thanks shlang (8382469) at stackoverflow.com/questions/61164230
+function peekable(iterator) {
+
+    if (Array.isArray(iterator))
+        iterator = (function*(i) { yield* i; })(iterator);
+
+    let peeked = iterator.next();
+    let prev = { value: undefined, done: false, beforeStart: true };
+  
+    let wrapped = (function* (initial) {
+      while (!peeked.done) {
+        let current = peeked.value;
+        prev = peeked;
+        peeked = iterator.next();
+        yield current;
+      }
+      return peeked.value;
+    })();
+  
+    wrapped.peek = () => peeked;
+    wrapped.prev = () => prev;
+    return wrapped;
+    
+}
+
 // peek function for iterables.  Returns
 // a peeked value and a rebuilt iterator
 // that you can iterate again as if 
@@ -832,32 +857,76 @@ function* recurse (func, data) {
 
     // func() should be used when 'data' is an unnested iterable
 
-    if (!isIterable(data)) {
-        console.trace();
-        throw 'data passed to recurse is not iterable.';
-    }
-
-    let iterator = function* () { yield* data; }();
-    let peeker$1 = peeker(iterator);
+    verifyRecursable(data);
+    let iter = peekable(data);
 
     // data is base records
-    if(!isIterable(peeker$1.peeked.value)) {
-        yield* func(peeker$1.rebuiltIterator());
+    if(!isIterable(iter.peek().value)) {
+        yield* func(iter);
         return;
     }
 
     // data is nested group 
-    for (let item of peeker$1.rebuiltIterator()) 
+    for (let item of iter) 
         yield recurse(func, item);
 
 }
 
+/*
+function* recurse (func, data) {
+
+    // func() should be used when 'data' is an unnested iterable
+    
+    verifyRecursable(data);
+    g.peekable(data);
+
+    let iterator = function* () { yield* data; }();
+    let peeker = g.peeker(iterator);
+
+    // data is base records
+    if(!g.isIterable(peeker.peeked.value)) {
+        yield* func(peeker.rebuiltIterator());
+        return;
+    }
+
+    // data is nested group 
+    for (let item of peeker.rebuiltIterator()) 
+        yield recurse(func, item);
+
+}
+*/
+/*
+function recurseForUngroup (func, data) {
+        
+    let isEnd = false;
+
+    verifyRecursable(data);
+
+    let iterator = function* () { yield* data; }();
+    let peeker = g.peeker(iterator);
+        
+
+    let output = [];            
+    let isEnd = 
+        Array.isArray(data) &&
+        Array.isArray(data[0]) && 
+        !Array.isArray(data[0][0]); 
+            
+    if (!isEnd) 
+        for (let item of data)
+            output.push(recurseForUngroup(func, item));
+    else 
+        for (let item of data)
+        for (let nested of item)
+            output.push(func(nested));
+    
+    return output;
+
+}
+*/
 function recurseToArray (func, data) {
 
-    if (!isIterable(data)) {
-        console.trace();
-        throw 'data passed to get() is not iterable.';
-    }
+    verifyRecursable(data);
 
     let iterator = function* () { yield* data; }();
     let peeker$1 = peeker(iterator);
@@ -873,6 +942,14 @@ function recurseToArray (func, data) {
 
 }
 
+function verifyRecursable (data) {
+    if (isIterable(data)) 
+        return;
+    console.trace();
+    throw 'Data is not iterable.  Cannot use for recursion.';
+}
+
+/*
 function recurseForUngroup (func, data) {
         
     let output = [];            
@@ -892,6 +969,7 @@ function recurseForUngroup (func, data) {
     return output;
 
 }
+*/
 
 class database {
 
