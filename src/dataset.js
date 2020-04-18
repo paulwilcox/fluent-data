@@ -9,6 +9,7 @@ export default class dataset {
 
     constructor(data) {
         this.data = data;
+        this.groupLevel = 1;
     }
 
     *[Symbol.iterator]() { 
@@ -20,7 +21,7 @@ export default class dataset {
             for(let row of data)
                 yield g.noUndefined(func(row));
         }
-        this.data = recurse(_map, this.data);
+        this.data = recurse(_map, this.data, this.groupLevel);
         return this;
     }
 
@@ -30,7 +31,7 @@ export default class dataset {
             if(func(row))
                 yield row;
         }
-        this.data = recurse(_filter, this.data);
+        this.data = recurse(_filter, this.data, this.groupLevel);
         return this;
     }
 
@@ -38,7 +39,7 @@ export default class dataset {
         let outerFunc = parser.parameters(func) > 1 
             ? data => data.sort(func)
             : data => quickSort(data, func);
-        this.data = recurse(outerFunc, this.data);
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     } 
 
@@ -47,13 +48,24 @@ export default class dataset {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        this.data = recurse(outerFunc, this.data);
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        this.groupLevel++;
         return this;
     }
 
     ungroup (func) {
-        this.data = recurseForUngroup(func, this.data);
+
+        let outerFunc = function* (data) {
+            for (let item of data)
+            for (let nested of item)
+                yield func(nested);
+        }
+
+        // stop early becuase you want one level above base records
+        this.data = recurse(outerFunc, this.data, this.groupLevel - 1);
+        this.groupLevel--;
         return this;
+
     }
 
     reduce (
@@ -75,7 +87,8 @@ export default class dataset {
 
         let recursed = recurse(
             data => runEmulators(data, func), 
-            isUngrouped ? [iter] : iter
+            isUngrouped ? [iter] : iter,
+            this.groupLevel
         );
 
         this.data = !isUngrouped || keepGrouped 
@@ -92,7 +105,7 @@ export default class dataset {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        this.data = recurse(outerFunc, this.data);
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     }
 
@@ -155,101 +168,36 @@ export default class dataset {
     get (func) {
         return recurseToArray(
             func || function(x) { return x }, 
-            this.data
+            this.data,
+            this.groupLevel
         );
     }
 
 }
 
-function* recurse (func, data) {
 
-    // func() should be used when 'data' is an unnested iterable
+function* recurse (func, data, levelCountdown) {
 
-    verifyRecursable(data);
-    let iter = g.peekable(data);
-
-    // data is base records
-    if(!g.isIterable(iter.peek().value)) {
-        yield* func(iter);
+    if (levelCountdown > 1) { // data is nested groups
+        for (let item of data) 
+            yield recurse(func, item, levelCountdown - 1);
         return;
     }
 
-    // data is nested group 
-    for (let item of iter) 
-        yield recurse(func, item);
+    yield* func(data); // data is base records
 
 }
 
-/*
-function recurseForUngroup (func, data) {
-        
-    let isEnd = false;
-
-    verifyRecursable(data);
-
-    let iterator = function* () { yield* data; }();
-    let peeker = g.peeker(iterator);
-        
-
-    let output = [];            
-    let isEnd = 
-        Array.isArray(data) &&
-        Array.isArray(data[0]) && 
-        !Array.isArray(data[0][0]); 
-            
-    if (!isEnd) 
-        for (let item of data)
-            output.push(recurseForUngroup(func, item));
-    else 
-        for (let item of data)
-        for (let nested of item)
-            output.push(func(nested));
-    
-    return output;
-
-}
-*/
-function recurseToArray (func, data) {
-
-    verifyRecursable(data);
-    let iter = g.peekable(data);
+function recurseToArray (func, data, levelCountdown) {
 
     let list = [];
-    for(let item of iter)
+    for(let item of data)
         list.push(
-            g.isIterable(iter.peek().value)                
-            ? recurseToArray(func, item)
+            levelCountdown > 1          
+            ? recurseToArray(func, item, levelCountdown - 1)
             : func(item)
         );
     return list;    
 
 }
 
-function verifyRecursable (data) {
-    if (g.isIterable(data)) 
-        return;
-    console.trace();
-    throw 'Data is not iterable.  Cannot use for recursion.';
-}
-
-/*
-function recurseForUngroup (func, data) {
-        
-    let output = [];            
-    let isEnd = 
-        Array.isArray(data) &&
-        Array.isArray(data[0]) && 
-        !Array.isArray(data[0][0]);
-            
-    if (!isEnd) 
-        for (let item of data)
-            output.push(recurseForUngroup(func, item));
-    else 
-        for (let item of data)
-        for (let nested of item)
-            output.push(func(nested));
-    
-    return output;
-
-}
-*/
