@@ -84,6 +84,28 @@ export let flattenArray = array => {
     return result;
 }
 
+// thanks shlang (8382469) at stackoverflow.com/questions/61164230
+export function peekable(iterator) {
+
+    let peeked = iterator.next();
+    let prev = { value: undefined, done: false, beforeStart: true };
+  
+    let wrapped = (function* (initial) {
+      while (!peeked.done) {
+        let current = peeked.value;
+        prev = peeked;
+        peeked = iterator.next();
+        yield current;
+      }
+      return peeked.value;
+    })();
+  
+    wrapped.peek = () => peeked;
+    wrapped.prev = () => prev;
+    return wrapped;
+    
+}
+
 // peek function for iterables.  Returns
 // a peeked value and a rebuilt iterator
 // that you can iterate again as if 
