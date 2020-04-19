@@ -1,15 +1,40 @@
-
 async function test () {
 
     let data = await sample('orders');
 
     let results = 
         $$({ o: data.orders })
-        .group(o => o.customer)
-        .group(o => o.rating >= 10)
-        .ungroup(o => o)
-        .get(o => o);    
+        .reduce(o => ({
+            firstCustomer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
+            speed_cor: $$.cor(o.speed, o.rating),
+            n: $$.count(o.id)
+        }))
+        .get('o');
 
-    console.log(results)
+console.log(results)
+
+    if(results.n != 12) throw `
+        results.n does not equal 12
+    `;
+
+    results = 
+        $$({ o: data.orders })
+        .group(o => o.customer) 
+        .reduce(o => ({
+            customer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
+            speed_cor: $$.cor(o.speed, o.rating)
+        }))
+        .get(o => o);
+
+    let row0 = prop => Math.round(results[0][prop] * 100) / 100;
+
+    return results.length == 3
+        && row0('rating') == 58.29
+        && row0('speed') == 4.57
+        && row0('speed_cor') == 0.74;
 
 }

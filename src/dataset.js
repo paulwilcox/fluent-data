@@ -55,6 +55,18 @@ export default class dataset {
 
     ungroup (func) {
 
+        if (this.groupLevel == 1) {
+            let counter = 0;
+            for (let item of this.data) {
+                if (++counter > 1)
+                    throw   'Ungrouping to level 0 is possible, but ' +
+                            'there can only be one item in the dataset.';
+                this.data = item;
+            }
+            this.groupLevel--;
+            return this;
+        }
+
         let outerFunc = function* (data) {
             for (let item of data)
             for (let nested of item)
@@ -68,35 +80,13 @@ export default class dataset {
 
     }
 
-    reduce (
-        func, 
-        keepGrouped = false
-    ) {
-
-        // Reduce expects grouped input.
-        // If it's not grouped, wrap it in a trivial group.
-        // When done, if desired (keepGrouped), return
-        // the reulting singleton object, not the one-item
-        // array. 
-
-        let iter = g.peekable(data);
-
-        let isUngrouped = 
-            !iter.peek().done  
-            && !g.isIterable(iter.peek().value);
-
-        let recursed = recurse(
-            data => runEmulators(data, func), 
-            isUngrouped ? [iter] : iter,
-            this.groupLevel
-        );
-
-        this.data = !isUngrouped || keepGrouped 
-            ? recursed
-            : recursed.next().value; 
-
+    reduce (func, ungroup = true) {
+        // Wrap outerFunc result in array to restore the group level
+        let outerFunc = data => [runEmulators(data, func)];
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        if (ungroup)
+            this.ungroup(x => x);
         return this;
-
     }    
 
     distinct (func) {
@@ -166,17 +156,22 @@ export default class dataset {
     }
 
     get (func) {
+
         return recurseToArray(
             func || function(x) { return x }, 
             this.data,
             this.groupLevel
         );
+        
     }
 
 }
 
 
 function* recurse (func, data, levelCountdown) {
+
+    if (levelCountdown === 0)
+        return func([data])[0];
 
     if (levelCountdown > 1) { // data is nested groups
         for (let item of data) 
@@ -189,6 +184,9 @@ function* recurse (func, data, levelCountdown) {
 }
 
 function recurseToArray (func, data, levelCountdown) {
+
+    if (levelCountdown === 0)
+        return func([data])[0];
 
     let list = [];
     for(let item of data)

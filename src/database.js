@@ -61,7 +61,7 @@ export default class {
     // of the calling FluentDB.
     get(funcOrKey) {
         if (g.isString(funcOrKey))
-            return this.datasets[funcOrKey];
+            return this.datasets[funcOrKey].data;
         let key = parser.parameters(funcOrKey)[0];
         return this
             ._callOnDs('get', funcOrKey)
