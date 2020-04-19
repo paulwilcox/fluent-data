@@ -1,18 +1,23 @@
 async function test () {
 
-    let data = await sample('orders');
+    let data = await sample();
+
+    
 
     let results = 
-        $$(data.orders)
-        .filter(o => o.customer != 7)
-        .get(o => ({
-            customer: o.customer,
-            rating: o.rating,
-            flag: o.rating < 10 ? 'bad' : o.rating < 50 ? 'okay' : 'good'
-        }));
+        $$({
+            o: data.orders,
+            c: data.customers
+        })
+        .group(o => o.customer)
+        .map(c => ({...c, customer: c.id, id: undefined}))
+        .merge(
+            (o,c) => o.customer = c.customer,
+            'both both'
+        )
+        .get(o => o);
 
-    return Object.keys(results[0]).includes('customer') 
-        && !Object.keys(results[0]).includes('id')
-        && !results.find(o => o.customer == 7);
+    console.log(results)
 
 }
+

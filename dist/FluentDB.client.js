@@ -748,6 +748,8 @@ class dataset {
         return this;
     }
 
+    // TODO: Test whether this consumes the external dataset
+    // by iterating it.
     merge (incoming, matcher, options, method) {
 
         let matcherReturnsString = false;
@@ -782,17 +784,7 @@ class dataset {
             method
         )];
 
-        // TODO: Consider below:
-        // Recursion when dealing with multiple datasets
-        // is not advised.  Code not functional in this
-        // case but even if it was I would quesiton wether
-        // it wouldn't be confusing, as it would consume
-        // a dataset you're not seeking to manipulate.
-        // Maybe we can rescue this at the dataset level
-        // by forcing Array.from against the incoming data
-        // at the dataset level.
-        // this.data = recurse(outerFunc, this.data);
-        this.data = outerFunc(this.data); 
+        this.data = recurse(outerFunc, this.data, this.groupLevel); 
         return this;
 
     }
@@ -858,7 +850,7 @@ class database {
             'filter', 'map', 
             'group', 'ungroup', 
             'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'mergeByVals', 'with'
+            'sort', 'print', 'merge', 'with'
         ];
 
         for(let funcName of funcsToAttach) 
