@@ -35,8 +35,10 @@ export default class dataset {
         return this;
     }
 
+    // TODO: Test for quicksort, triggered by two parameter function.  
+    // Presently I only have a test for one parameter version. 
     sort (func) {
-        let outerFunc = parser.parameters(func) > 1 
+        let outerFunc = parser.parameters(func).length > 1 
             ? data => data.sort(func)
             : data => quickSort(data, func);
         this.data = recurse(outerFunc, this.data, this.groupLevel);

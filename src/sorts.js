@@ -1,77 +1,71 @@
-// TODO: See if we need to uncomment the falsy checks below.
-// I ran orderby without them and surprisingly, it did not 
-// fail, though I don't know if the ordering comes out as 
-// desired.
-//
-// orderedValuesSelector accepts a single function that selects 
-// values from an object "{}" and returns an array "[]"
-export let quickSort = (unsorted, orderedValuesSelector) => {
 
-    if (unsorted.length <= 1) 
-        return unsorted;
+export function* quickSort (
+    unsorted, 
+    orderSelector
+) {
 
-    let pivot = unsorted.pop();
-    let left = []; 
-    let right = [];
+    let lesserThans = [];
+    let greaterThans = [];
+    let pivot;
 
+    // Get the first of unsorted, establish it as the pivot
+    if (!Array.isArray(unsorted)) {
+        pivot = unsorted.next();
+        if (pivot.done)
+            return pivot.value;
+        pivot = pivot.value; 
+    } 
+    else 
+        pivot = unsorted.pop();
+
+    let pivotSelection = orderSelector(pivot);
+
+    // Compare remaining rows to the pivot and put into 
+    // bins of lesser records and equal/greater records.
     for (let row of unsorted) {
 
-        let orderDecision = 
-            decideOrder(
-                orderedValuesSelector(row), 
-                orderedValuesSelector(pivot)
-            );
+        let orderDecision = decideOrder(
+            orderSelector(row), 
+            pivotSelection
+        );
 
         orderDecision == -1
-            ? left.push(row) 
-            : right.push(row);
+            ? lesserThans.push(row) 
+            : greaterThans.push(row);
 
     }
 
-    return quickSort(left, orderedValuesSelector)
-        .concat([pivot])
-        .concat(quickSort(right, orderedValuesSelector));
+    if (lesserThans.length > 0)
+        yield* quickSort(lesserThans, orderSelector);
+    
+    yield pivot;
+    
+    if (greaterThans.length > 0)
+        yield* quickSort(greaterThans, orderSelector);
 
 };
 
-/*
-    Take two points or arrays of values.  Compare the 
-    first value in each for <, >, or =.  If < or >, then 
-    that's your result.  If =, then compare the second 
-    value in each array.  Only if all are =, then output =.  
-    As usual -1, 0, and 1 correspond to <, =, > respectively.
-    Valid < invalid (e.g. "x" < undefined) (but is this 
-    going to kill performance?)
-*/  
-let decideOrder = (
+// Capture lessThan (-1), greaterThan (1) or equal (0)
+function decideOrder (
     leftVals,
     rightVals
-) => {
+) {
 
+    // User has option to pass array as orderFunc to
+    // created steped orderings.  If they don't pass
+    // an array, just wrap in one at this step.
     if (!Array.isArray(leftVals))
         leftVals = [leftVals];
-
     if (!Array.isArray(rightVals))
         rightVals = [rightVals];
         
-    let length = 
-            leftVals.length > rightVals.length
+    let length = leftVals.length > rightVals.length
         ? leftVals.length
         : rightVals.length;
 
     for(let i = 0; i < length; i++) {
-
-        let leftVal = leftVals[i];
-        let rightVal = rightVals[i];
-
-        //let isLeftValid = leftVal === 0 || leftVal === false || Boolean(leftVal);
-        //let isRightValid = rightVal === 0 || rightVal === false || Boolean(rightVal);
-
-        //if (isLeftValid && !isRightValid) return -1
-        //if (!leftValid && isRightValid) return 1;
-        if (leftVal < rightVal) return -1;
-        if (rightVal < leftVal) return 1;
-
+        if (leftVals[i] < rightVals[i]) return -1;
+        if (leftVals[i] > rightVals[i]) return 1;
     }
 
     return 0;
