@@ -2,13 +2,12 @@ import { reducer, runEmulators } from './reducer.js';
 import database from './database.js';
 import dataset from './dataset.js';
 import { mergeMethod } from './mergeTools.js';
+import * as g from './general.js';
 
 export default function _(obj) { 
-    if (Array.isArray(obj)) {
-        Object.setPrototypeOf(obj, dataset.prototype);
-        return obj;
-    }
-    return new database().addDatasets(obj); 
+    return obj instanceof dataset ? obj
+        : g.isIterable(obj) ? new dataset(obj)
+        : new database().addDatasets(obj); 
 }
 
 _.mergeMethod = mergeMethod;

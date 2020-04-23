@@ -67,6 +67,11 @@ export let isString = input =>
 export let isFunction = input => 
     typeof input === 'function';
 
+// Thanks domino at https://stackoverflow.com/questions/18884249
+export let isIterable = (input, includeStrings = false) => 
+    !includeStrings && isString(includeStrings) ? false
+    : Symbol.iterator in Object(input);
+
 // array.flat not out in all browsers/node
 export let flattenArray = array => {
     let result = [];
@@ -77,6 +82,31 @@ export let flattenArray = array => {
         else 
             result.push(element);
     return result;
+}
+
+// thanks shlang (8382469) at stackoverflow.com/questions/61164230
+export function peekable(iterator) {
+
+    if (Array.isArray(iterator))
+        iterator = (function*(i) { yield* i; })(iterator);
+
+    let peeked = iterator.next();
+    let prev = { value: undefined, done: false, beforeStart: true };
+  
+    let wrapped = (function* (initial) {
+      while (!peeked.done) {
+        let current = peeked.value;
+        prev = peeked;
+        peeked = iterator.next();
+        yield current;
+      }
+      return peeked.value;
+    })();
+  
+    wrapped.peek = () => peeked;
+    wrapped.prev = () => prev;
+    return wrapped;
+    
 }
 
 export let noUndefinedForFunc = mapper =>

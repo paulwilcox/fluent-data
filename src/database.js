@@ -12,7 +12,7 @@ export default class {
             'filter', 'map', 
             'group', 'ungroup', 
             'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'mergeByVals', 'with'
+            'sort', 'print', 'merge', 'with'
         ];
 
         for(let funcName of funcsToAttach) 
@@ -21,14 +21,10 @@ export default class {
 
     }
 
-    // TODO: determine whether we want to keep clone, 
-    // or to implement pass by reference, or give option.
     addDataset (key, data) { 
-        if (!data)
-            throw `Cannot pass ${key} as undefined in 'addDataset'`
-        this.datasets[key] = Array.isArray(data) 
-            ? new dataset(...data) 
-            : data;
+        if (!g.isIterable(data))
+            throw `Cannot add dataset ${key} because it is not iterable.`
+        this.datasets[key] = new dataset(data);
         return this;
     }    
 
@@ -56,7 +52,7 @@ export default class {
 
         else for (let param of parser.parameters(arg)) 
             datasets.push(this.datasets[param]);
-        
+
         return datasets.filter(ds => ds !== undefined);
 
     }
@@ -65,10 +61,10 @@ export default class {
     // of the calling FluentDB.
     get(funcOrKey) {
         if (g.isString(funcOrKey))
-            return this.datasets[funcOrKey];
+            return this.datasets[funcOrKey].data;
         let key = parser.parameters(funcOrKey)[0];
         return this
-            ._callOnDs('map', funcOrKey)
+            ._callOnDs('get', funcOrKey)
             .datasets[key];
     }
 

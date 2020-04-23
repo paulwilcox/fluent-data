@@ -112,12 +112,10 @@ let isString = input =>
 let isFunction = input => 
     typeof input === 'function';
 
-let noUndefinedForFunc = mapper =>
-
-    (...args) => {
-        let result = mapper(...args);
-        return noUndefined(result);
-    };
+// Thanks domino at https://stackoverflow.com/questions/18884249
+let isIterable = (input, includeStrings = false) => 
+    !includeStrings && isString(includeStrings) ? false
+    : Symbol.iterator in Object(input);
 
 let noUndefined = obj => {
     
@@ -291,7 +289,7 @@ class hashBuckets extends Map {
     }  
  
     addItems(items) {
-        for(let item of items) 
+        for(let item of items)
             this.addItem(item);
         return this;
     }
@@ -356,85 +354,83 @@ class hashBuckets extends Map {
     
 }
 
-// TODO: See if we need to uncomment the falsy checks below.
-// I ran orderby without them and surprisingly, it did not 
-// fail, though I don't know if the ordering comes out as 
-// desired.
-//
-// orderedValuesSelector accepts a single function that selects 
-// values from an object "{}" and returns an array "[]"
-let quickSort = (unsorted, orderedValuesSelector) => {
+function* quickSort (
+    unsorted, 
+    func,
+    funcReturnsArray
+) {
 
-    if (unsorted.length <= 1) 
-        return unsorted;
+    // Initializations
 
-    let pivot = unsorted.pop();
-    let left = []; 
-    let right = [];
+        let lesserThans = [];
+        let greaterThans = [];
+        let pivot;
 
-    for (let row of unsorted) {
+    // Get the first of unsorted, establish it as the pivot
+        
+        if (!Array.isArray(unsorted)) {
+            pivot = unsorted.next();
+            if (pivot.done)
+                return pivot.value;
+            pivot = pivot.value; 
+        } 
+        else 
+            pivot = unsorted.pop();
 
-        let orderDecision = 
-            decideOrder(
-                orderedValuesSelector(row), 
-                orderedValuesSelector(pivot)
-            );
+    // Compare remaining rows to the pivot and put into 
+    // bins of lesser records and equal/greater records.
+                
+        let pivotSelection = funcReturnsArray ? func(pivot) : null;
 
-        orderDecision == -1
-            ? left.push(row) 
-            : right.push(row);
+        for (let row of unsorted) {
 
-    }
+            let orderDecision = funcReturnsArray
+                ? compareArrays(func(row), pivotSelection) // func returns array
+                : func(row, pivot); // func returns boolean
 
-    return quickSort(left, orderedValuesSelector)
-        .concat([pivot])
-        .concat(quickSort(right, orderedValuesSelector));
+            orderDecision == -1
+                ? lesserThans.push(row) 
+                : greaterThans.push(row);
 
-};
+        }
 
-/*
-    Take two points or arrays of values.  Compare the 
-    first value in each for <, >, or =.  If < or >, then 
-    that's your result.  If =, then compare the second 
-    value in each array.  Only if all are =, then output =.  
-    As usual -1, 0, and 1 correspond to <, =, > respectively.
-    Valid < invalid (e.g. "x" < undefined) (but is this 
-    going to kill performance?)
-*/  
-let decideOrder = (
+    // output in the incrementally better order 
+        
+        if (lesserThans.length > 0)
+            yield* quickSort(lesserThans, func, funcReturnsArray);
+        
+        yield pivot;
+        
+        if (greaterThans.length > 0)
+            yield* quickSort(greaterThans, func, funcReturnsArray);
+
+}
+// Capture lessThan (-1), greaterThan (1) or equal (0)
+function compareArrays (
     leftVals,
     rightVals
-) => {
+) {
 
+    // User has option to pass array as orderFunc to
+    // created steped orderings.  If they don't pass
+    // an array, just wrap in one at this step.
     if (!Array.isArray(leftVals))
         leftVals = [leftVals];
-
     if (!Array.isArray(rightVals))
         rightVals = [rightVals];
         
-    let length = 
-            leftVals.length > rightVals.length
+    let length = leftVals.length > rightVals.length
         ? leftVals.length
         : rightVals.length;
 
     for(let i = 0; i < length; i++) {
-
-        let leftVal = leftVals[i];
-        let rightVal = rightVals[i];
-
-        //let isLeftValid = leftVal === 0 || leftVal === false || Boolean(leftVal);
-        //let isRightValid = rightVal === 0 || rightVal === false || Boolean(rightVal);
-
-        //if (isLeftValid && !isRightValid) return -1
-        //if (!leftValid && isRightValid) return 1;
-        if (leftVal < rightVal) return -1;
-        if (rightVal < leftVal) return 1;
-
+        if (leftVals[i] < rightVals[i]) return -1;
+        if (leftVals[i] > rightVals[i]) return 1;
     }
 
     return 0;
 
-};
+}
 
 let mergeMethod = {
     hash: 'hash',
@@ -571,7 +567,7 @@ function* loopMerge (
             leftHits.add(l);
             rightHits.add(r);
             let mapped = mapper(leftItem, rightItem);
-            if (mapped)
+            if (mapped) 
                 yield mapped;
         }
     }
@@ -658,48 +654,44 @@ function parametersAreEqual (a,b) {
 
 }
 
-class dataset extends Array {
+class dataset {
 
-    constructor(...data) {
-        super(...data);
+    constructor(data) {
+        this.data = data;
+        this.groupLevel = 1;
+    }
+
+    *[Symbol.iterator]() { 
+        yield* this.data;
     }
 
     map (func) {    
-        let recursed = recurse(
-            data => Array.prototype.map.call(
-                data, 
-                noUndefinedForFunc(func)
-            ),
-            this 
-        );
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        let _map = function* (data) {
+            for(let row of data)
+                yield noUndefined(func(row));
+        };
+        this.data = recurse(_map, this.data, this.groupLevel);
+        return this;
     }
 
     filter (func) {    
-        let recursed = recurse(
-            data => Array.prototype.filter.call(
-                data,
-                func
-            ),
-            this, 
-        );
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        let _filter = function* (data) {
+            for(let row of data)
+            if(func(row))
+                yield row;
+        };
+        this.data = recurse(_filter, this.data, this.groupLevel);
+        return this;
     }
 
+    // TODO: Test for quicksort, triggered by two parameter function.  
+    // Presently I only have a test for one parameter version. 
     sort (func) {
-
-        let params = parser.parameters(func);
-
-        let outerFunc = params.length > 1 
-            ? data => Array.prototype.sort.call(data, func)
-            : data => quickSort(data, func);
-        
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
-
+        let outerFunc = parser.parameters(func).length > 1 
+            ? data => quickSort(data, func, false)
+            : data => quickSort(data, func, true);
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        return this;
     } 
 
     group (func) {
@@ -707,42 +699,45 @@ class dataset extends Array {
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        this.groupLevel++;
+        return this;
     }
 
     ungroup (func) {
-        let recursed = recurseForUngroup(func, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+
+        if (this.groupLevel == 1) {
+            let counter = 0;
+            for (let item of this.data) {
+                if (++counter > 1)
+                    throw   'Ungrouping to level 0 is possible, but ' +
+                            'there can only be one item in the dataset.';
+                this.data = item;
+            }
+            this.groupLevel--;
+            return this;
+        }
+
+        let outerFunc = function* (data) {
+            for (let item of data)
+            for (let nested of item)
+                yield func(nested);
+        };
+
+        // stop early becuase you want one level above base records
+        this.data = recurse(outerFunc, this.data, this.groupLevel - 1);
+        this.groupLevel--;
+        return this;
+
     }
 
-    reduce (
-        func, 
-        keepGrouped = false
-    ) {
-
-        // Reduce expects grouped input.
-        // If it's not grouped, wrap it in a trivial group.
-        // When done, if desired (keepGrouped), return
-        // the reulting singleton object, not the one-item
-        // array. 
-
-        let isUngrouped = 
-            this.length > 0 
-            && !Array.isArray(this[0]);
-
-        let recursed = recurse(
-            data => runEmulators(data, func), 
-            isUngrouped ? [this] : this
-        );
-        Object.setPrototypeOf(recursed, dataset.prototype);
-
-        return !isUngrouped || keepGrouped 
-            ? recursed
-            : recursed[0];
-
+    reduce (func, ungroup = true) {
+        // Wrap outerFunc result in array to restore the group level
+        let outerFunc = data => [runEmulators(data, func)];
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        if (ungroup)
+            this.ungroup(x => x);
+        return this;
     }    
 
     distinct (func) {
@@ -751,11 +746,12 @@ class dataset extends Array {
             .addItems(data)
             .getBuckets()
             .map(bucket => func(bucket[0]));
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        return this;
     }
 
+    // TODO: Test whether this consumes the external dataset
+    // by iterating it.
     merge (incoming, matcher, options, method) {
 
         let matcherReturnsString = false;
@@ -784,91 +780,65 @@ class dataset extends Array {
 
         let outerFunc = data => [...merge (
             data, 
-            incoming, 
+            incoming.data, 
             matcher, 
             options, 
             method
         )];
 
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
+        this.data = recurse(outerFunc, this.data, this.groupLevel); 
+        return this;
 
     }
 
-
-    mergeOld (incoming, matcher, options, method) {
-        let outerFunc = data => [...merge (
-            data, 
-            incoming, 
-            matcher, 
-            options, 
-            method
-        )];
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
-    }
-
-    mergeByVals(incoming, options, method) {
-        if (isString(options()))
-            options = options();
-        let outerFunc = data => [...merge (
-            data, 
-            incoming, 
-            (l,r) => eq(l,r), 
-            {
-                hasher: x => x,
-                mapper: options
-            }, 
-            method
-        )];
-        let recursed = recurse(outerFunc, this);
-        Object.setPrototypeOf(recursed, dataset.prototype);
-        return recursed;
-    }
-
+    // TODO: Since we're dealing with an iterable, this 
+    // take this.data to a 'done' state before we're ready
     with (func) {
-        func(this);
+        func(this.data);
         return this;
     }
 
-}
+    get (func) {
 
-function recurse (func, data) {
-
-    let output = [];
-    let isEnd = 
-        Array.isArray(data) && 
-        !Array.isArray(data[0]);
-
-    if (!isEnd) {
-        for (let item of data)
-            output.push(recurse(func, item));
-        return output;
-    }
-    else 
-        return func(data);
-
-}
-
-function recurseForUngroup (func, data) {
+        return recurseToArray(
+            func || function(x) { return x }, 
+            this.data,
+            this.groupLevel
+        );
         
-    let output = [];            
-    let isEnd = 
-        Array.isArray(data) &&
-        Array.isArray(data[0]) && 
-        !Array.isArray(data[0][0]);
-            
-    if (!isEnd) 
-        for (let item of data)
-            output.push(recurseForUngroup(func, item));
-    else 
-        for (let item of data)
-        for (let nested of item)
-            output.push(func(nested));
-    
-    return output;
+    }
+
+}
+
+
+function* recurse (func, data, levelCountdown) {
+
+    if (levelCountdown === 0)
+        return func([data])[0];
+
+    if (levelCountdown > 1) { // data is nested groups
+        for (let item of data) 
+            yield recurse(func, item, levelCountdown - 1);
+        return;
+    }
+
+    yield* func(data); // data is base records
+
+}
+
+function recurseToArray (func, data, levelCountdown) {
+
+    if (levelCountdown === 0)
+        return func([data])[0];
+
+    let list = [];
+    for(let item of data)
+        list.push(
+            levelCountdown > 1          
+            ? recurseToArray(func, item, levelCountdown - 1)
+            : func(item)
+        );
+    return list;    
 
 }
 
@@ -882,7 +852,7 @@ class database {
             'filter', 'map', 
             'group', 'ungroup', 
             'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'mergeByVals', 'with'
+            'sort', 'print', 'merge', 'with'
         ];
 
         for(let funcName of funcsToAttach) 
@@ -891,14 +861,10 @@ class database {
 
     }
 
-    // TODO: determine whether we want to keep clone, 
-    // or to implement pass by reference, or give option.
     addDataset (key, data) { 
-        if (!data)
-            throw `Cannot pass ${key} as undefined in 'addDataset'`
-        this.datasets[key] = Array.isArray(data) 
-            ? new dataset(...data) 
-            : data;
+        if (!isIterable(data))
+            throw `Cannot add dataset ${key} because it is not iterable.`
+        this.datasets[key] = new dataset(data);
         return this;
     }    
 
@@ -926,7 +892,7 @@ class database {
 
         else for (let param of parser.parameters(arg)) 
             datasets.push(this.datasets[param]);
-        
+
         return datasets.filter(ds => ds !== undefined);
 
     }
@@ -935,10 +901,10 @@ class database {
     // of the calling FluentDB.
     get(funcOrKey) {
         if (isString(funcOrKey))
-            return this.datasets[funcOrKey];
+            return this.datasets[funcOrKey].data;
         let key = parser.parameters(funcOrKey)[0];
         return this
-            ._callOnDs('map', funcOrKey)
+            ._callOnDs('get', funcOrKey)
             .datasets[key];
     }
 
@@ -985,11 +951,9 @@ class database {
 }
 
 function _(obj) { 
-    if (Array.isArray(obj)) {
-        Object.setPrototypeOf(obj, dataset.prototype);
-        return obj;
-    }
-    return new database().addDatasets(obj); 
+    return obj instanceof dataset ? obj
+        : isIterable(obj) ? new dataset(obj)
+        : new database().addDatasets(obj); 
 }
 
 _.mergeMethod = mergeMethod;

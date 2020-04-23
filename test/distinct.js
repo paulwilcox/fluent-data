@@ -15,7 +15,6 @@ async function test () {
         .get(n => n);
 
     if (results.filter(n => n == '??').length != 1) {
-        console.log(results)
         return false;
     }
 
