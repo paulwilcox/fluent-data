@@ -35,8 +35,6 @@ export default class dataset {
         return this;
     }
 
-    // TODO: Test for quicksort, triggered by two parameter function.  
-    // Presently I only have a test for one parameter version. 
     sort (func) {
         let outerFunc = parser.parameters(func).length > 1 
             ? data => quickSort(data, func, false)
