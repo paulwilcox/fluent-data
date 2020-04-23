@@ -1,52 +1,58 @@
 
 export function* quickSort (
     unsorted, 
-    orderSelector
+    func,
+    funcReturnsArray
 ) {
 
-    let lesserThans = [];
-    let greaterThans = [];
-    let pivot;
+    // Initializations
+
+        let lesserThans = [];
+        let greaterThans = [];
+        let pivot;
 
     // Get the first of unsorted, establish it as the pivot
-    if (!Array.isArray(unsorted)) {
-        pivot = unsorted.next();
-        if (pivot.done)
-            return pivot.value;
-        pivot = pivot.value; 
-    } 
-    else 
-        pivot = unsorted.pop();
-
-    let pivotSelection = orderSelector(pivot);
+        
+        if (!Array.isArray(unsorted)) {
+            pivot = unsorted.next();
+            if (pivot.done)
+                return pivot.value;
+            pivot = pivot.value; 
+        } 
+        else 
+            pivot = unsorted.pop();
 
     // Compare remaining rows to the pivot and put into 
     // bins of lesser records and equal/greater records.
-    for (let row of unsorted) {
+                
+        let pivotSelection = funcReturnsArray ? func(pivot) : null;
 
-        let orderDecision = decideOrder(
-            orderSelector(row), 
-            pivotSelection
-        );
+        for (let row of unsorted) {
 
-        orderDecision == -1
-            ? lesserThans.push(row) 
-            : greaterThans.push(row);
+            let orderDecision = funcReturnsArray
+                ? compareArrays(func(row), pivotSelection) // func returns array
+                : func(row, pivot); // func returns boolean
 
-    }
+            orderDecision == -1
+                ? lesserThans.push(row) 
+                : greaterThans.push(row);
 
-    if (lesserThans.length > 0)
-        yield* quickSort(lesserThans, orderSelector);
-    
-    yield pivot;
-    
-    if (greaterThans.length > 0)
-        yield* quickSort(greaterThans, orderSelector);
+        }
+
+    // output in the incrementally better order 
+        
+        if (lesserThans.length > 0)
+            yield* quickSort(lesserThans, func, funcReturnsArray);
+        
+        yield pivot;
+        
+        if (greaterThans.length > 0)
+            yield* quickSort(greaterThans, func, funcReturnsArray);
 
 };
 
 // Capture lessThan (-1), greaterThan (1) or equal (0)
-function decideOrder (
+function compareArrays (
     leftVals,
     rightVals
 ) {

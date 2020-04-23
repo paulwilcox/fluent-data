@@ -39,8 +39,8 @@ export default class dataset {
     // Presently I only have a test for one parameter version. 
     sort (func) {
         let outerFunc = parser.parameters(func).length > 1 
-            ? data => data.sort(func)
-            : data => quickSort(data, func);
+            ? data => quickSort(data, func, false)
+            : data => quickSort(data, func, true);
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     } 

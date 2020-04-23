@@ -14,6 +14,7 @@ async function test () {
         )
         .get(o => o);
 
+    console.log({results})
     check(results)
 
 }
