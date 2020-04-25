@@ -797,13 +797,16 @@ class dataset {
     }
 
     get (func) {
-
         return recurseToArray(
             func || function(x) { return x }, 
             this.data,
             this.groupLevel
         );
-        
+    }
+
+    toJson(func) {
+        let dataJson = JSON.stringify(this.get(func));
+        return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
     }
 
 }
@@ -904,6 +907,16 @@ class database {
         return this
             ._callOnDs('get', funcOrKey)
             .datasets[key];
+    }
+
+    toJson() {
+        let json = '[';
+        for(let key of Object.keys(this.datasets)) 
+            json += `{"${key}":${this.datasets[key].toJson()}},`;
+        if(json.endsWith(','))
+            json = json.slice(0, -1);
+        json += ']';
+        return json;
     }
 
     // - Execute a function on a dataset, basically a proxy,

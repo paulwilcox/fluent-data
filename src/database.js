@@ -68,6 +68,16 @@ export default class {
             .datasets[key];
     }
 
+    toJson() {
+        let json = '[';
+        for(let key of Object.keys(this.datasets)) 
+            json += `{"${key}":${this.datasets[key].toJson()}},`;
+        if(json.endsWith(','))
+            json = json.slice(0, -1);
+        json += ']';
+        return json;
+    }
+
     // - Execute a function on a dataset, basically a proxy,
     //   but you don't know what the target is.
     // - Parse ...args -- which can be broken down into 

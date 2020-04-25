@@ -148,13 +148,16 @@ export default class dataset {
     }
 
     get (func) {
-
         return recurseToArray(
             func || function(x) { return x }, 
             this.data,
             this.groupLevel
         );
-        
+    }
+
+    toJson(func) {
+        let dataJson = JSON.stringify(this.get(func));
+        return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
     }
 
 }
