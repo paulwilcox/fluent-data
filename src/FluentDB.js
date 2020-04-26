@@ -13,14 +13,23 @@ export default function _(obj) {
 _.fromJson = function(json) {
     
     let db = new database();
-    let protoDatasets = JSON.parse(json);
 
-    for(let key of Object.keys(protoDatasets)) 
-        db.datasets[key] = new dataset(
-            protoDatasets[key].data, 
-            protoDatasets[key].groupLevel
-        );
+    let populateDb = pds => {
+        for(let key of Object.keys(pds)) 
+            db.datasets[key] = new dataset(
+                pds[key].data, 
+                pds[key].groupLevel
+            );
+    }
 
+    if (json.constructor.name == 'Response') 
+        return json.json().then(protoDatasets => {
+            populateDb(protoDatasets);
+            return db;
+        });
+
+    let protoDatasets = g.isString(json) ? JSON.parse(json) : json;
+    populateDb(protoDatasets);
     return db;
 
 }

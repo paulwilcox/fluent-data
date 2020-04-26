@@ -1,21 +1,14 @@
 async function serve(req, res) {
 
-    if(req.method != 'POST') {
-        res.writeHead(405, '_jsonReciever.r.js must recieve a POST');
-        res.end();
-        throw 'curious to see if this ever hits';
-    }
-
     let json = '';
     req.on('data', chunk => json += chunk);
 
     req.on('end', () => {
-
-        console.log({recievedJson: json});
-        
+        let db = $$.fromJson(json);
+        let c = db.sort(c => c.id).get(c => c);
+        let result = c.length > 0 && c[0].id == 1;
         res.writeHead(200, 'ok');
-        res.end('true');
-
+        res.end(result.toString());
     });
 
 }

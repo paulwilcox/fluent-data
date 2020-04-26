@@ -811,8 +811,13 @@ class dataset {
 
 }
 
+// json might already be parsed, such as when 
+// calling request.json from fetch api.
 dataset.fromJson = function(json) {
-    let parsed = JSON.parse(json);
+    let parsed = 
+        json instanceof Response ? json.json()
+        : isString(json) ? JSON.parse(json) 
+        : json;
     this.data = parsed.data;
     this.groupLevel = parsed.groupLevel;
 };
@@ -975,14 +980,23 @@ function _(obj) {
 _.fromJson = function(json) {
     
     let db = new database();
-    let protoDatasets = JSON.parse(json);
 
-    for(let key of Object.keys(protoDatasets)) 
-        db.datasets[key] = new dataset(
-            protoDatasets[key].data, 
-            protoDatasets[key].groupLevel
-        );
+    let populateDb = (pds) => {
+        for(let key of Object.keys(pds)) 
+            db.datasets[key] = new dataset(
+                pds[key].data, 
+                pds[key].groupLevel
+            );
+    };
+    
+    if (json.constructor.name == 'Response') 
+        return json.json().then(protoDatasets => {
+            populateDb(protoDatasets);
+            return db;
+        });
 
+    let protoDatasets = isString(json) ? JSON.parse(json) : json;
+    populateDb(protoDatasets);
     return db;
 
 };
