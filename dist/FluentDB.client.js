@@ -654,9 +654,9 @@ function parametersAreEqual (a,b) {
 
 class dataset {
 
-    constructor(data) {
+    constructor(data, groupLevel = 1) {
         this.data = data;
-        this.groupLevel = 1;
+        this.groupLevel = groupLevel;
     }
 
     *[Symbol.iterator]() { 
@@ -809,6 +809,11 @@ class dataset {
 
 }
 
+dataset.fromJson = function(json) {
+    let parsed = JSON.parse(json);
+    this.data = parsed.data;
+    this.groupLevel = parsed.groupLevel;
+};
 
 function* recurse (func, data, levelCountdown) {
 
@@ -908,12 +913,12 @@ class database {
     }
 
     toJson() {
-        let json = '[';
+        let json = '{';
         for(let key of Object.keys(this.datasets)) 
-            json += `{"${key}":${this.datasets[key].toJson()}},`;
+            json += `"${key}":${this.datasets[key].toJson()},`;
         if(json.endsWith(','))
             json = json.slice(0, -1);
-        json += ']';
+        json += '}';
         return json;
     }
 
@@ -964,6 +969,21 @@ function _(obj) {
         : isIterable(obj) ? new dataset(obj)
         : new database().addDatasets(obj); 
 }
+
+_.fromJson = function(json) {
+    
+    let db = new database();
+    let protoDatasets = JSON.parse(json);
+
+    for(let key of Object.keys(protoDatasets)) 
+        db.datasets[key] = new dataset(
+            protoDatasets[key].data, 
+            protoDatasets[key].groupLevel
+        );
+
+    return db;
+
+};
 
 _.mergeMethod = mergeMethod;
 

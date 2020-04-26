@@ -69,12 +69,12 @@ export default class {
     }
 
     toJson() {
-        let json = '[';
+        let json = '{';
         for(let key of Object.keys(this.datasets)) 
-            json += `{"${key}":${this.datasets[key].toJson()}},`;
+            json += `"${key}":${this.datasets[key].toJson()},`;
         if(json.endsWith(','))
             json = json.slice(0, -1);
-        json += ']';
+        json += '}';
         return json;
     }
 

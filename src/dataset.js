@@ -7,9 +7,9 @@ import { merge as mrg, mergeMethod } from './mergeTools.js';
 
 export default class dataset {
 
-    constructor(data) {
+    constructor(data, groupLevel = 1) {
         this.data = data;
-        this.groupLevel = 1;
+        this.groupLevel = groupLevel;
     }
 
     *[Symbol.iterator]() { 
@@ -162,6 +162,11 @@ export default class dataset {
 
 }
 
+dataset.fromJson = function(json) {
+    let parsed = JSON.parse(json);
+    this.data = parsed.data;
+    this.groupLevel = parsed.groupLevel;
+}
 
 function* recurse (func, data, levelCountdown) {
 

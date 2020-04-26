@@ -10,6 +10,21 @@ export default function _(obj) {
         : new database().addDatasets(obj); 
 }
 
+_.fromJson = function(json) {
+    
+    let db = new database();
+    let protoDatasets = JSON.parse(json);
+
+    for(let key of Object.keys(protoDatasets)) 
+        db.datasets[key] = new dataset(
+            protoDatasets[key].data, 
+            protoDatasets[key].groupLevel
+        );
+
+    return db;
+
+}
+
 _.mergeMethod = mergeMethod;
 
 _.reducer = reducer;
