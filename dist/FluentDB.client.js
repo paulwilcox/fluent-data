@@ -537,11 +537,8 @@ function* hashMerge (
 
     // yield right unmatched
     for(let key of rightBuckets.keys()) 
-        for(let rightItem of removeBucket(rightBuckets, key)) {
-            let mapped = mapper(undefined, rightItem);
-            if (mapped)
-                yield mapped;
-        }
+        for(let rightItem of removeBucket(rightBuckets, key)) 
+            yield* wrapper(mapper(undefined, rightItem));
 
 }
 
@@ -557,35 +554,32 @@ function* loopMerge (
 
     for (let l in leftData)
     for (let r in rightData) {
-        let leftItem = leftData[l];
-        let rightItem = rightData[r];
-        if (leftItem == undefined || rightItem == undefined)
+        if (leftData[l] == undefined || rightData[r] == undefined)
             continue;
-        if (matcher(leftItem, rightItem)) {
+        if (matcher(leftData[l], rightData[r])) {
             leftHits.add(l);
             rightHits.add(r);
-            let mapped = mapper(leftItem, rightItem);
-            if (mapped) 
-                yield mapped;
+            yield* wrapper(mapper(leftData[l], rightData[r]));
         }
     }
 
-    for (let l in leftData) {
-        if (leftHits.has(l))
-            continue;
-        let mapped = mapper(leftData[l], undefined);
-        if (mapped)
-            yield mapped;
-    }
+    for (let l in leftData) 
+        if (!leftHits.has(l))
+            yield* wrapper(mapper(leftData[l], undefined));
 
-    for (let r in rightData) {
-        if (rightHits.has(r))
-            continue;
-        let mapped = mapper(undefined, rightData[r]);
-        if (mapped)
-            yield mapped;
-    }
+    for (let r in rightData) 
+        if (!rightHits.has(r))
+            yield* wrapper(mapper(undefined, rightData[r]));
 
+}
+
+function* wrapper (mapped) {
+    if (!mapped)
+        return;
+    if (mapped[Symbol.iterator]) 
+        yield* mapped;
+    else 
+        yield mapped;
 }
 
 function normalizeMapper (mapFunc, matchingLogic) {
@@ -809,15 +803,20 @@ class dataset {
 
 }
 
-// json might already be parsed, such as when 
-// calling request.json from fetch api.
+// Untested
 dataset.fromJson = function(json) {
-    let parsed = 
-        json instanceof Response ? json.json()
-        : isString(json) ? JSON.parse(json) 
-        : json;
+
+    if (json.constructor.name == 'Response') 
+        return json.json().then(parsed => {
+            this.data = parsed.data;
+            this.groupLevel = parsed.groupLevel;
+            return this;
+        });
+
+    let parsed = isString(json) ? JSON.parse(json) : json;
     this.data = parsed.data;
     this.groupLevel = parsed.groupLevel;
+
 };
 
 function* recurse (func, data, levelCountdown) {
@@ -910,7 +909,7 @@ class database {
     // of the calling FluentDB.
     get(funcOrKey) {
         if (isString(funcOrKey))
-            return this.datasets[funcOrKey].data;
+            return this.datasets[funcOrKey].get();
         let key = parser.parameters(funcOrKey)[0];
         return this
             ._callOnDs('get', funcOrKey)
@@ -979,14 +978,14 @@ _.fromJson = function(json) {
     
     let db = new database();
 
-    let populateDb = (pds) => {
+    let populateDb = pds => {
         for(let key of Object.keys(pds)) 
             db.datasets[key] = new dataset(
                 pds[key].data, 
                 pds[key].groupLevel
             );
     };
-    
+
     if (json.constructor.name == 'Response') 
         return json.json().then(protoDatasets => {
             populateDb(protoDatasets);
