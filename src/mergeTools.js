@@ -160,6 +160,9 @@ export function normalizeMapper (mapFunc, matchingLogic) {
         mapFunc = 'both null'; // inner join by default
 
     if (g.isString(mapFunc)) {
+        
+        if (mapFunc.length == 2) 
+            mapFunc = inflateKeywords(mapFunc);
 
         let keywords = mapFunc.split(' ');
         let onMatched = keywords[0];
@@ -200,6 +203,19 @@ function mergeByKeywords (left, right, onMatched, onUnmatched) {
         case 'null': return undefined;
     }
 
+}
+
+function inflateKeywords (keywordString) {
+    let replacer = str => 
+          str == 'b' ? 'both'
+        : str == 't' ? 'thob' 
+        : str == 'l' ? 'left'
+        : str == 'r' ? 'right'
+        : str == 'n' ? 'null'
+        : str == 's' ? 'stack'
+        : null;
+    return replacer(keywordString.substring(0,1)) + ' ' +
+        replacer(keywordString.substring(1,2)); 
 }
 
 function parametersAreEqual (a,b) {
