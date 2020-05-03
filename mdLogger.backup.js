@@ -9,12 +9,16 @@ let target = args[1];
 
 (async function main() {
 
-    let groups = groupFileLines(source);
+    let lines = fs.readFileSync(source)
+        .toString()
+        .split('\r\n');
+
+    let groups = groupLines(lines);
     groups = await processCodeGroups(groups);
     let output = rebuildGroups(groups);
 
     if (target == undefined) {
-        console.log({output});
+        console.log(output);
         return;
     }
 
@@ -39,48 +43,20 @@ async function processCodeGroups (groups) {
 
     for(var group of groups) 
         if (group.type == 'code' && group.frameArgs.log == 'true') {
-
-            let setup = '';
-
             if (output != '')
                 output += '\r\n';
-
-            if (group.frameArgs.setup) {
-                if(!group.frameArgs.setup.includes(':'))
-                    group.frameArgs.setup = 
-                        source + ':' + 
-                        group.frameArgs.setup;
-                let [f,id] = group.frameArgs.setup.split(':');
-                setup += getGroupById(f, id).value;
-            }
-
-            output += await captureOutput(setup + ';' + group.value);
-
+            output += await captureOutput(group.value);
         }
         else if (group.type == 'code' && group.frameArgs.output == 'true') {
-            let leadSpace = group.frameStarter.match(/\s*/);
-            group.value = leadSpace + output.replace(/\n/g,'\n' + leadSpace); 
+            group.value = output; 
             output = '';
         }
 
     return groups;
 
-}
+};
 
-function getGroupById (file, id) {
-    return groupFileLines(file)
-        .find(group => 
-            group.frameArgs &&
-            group.frameArgs.id && 
-            group.frameArgs.id == id
-        );
-}
-
-function groupFileLines (file) {
-
-    let lines = fs.readFileSync(file)
-        .toString()
-        .split('\r\n');
+function groupLines (lines) {
 
     let groups = [];
     let group = { 
