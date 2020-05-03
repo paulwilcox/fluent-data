@@ -3,25 +3,46 @@ let util = require('util');
 let cp = require('child_process');
 let = exec = util.promisify(cp.exec);
 
+let args = process.argv.slice(2);
+let source = args[0];
+let target = args[1];
+
 (async function main() {
 
-    let lines = fs.readFileSync('./wiki/test.md')
-    .toString()
-    .split('\r\n');
+    let lines = fs.readFileSync(source)
+        .toString()
+        .split('\r\n');
 
     let groups = groupLines(lines);
-    groups = processOutputs(groups);
+    groups = await processCodeGroups(groups);
+    let output = rebuildGroups(groups);
 
-    
+    if (target == undefined) {
+        console.log(output);
+        return;
+    }
+
+    fs.writeFileSync(target, output);
 
 }())
 
-async function processOutputs (groups) {
+function rebuildGroups(groups) {
+    let output = '';
+    for(let group of groups) {
+        output += 
+            (group.frameStarter ? group.frameStarter + '\r\n' : '') +
+            group.value + '\r\n' + 
+            (group.frameEnder ? group.frameEnder + '\r\n' : '')
+    }
+    return output;
+}
+
+async function processCodeGroups (groups) {
 
     let output = '';
 
     for(var group of groups) 
-        if (group.type == 'code' && group.frameArgs.output != 'true') {
+        if (group.type == 'code' && group.frameArgs.log == 'true') {
             if (output != '')
                 output += '\r\n';
             output += await captureOutput(group.value);
@@ -40,23 +61,24 @@ function groupLines (lines) {
     let groups = [];
     let group = { 
         type: 'md', 
-        value: ''
+        value: null
     };
 
     for(let line of lines) {
 
-        let isFrame = line.trim().startsWith('```')
+        let isFrameStart = line.trim().startsWith('```')
+        let isFrameEnd = line.trim().endsWith('```')
 
-        if (group.type == 'md' && isFrame) {
+        if (group.type == 'md' && isFrameStart) {
             groups.push(group);
             group = {
                 type: 'code',
                 frameStarter: line,
                 frameArgs: parseFrameArgs(line),
-                value: '' 
+                value: null 
             }
         }
-        else if (group.type == 'code' && line.trim().endsWith('```')) 
+        else if (group.type == 'code' && isFrameEnd) 
             group.frameEnder = line;
         else if (group.type == 'code' && group.frameEnder) {
             groups.push(group);
@@ -65,10 +87,12 @@ function groupLines (lines) {
                 value: line 
             }
         } 
-        else 
-            group.value += 
-                (group.value == '' ? '' : `\r\n`) + 
-                line;
+        else {
+            group.value == null
+                ? group.value = ''
+                : group.value += '\r\n';
+            group.value += line;
+        }
 
     }
 
@@ -98,7 +122,7 @@ async function captureOutput(script) {
 
     await exec(`node -e "${script}"`)
         .then(log => {
-            output += log.stdout + log.stderr;
+            output += log.stdout.trim() + log.stderr.trim();
         })
         .catch(error => {
             console.log('exec error: ' + error);
