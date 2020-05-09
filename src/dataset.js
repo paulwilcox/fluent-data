@@ -203,7 +203,7 @@ function recurseToArray (func, data, levelCountdown) {
         list.push(
             levelCountdown > 1          
             ? recurseToArray(func, item, levelCountdown - 1)
-            : func(item)
+            : g.noUndefined(func(item))
         );
     return list;    
 
