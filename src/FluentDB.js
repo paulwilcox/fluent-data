@@ -39,12 +39,12 @@ _.mergeMethod = mergeMethod;
 _.reducer = reducer;
 _.runEmulators = runEmulators;
 
-_.reducer(_, 'first', v => v, array => array.reduce((a,b) => a || b));
-_.reducer(_, 'last', v => v, array => array.reduce((a,b) => b || a));
-_.reducer(_, 'sum', v => v, array => array.reduce((a,b) => a + b));
-_.reducer(_, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+_.first = reducer(v => v, array => array.reduce((a,b) => a || b));
+_.last = reducer(v => v, array => array.reduce((a,b) => b || a));
+_.sum = reducer(v => v, array => array.reduce((a,b) => a + b));
+_.count = reducer(v => v, array => array.reduce((a,b) => a + 1, 0));
 
-_.reducer(_, 'avg', v => v, array => {
+_.avg = reducer(v => v, array => {
 
     let agg = runEmulators(array, val => ({
         sum: _.sum(val), 
@@ -55,7 +55,7 @@ _.reducer(_, 'avg', v => v, array => {
 
 });
 
-_.reducer(_, 'mad', v => v, array => {
+_.mad = reducer(v => v, array => {
 
     let agg = runEmulators(array, val => _.avg(val));
 
@@ -66,7 +66,7 @@ _.reducer(_, 'mad', v => v, array => {
     
 });
 
-_.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
+_.cor = reducer((x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: _.avg(row.x), 

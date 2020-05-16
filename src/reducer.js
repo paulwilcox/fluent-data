@@ -1,10 +1,8 @@
 // rowMaker takes the passed in parameters 
 // and turns them into a row in the dataset.
 // In other words, it will shape your rows.
-export let reducer = (obj, name, rowMaker, processor) => {
-    let p = processor;
-    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
-    return p;
+export let reducer = (rowMaker, processor) => {
+    return (...vals) => new emulator(processor, rowMaker(...vals));
 }
 
 // Aggregators such as 'sum' or 'avg' operate on
