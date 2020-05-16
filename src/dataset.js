@@ -55,6 +55,9 @@ export default class dataset {
 
     ungroup (func) {
 
+        if (!func) 
+            func = x => x;
+
         if (this.groupLevel == 1) {
             let counter = 0;
             for (let item of this.data) {
@@ -129,7 +132,7 @@ export default class dataset {
 
         let outerFunc = data => [...mrg (
             data, 
-            incoming.data, 
+            incoming instanceof dataset ? incoming.data : incoming, 
             matcher, 
             options, 
             method
