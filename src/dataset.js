@@ -123,10 +123,10 @@ export default class dataset {
 
     }
 
-    // TODO: Since we're dealing with an iterable, this 
-    // take this.data to a 'done' state before we're ready
     with (func) {
-        func(this.data);
+        let arr = recurseToArray(x => x, this.data, this.groupLevel);
+        func(arr);
+        this.data = arr;
         return this;
     }
 
