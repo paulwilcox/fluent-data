@@ -5,66 +5,61 @@ async function test () {
     // Will a hash failure change to loop?
         
         let results = 
-            $$({
-                p: data.philosophites,
-                m: data.mathematicians
-            })
+            $$(data.philosophites)
             .merge(
+                data.mathematicians,
                 (p,m) => p.id == m.id || p.id == 'z', 
                 'both both'
             )
-            .get(p => p);
+            .get();
 
         checkBothBoth('hash fail', results);
             
     // Does the mapper as object of options work?  
         
         results = 
-            $$({
-                p: data.philosophites,
-                m: data.mathematicians
-            })
-            .merge((p,m) => p.id == m.id, {
-                leftHasher: x => x.id,
-                rightHasher: x => x.id,
-                mapper: 'both both'
-            })
-            .get(p => p);
+            $$(data.philosophites)
+            .merge(
+                data.mathematicians,
+                p.id == m.id, 
+                {
+                    leftHasher: x => x.id,
+                    rightHasher: x => x.id,
+                    mapper: 'both both'
+                }
+            )
+            .get();
 
         checkBothBoth('left right hashers', results);
 
     // Does the mapper as object of options work?  
         
         results = 
-            $$({
-                p: data.philosophites,
-                m: data.mathematicians
-            })
+            $$(data.philosophites)
             .merge(
-                (p,m) => p.id == m.id, {
+                data.mathematicians,
+                (p,m) => p.id == m.id, 
+                {
                     hasher: x => x.id,
                     mapper: 'both both'
                 },
                 $$.mergeMethod.hash
             )
-            .get(p => p);
+            .get();
 
         checkBothBoth('hashers', results);
 
     // Will merge work inside groupings?
 
         results = 
-            $$({
-                o: data.orders,
-                c: data.customers
-            })
+            $$(data.orders)
             .group(o => o.customer)
-            .map(c => ({...c, customer: c.id, id: undefined}))
             .merge(
-                (o,c) => o.customer = c.customer,
+                data.customers,
+                (o,c) => o.customer = c.id,
                 'both both'
             )
-            .get(o => o);
+            .get();
 
         let sourceTag = 'Grouped Merge';
 
@@ -96,12 +91,9 @@ async function test () {
         sourceTag = 'set theoreticals' 
 
         results = 
-            $$({
-                pc: data.potentialCustomers,
-                s: data.shoplifters
-            })
-            .merge((pc, s) => 'hash', 'null both')
-            .get(pc => pc);
+            $$(data.potentialCustomers)
+            .merge(data.shoplifters, '=', 'null both')
+            .get();
 
         if (
             results.filter(row => [2,3,5].includes(row.id)).length != 3 ||
@@ -112,12 +104,9 @@ async function test () {
         `;
 
         results = 
-            $$({
-                pc: data.potentialCustomers,
-                s: data.shoplifters
-            })
-            .merge((pc, s) => 'hash', 'both null')
-            .get(pc => pc);
+            $$(data.potentialCustomers)
+            .merge(data.shoplifters, '=', 'both null')
+            .get();
 
         if (
             results.length != 1 ||

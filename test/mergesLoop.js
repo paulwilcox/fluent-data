@@ -71,16 +71,14 @@ class mergeTester {
     _merge(data, mapper) {
 
         let results = 
-            $$({
-                p: data.philosophites,
-                m: data.mathematicians
-            })
+            $$(data.philosophites)
             .merge(
+                data.mathematicians,
                 (p,m) => p.id == m.id, 
                 mapper,
                 $$.mergeMethod.loop
             )
-            .get(p => p);
+            .get();
 
         return results;
 

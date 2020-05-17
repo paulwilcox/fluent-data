@@ -6,12 +6,9 @@ async function test () {
     document.body.innerHTML += `<div id='result'></div><br/>`
     let data = await sample('orders');
 
-
     let results = 
         $$({o: data.orders})
         .with(o => print('#result', o, 'orders'))
         .with(o => console.log(o));
-
-    return true;
 
 }

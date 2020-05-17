@@ -10,18 +10,18 @@ async function test () {
     ];
 
     let results = 
-        $$({ n: numbers })
+        $$(numbers)
         .distinct(n => n.label)
-        .get(n => n);
+        .get();
 
     if (results.filter(n => n == '??').length != 1) {
         return false;
     }
 
     results = 
-        $$({ n: numbers })
+        $$(numbers)
         .distinct(n => n)
-        .get(n => n);
+        .get();
 
     if (results.filter(n => n.id == 2).length != 1)
         return false;

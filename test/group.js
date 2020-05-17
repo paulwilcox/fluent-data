@@ -4,19 +4,19 @@ async function test () {
     let data = await sample('orders');
 
     let results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .group(o => o.customer) 
-        .get(o => o);
+        .get();
 
     if (results.length != 3) throw `
         Results should have 3 groups.  
         This does not seem to be the case`;
 
     results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .group(o => o.customer)
         .group(o => o.rating >= 10) 
-        .get(o => o);
+        .get();
 
     for(let entry of results) 
         if (!Array.isArray(entry)) throw `
@@ -26,12 +26,12 @@ async function test () {
     // Also implicitly testing to see if map works with
     // nested groupings as desired             
     results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .group(o => o.customer)
         .map(o => ({ c: o.customer, p: o.product })) 
         .group(o => o.rating >= 10)
         .map(o => ({ cust: o.c, prod: o.p })) 
-        .get(o => o);    
+        .get();    
 
     for (let group of results)
     for (let subgroup of group) 
@@ -43,11 +43,11 @@ async function test () {
         throw 'results[0][0] has an item with cust != 1.';
 
     results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .group(o => o.customer)
         .group(o => o.rating >= 10)
         .ungroup(o => o)
-        .get(o => o);    
+        .get();    
 
     for(let group of results)
     for(let item of group) 

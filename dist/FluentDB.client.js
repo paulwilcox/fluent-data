@@ -7,14 +7,23 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// rowMaker takes the passed in parameters 
-// and turns them into a row in the dataset.
-// In other words, it will shape your rows.
-let reducer = (obj, name, rowMaker, processor) => {
-    let p = processor;
-    obj[name] = (...vals) => new emulator(p, rowMaker(...vals));
-    return p;
-};
+function reducer (
+    
+    // Function: The parameters determine the number 
+    // of parameters expected to be passed in by the user.
+    // The object returned by is used by 'processor'.
+    inputShaper, 
+
+    // Function: The logic used to aggregate values.
+    processor
+
+) {
+    return (...vals) => 
+        new emulator(
+            processor, 
+            inputShaper(...vals)
+        );
+}
 
 // Aggregators such as 'sum' or 'avg' operate on
 // columnar data.  But the values passed to the
@@ -152,126 +161,6 @@ let eq = (obj1, obj2) => {
     }
 
     return true;
-
-};
-
-class parser {
-
-    // Parse function into argument names and body
-    constructor (func) {
-
-        this.parameters = [];
-        this.body = "";
-
-        let lr = this.splitLeftAndRight(func);
-
-        this.parameters = 
-            lr.left
-            .replace(/[()\s]/g, '')
-            .split(',');
-
-        this.body =
-            lr.right
-            .replace(/^\s*\{|\}\s*$/g,'')
-            .replace(/^\s*|\s*$/g,'');
-
-    }
-
-    splitLeftAndRight (func) {
-
-        let uncommented = 
-            func.toString() 
-            .replace(/[/][/].*$/mg,'') // strip single-line comments
-            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
-	
-        let arrowIx = uncommented.indexOf('=>');
-        let braceIx = uncommented.indexOf('{');	
-
-        if (arrowIx == -1 && braceIx == -1) {
-            console.trace();
-            throw   `it seems that a non-lambda function 
-                    was passed to 'parser'`;
-        }
-
-        let splitIx = 
-            braceIx == -1 ? arrowIx
-            : arrowIx == -1 ? braceIx
-            : arrowIx < braceIx ? arrowIx 
-            : braceIx;
-
-        let isArrow = splitIx == arrowIx;
-
-        let left = uncommented.slice(0,splitIx);
-        let right = uncommented.slice(splitIx);
-
-        if(isArrow)
-            right = right.slice(2); // get rid of the arrow
-        else {
-            let parenIx = left.indexOf('(');
-            left = left.slice(parenIx);
-        }
-        
-        return { left, right };
-
-    }
-
-}
-
-parser.parse = function (func) {
-    return new parser(func);
-};
-
-parser.parameters = function(func) {
-    return new parser(func).parameters;
-};
-
-// Converts (v,w) => v.a = w.a && v.b == w.b 
-// into v => { x0 = v.a, x1 = v.b }
-// and w => { x0 = w.a, x1 = w.b }
-parser.pairEqualitiesToObjectSelectors = function(func) {
-
-    let parsed = new parser(func);
-    let leftParam = parsed.parameters[0];
-    let rightParam = parsed.parameters[1];
-    let leftEqualities = [];
-    let rightEqualities = [];
-    let splitBodyByAnds = parsed.body.split(/&&|&/);
-
-    for (let aix in splitBodyByAnds) {
-
-        let andPart = splitBodyByAnds[aix];
-        let eqParts = andPart.split(/===|==|=/);
-        let leftEq;
-        let rightEq;
-
-        if (eqParts.length != 2)
-            return;
-
-        for (let eix in eqParts) {
-
-            let ep = eqParts[eix].trim();
-
-            if (/[^A-Za-z0-9_. ]/.test(ep)) 
-                return;
-
-            if (ep.startsWith(`${leftParam}.`) || ep == leftParam)
-                leftEq = ep;
-            else if (ep.startsWith(`${rightParam}.`) || ep == rightParam)
-                rightEq = ep;
-            else
-                return; 
-
-        }	    
-
-        leftEqualities[aix] = `x${aix}: ${leftEq}`;
-        rightEqualities[aix] = `x${aix}: ${rightEq}`;
-
-    }
-
-    return {
-        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
-        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
-    };
 
 };
 
@@ -429,6 +318,126 @@ function compareArrays (
     return 0;
 
 }
+
+class parser {
+
+    // Parse function into argument names and body
+    constructor (func) {
+
+        this.parameters = [];
+        this.body = "";
+
+        let lr = this.splitLeftAndRight(func);
+
+        this.parameters = 
+            lr.left
+            .replace(/[()\s]/g, '')
+            .split(',');
+
+        this.body =
+            lr.right
+            .replace(/^\s*\{|\}\s*$/g,'')
+            .replace(/^\s*|\s*$/g,'');
+
+    }
+
+    splitLeftAndRight (func) {
+
+        let uncommented = 
+            func.toString() 
+            .replace(/[/][/].*$/mg,'') // strip single-line comments
+            .replace(/[/][*][^/*]*[*][/]/g, ''); // strip multi-line comments  
+	
+        let arrowIx = uncommented.indexOf('=>');
+        let braceIx = uncommented.indexOf('{');	
+
+        if (arrowIx == -1 && braceIx == -1) {
+            console.trace();
+            throw   `it seems that a non-lambda function 
+                    was passed to 'parser'`;
+        }
+
+        let splitIx = 
+            braceIx == -1 ? arrowIx
+            : arrowIx == -1 ? braceIx
+            : arrowIx < braceIx ? arrowIx 
+            : braceIx;
+
+        let isArrow = splitIx == arrowIx;
+
+        let left = uncommented.slice(0,splitIx);
+        let right = uncommented.slice(splitIx);
+
+        if(isArrow)
+            right = right.slice(2); // get rid of the arrow
+        else {
+            let parenIx = left.indexOf('(');
+            left = left.slice(parenIx);
+        }
+        
+        return { left, right };
+
+    }
+
+}
+
+parser.parse = function (func) {
+    return new parser(func);
+};
+
+parser.parameters = function(func) {
+    return new parser(func).parameters;
+};
+
+// Converts (v,w) => v.a = w.a && v.b == w.b 
+// into v => { x0 = v.a, x1 = v.b }
+// and w => { x0 = w.a, x1 = w.b }
+parser.pairEqualitiesToObjectSelectors = function(func) {
+
+    let parsed = new parser(func);
+    let leftParam = parsed.parameters[0];
+    let rightParam = parsed.parameters[1];
+    let leftEqualities = [];
+    let rightEqualities = [];
+    let splitBodyByAnds = parsed.body.split(/&&|&/);
+
+    for (let aix in splitBodyByAnds) {
+
+        let andPart = splitBodyByAnds[aix];
+        let eqParts = andPart.split(/===|==|=/);
+        let leftEq;
+        let rightEq;
+
+        if (eqParts.length != 2)
+            return;
+
+        for (let eix in eqParts) {
+
+            let ep = eqParts[eix].trim();
+
+            if (/[^A-Za-z0-9_. ]/.test(ep)) 
+                return;
+
+            if (ep.startsWith(`${leftParam}.`) || ep == leftParam)
+                leftEq = ep;
+            else if (ep.startsWith(`${rightParam}.`) || ep == rightParam)
+                rightEq = ep;
+            else
+                return; 
+
+        }	    
+
+        leftEqualities[aix] = `x${aix}: ${leftEq}`;
+        rightEqualities[aix] = `x${aix}: ${rightEq}`;
+
+    }
+
+    return {
+        leftFunc: new Function(leftParam, `return { ${leftEqualities.join(', ')} };`),
+        rightFunc: new Function(rightParam, `return { ${rightEqualities.join(', ')} };`)
+    };
+
+};
 
 let mergeMethod = {
     hash: 'hash',
@@ -712,6 +721,9 @@ class dataset {
 
     ungroup (func) {
 
+        if (!func) 
+            func = x => x;
+
         if (this.groupLevel == 1) {
             let counter = 0;
             for (let item of this.data) {
@@ -746,47 +758,40 @@ class dataset {
         return this;
     }    
 
-    distinct (func) {
+    distinct (func, sorter) {
+
+        func = func || (x => x);
+        
+        if (sorter) sorter = 
+            parser.parameters(sorter).length > 1 
+            ? data => quickSort(data, func, false)
+            : data => quickSort(data, func, true);
+        else 
+            sorter = data => data;
+
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
             .getBuckets()
-            .map(bucket => func(bucket[0]));
+            .map(bucket => {
+                return [...sorter(bucket)][0]
+            });
+
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
+
     }
 
     // TODO: Test whether this consumes the external dataset
     // by iterating it.
     merge (incoming, matcher, options, method) {
 
-        let matcherReturnsString = false;
-        try {matcherReturnsString = isString(matcher());}
-        catch {}
-
-        // user is trying to use shortcut syntax that 
-        // uses full object equality by value
-        if (matcherReturnsString) {
-
-            let keyword = matcher();
-            if(!Object.keys(mergeMethod).includes(keyword)) throw `
-                'matcher' param in 'merge' returns a string, but 
-                this string is not represented in the 'mergeMethod'
-                enumeration.  Choose one of ${mergeMethod}.
-            `;
-
-            method = keyword;
+        if (matcher == '=') 
             matcher = (l,r) => eq(l,r);
-            options = { 
-                mapper: options,
-                hasher: x => x
-            }; 
-
-        }
 
         let outerFunc = data => [...merge (
             data, 
-            incoming.data, 
+            incoming instanceof dataset ? incoming.data : incoming, 
             matcher, 
             options, 
             method
@@ -797,10 +802,10 @@ class dataset {
 
     }
 
-    // TODO: Since we're dealing with an iterable, this 
-    // take this.data to a 'done' state before we're ready
     with (func) {
-        func(this.data);
+        let arr = recurseToArray(x => x, this.data, this.groupLevel);
+        func(arr);
+        this.data = arr;
         return this;
     }
 
@@ -812,7 +817,7 @@ class dataset {
         );
     }
 
-    toJson(func) {
+    toJsonString(func) {
         let dataJson = JSON.stringify(this.get(func));
         return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
     }
@@ -821,6 +826,8 @@ class dataset {
 
 // Untested
 dataset.fromJson = function(json) {
+
+    console.log({json});
 
     if (json.constructor.name == 'Response') 
         return json.json().then(parsed => {
@@ -860,157 +867,34 @@ function recurseToArray (func, data, levelCountdown) {
         list.push(
             levelCountdown > 1          
             ? recurseToArray(func, item, levelCountdown - 1)
-            : func(item)
+            : noUndefined(func(item))
         );
     return list;    
 
 }
 
-class database {
-
-    constructor() {
-        
-        this.datasets = {};
-
-        let funcsToAttach = [
-            'filter', 'map', 
-            'group', 'ungroup', 
-            'distinct', 'reduce', 
-            'sort', 'print', 'merge', 'with'
-        ];
-
-        for(let funcName of funcsToAttach) 
-            this[funcName] = (...args) => 
-                this._callOnDs(funcName, ...args); 
-
-    }
-
-    addDataset (key, data) { 
-        if (!isIterable(data))
-            throw `Cannot add dataset ${key} because it is not iterable.`
-        this.datasets[key] = new dataset(data);
-        return this;
-    }    
-
-    addDatasets (obj) { 
-        for (let entry of Object.entries(obj)) 
-            this.addDataset(entry[0], entry[1]);
-        return this;
-    }
-
-    getDataset(arg) {
-        if (isString(arg))
-            return this.datasets[arg];
-        if (isFunction(arg)) {
-            let param = parser.parameters(arg)[0];
-            return this.datasets(param)[0];
-        }
-    }
-
-    getDatasets(arg) {
-
-        let datasets = [];
-        
-        if (isString(arg))
-            datasets.push(this.getDataset(arg));
-
-        else for (let param of parser.parameters(arg)) 
-            datasets.push(this.datasets[param]);
-
-        return datasets.filter(ds => ds !== undefined);
-
-    }
-
-    // .map(), except return the dataset instead
-    // of the calling FluentDB.
-    get(funcOrKey) {
-        if (isString(funcOrKey))
-            return this.datasets[funcOrKey].get();
-        let key = parser.parameters(funcOrKey)[0];
-        return this
-            ._callOnDs('get', funcOrKey)
-            .datasets[key];
-    }
-
-    toJson() {
-        let json = '{';
-        for(let key of Object.keys(this.datasets)) 
-            json += `"${key}":${this.datasets[key].toJson()},`;
-        if(json.endsWith(','))
-            json = json.slice(0, -1);
-        json += '}';
-        return json;
-    }
-
-    // - Execute a function on a dataset, basically a proxy,
-    //   but you don't know what the target is.
-    // - Parse ...args -- which can be broken down into 
-    //   targetDsName, lambda, ...otherArgs -- to identify
-    //   targetDsName, ...dataArgs, lambda, ...otherArgs.
-    // - If targetDsName is not present, it is implied by
-    //   lambda.   
-    _callOnDs(funcName, ...args) {
-
-        // User parameters should take the form of 
-        // 'targetDsName, lambda, ...args'.  But the user
-        // might omit 'targetDsName'.  If so, create one 
-        // now using the first parameter of 'lambda'.
-        if (isFunction(args[0])) {
-            let dsName = parser.parameters(args[0])[0];
-            args.unshift(dsName);
-        }
-
-        // The dataset name to load the result into.  
-        // The lambda to execute on a method of the dataset
-        // args is now the other args to execute on that method.
-        let targetDsName = args.shift(); 
-        let lambda = args.shift();
-
-        // Get the datasets referenced by 'lambda'.  The 
-        // first one is the 'target' of operations.
-        let dataArgs = this.getDatasets(lambda);
-        let targetDs = dataArgs.shift(); 
-
-        // Execute the method on the target dataset 
-        this.datasets[targetDsName] = targetDs[funcName](
-            ...dataArgs, 
-            lambda, 
-            ...args
-        ); 
-
-        return this;  
-
-    }    
-
-}
-
 function _(obj) { 
-    return obj instanceof dataset ? obj
-        : isIterable(obj) ? new dataset(obj)
-        : new database().addDatasets(obj); 
+    if (!isIterable(obj))
+        throw 'Object instantiating FluentDB must be iterable';
+    return obj instanceof dataset ? obj : new dataset(obj);
 }
 
 _.fromJson = function(json) {
-    
-    let db = new database();
 
-    let populateDb = pds => {
-        for(let key of Object.keys(pds)) 
-            db.datasets[key] = new dataset(
-                pds[key].data, 
-                pds[key].groupLevel
-            );
-    };
+    let ds = new dataset();
 
     if (json.constructor.name == 'Response') 
-        return json.json().then(protoDatasets => {
-            populateDb(protoDatasets);
-            return db;
+        return json.json().then(parsed => {
+            ds.data = parsed.data;
+            ds.groupLevel = parsed.groupLevel;
+            return ds;
         });
 
-    let protoDatasets = isString(json) ? JSON.parse(json) : json;
-    populateDb(protoDatasets);
-    return db;
+    let parsed = isString(json) ? JSON.parse(json) : json;
+    ds.data = parsed.data;
+    ds.groupLevel = parsed.groupLevel;
+
+    return ds;
 
 };
 
@@ -1019,12 +903,12 @@ _.mergeMethod = mergeMethod;
 _.reducer = reducer;
 _.runEmulators = runEmulators;
 
-_.reducer(_, 'first', v => v, array => array.reduce((a,b) => a || b));
-_.reducer(_, 'last', v => v, array => array.reduce((a,b) => b || a));
-_.reducer(_, 'sum', v => v, array => array.reduce((a,b) => a + b));
-_.reducer(_, 'count', v => v, array => array.reduce((a,b) => a + 1, 0));
+_.first = reducer(v => v, array => array.reduce((a,b) => a || b));
+_.last = reducer(v => v, array => array.reduce((a,b) => b || a));
+_.sum = reducer(v => v, array => array.reduce((a,b) => a + b));
+_.count = reducer(v => v, array => array.reduce((a,b) => a + 1, 0));
 
-_.reducer(_, 'avg', v => v, array => {
+_.avg = reducer(v => v, array => {
 
     let agg = runEmulators(array, val => ({
         sum: _.sum(val), 
@@ -1035,7 +919,7 @@ _.reducer(_, 'avg', v => v, array => {
 
 });
 
-_.reducer(_, 'mad', v => v, array => {
+_.mad = reducer(v => v, array => {
 
     let agg = runEmulators(array, val => _.avg(val));
 
@@ -1046,7 +930,7 @@ _.reducer(_, 'mad', v => v, array => {
     
 });
 
-_.reducer(_, 'cor', (x,y) => ({ x, y }), data => {
+_.cor = reducer((x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: _.avg(row.x), 

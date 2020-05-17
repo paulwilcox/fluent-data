@@ -3,7 +3,7 @@ async function test () {
     let data = await sample('orders');
 
     let results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .reduce(o => ({
             firstCustomer: $$.first(o.customer), 
             speed: $$.avg(o.speed),
@@ -11,14 +11,14 @@ async function test () {
             speed_cor: $$.cor(o.speed, o.rating),
             n: $$.count(o.id)
         }))
-        .get('o');
+        .get();
 
     if(results.n != 12) throw `
         results.n does not equal 12
     `;
 
     results = 
-        $$({ o: data.orders })
+        $$(data.orders)
         .group(o => o.customer) 
         .reduce(o => ({
             customer: $$.first(o.customer), 
@@ -26,7 +26,7 @@ async function test () {
             rating: $$.avg(o.rating),
             speed_cor: $$.cor(o.speed, o.rating)
         }))
-        .get(o => o);
+        .get();
 
     let row0 = prop => Math.round(results[0][prop] * 100) / 100;
 

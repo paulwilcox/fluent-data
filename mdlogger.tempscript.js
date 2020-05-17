@@ -1,6 +1,10 @@
-async function test () {
-
-    let json = `{
+    let $$ = require('./dist/FluentDB.server.js');
+    
+    let customers = [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Benny' },
+        { id: 3, name: 'Cathy' }
+    ];;    let json = `{
         "data":[
             {"id":1,"name":"Alice","initial":"A"},
             {"id":2,"name":"Benny","initial":"B"},
@@ -15,5 +19,3 @@ async function test () {
         .get();
 
     console.log(results);
-
-}

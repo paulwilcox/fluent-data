@@ -3,9 +3,7 @@ async function test () {
     let data = await sample('orders');
 
     let results = 
-        $$({
-            o: data.orders
-        })
+        $$(data.orders)
         .get(o => ({
             customer: o.customer,
             rating: o.rating,
