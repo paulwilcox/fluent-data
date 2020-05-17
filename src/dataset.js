@@ -92,15 +92,28 @@ export default class dataset {
         return this;
     }    
 
-    distinct (func) {
+    distinct (func, sorter) {
+
         func = func || (x => x);
+        
+        if (sorter) sorter = 
+            parser.parameters(sorter).length > 1 
+            ? data => quickSort(data, func, false)
+            : data => quickSort(data, func, true);
+        else 
+            sorter = data => data;
+
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
             .getBuckets()
-            .map(bucket => func(bucket[0]));
+            .map(bucket => {
+                return [...sorter(bucket)][0]
+            });
+
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
+
     }
 
     // TODO: Test whether this consumes the external dataset
