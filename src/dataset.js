@@ -93,6 +93,7 @@ export default class dataset {
     }    
 
     distinct (func) {
+        func = func || (x => x);
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
@@ -106,29 +107,8 @@ export default class dataset {
     // by iterating it.
     merge (incoming, matcher, options, method) {
 
-        let matcherReturnsString = false;
-        try {matcherReturnsString = g.isString(matcher());}
-        catch {}
-
-        // user is trying to use shortcut syntax that 
-        // uses full object equality by value
-        if (matcherReturnsString) {
-
-            let keyword = matcher();
-            if(!Object.keys(mergeMethod).includes(keyword)) throw `
-                'matcher' param in 'merge' returns a string, but 
-                this string is not represented in the 'mergeMethod'
-                enumeration.  Choose one of ${mergeMethod}.
-            `;
-
-            method = keyword;
+        if (matcher == '=') 
             matcher = (l,r) => g.eq(l,r);
-            options = { 
-                mapper: options,
-                hasher: x => x
-            }; 
-
-        }
 
         let outerFunc = data => [...mrg (
             data, 
