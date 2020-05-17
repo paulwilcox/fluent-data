@@ -151,7 +151,7 @@ export default class dataset {
         );
     }
 
-    toJson(func) {
+    toJsonString(func) {
         let dataJson = JSON.stringify(this.get(func));
         return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
     }
@@ -160,6 +160,8 @@ export default class dataset {
 
 // Untested
 dataset.fromJson = function(json) {
+
+    console.log({json})
 
     if (json.constructor.name == 'Response') 
         return json.json().then(parsed => {

@@ -11,26 +11,21 @@ export default function _(obj) {
 }
 
 _.fromJson = function(json) {
-    
-    let db = new database();
 
-    let populateDb = pds => {
-        for(let key of Object.keys(pds)) 
-            db.datasets[key] = new dataset(
-                pds[key].data, 
-                pds[key].groupLevel
-            );
-    }
+    let ds = new dataset();
 
     if (json.constructor.name == 'Response') 
-        return json.json().then(protoDatasets => {
-            populateDb(protoDatasets);
-            return db;
+        return json.json().then(parsed => {
+            ds.data = parsed.data;
+            ds.groupLevel = parsed.groupLevel;
+            return ds;
         });
 
-    let protoDatasets = g.isString(json) ? JSON.parse(json) : json;
-    populateDb(protoDatasets);
-    return db;
+    let parsed = g.isString(json) ? JSON.parse(json) : json;
+    ds.data = parsed.data;
+    ds.groupLevel = parsed.groupLevel;
+
+    return ds;
 
 }
 
