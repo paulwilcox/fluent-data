@@ -6,7 +6,7 @@ async function test () {
             fetch('./_jsonSender.r.js')
             .then(resp => $$.fromJson(resp));
 
-        let json = db.toJson();
+        let json = db.toJsonString();
 
         await runServerTests(json, 'toJson');
 
@@ -17,7 +17,7 @@ async function test () {
             .then(resp => resp.json())
             .then(protoDb => $$.fromJson(protoDb));
 
-        json = db.toJson();
+        json = db.toJsonString();
 
         await runServerTests(json, 'toJson');
 
@@ -28,7 +28,7 @@ async function test () {
             .then(resp => resp.text())
             .then(protoDb => $$.fromJson(protoDb));
 
-        json = db.toJson();
+        json = db.toJsonString();
 
         await runServerTests(json, 'toJson');
 

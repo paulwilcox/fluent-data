@@ -4,7 +4,7 @@ async function serve(req, res) {
 
     let json = 
         $$(data.customers)
-        .toJson();
+        .toJsonString();
 
     res.writeHead(200, 'ok');
     res.end(json);

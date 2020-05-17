@@ -14,13 +14,13 @@ async function test () {
         .distinct(n => n.label)
         .get();
 
-    if (results.filter(n => n == '??').length != 1) {
+    if (results.filter(n => n.label == '??').length != 1) {
         return false;
     }
 
     results = 
         $$(numbers)
-        .distinct(n => n)
+        .distinct()
         .get();
 
     if (results.filter(n => n.id == 2).length != 1)
