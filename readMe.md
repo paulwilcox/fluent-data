@@ -1,6 +1,6 @@
 ** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
 
-Maipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
+Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
 
 FluentDB works like many of the methods on `Array.prototype`.  However, FluentDB makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
