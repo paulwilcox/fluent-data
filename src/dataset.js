@@ -144,11 +144,13 @@ export default class dataset {
     }
 
     get (func) {
-        return recurseToArray(
+        let arr = recurseToArray(
             func || function(x) { return x }, 
             this.data,
             this.groupLevel
         );
+        this.data = arr;
+        return arr;
     }
 
     toJsonString(func) {

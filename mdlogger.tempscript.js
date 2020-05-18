@@ -1,21 +1,17 @@
     let $$ = require('./dist/FluentDB.server.js');
     
-    let customers = [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Benny' },
-        { id: 3, name: 'Cathy' }
-    ];;    let json = `{
-        "data":[
-            {"id":1,"name":"Alice","initial":"A"},
-            {"id":2,"name":"Benny","initial":"B"},
-            {"id":3,"name":"Cathy","initial":"C"}
-        ],
-        "groupLevel":1
-    }`;
+    let purchases = [
+        { customer: 'Alice', speed: 5, rating: 5 },
+        { customer: 'Benny', speed: 10, rating: 25 },
+        { customer: 'Cathy', speed: 15, rating: 75 }
+    ];;    let calibrations = 
+        $$(purchases).map(p => ({
+            ...p, 
+            recalibrated: p.speed - 10
+        }));
 
-    let results = 
-        $$.fromJson(json)
-        .filter(c => c.initial != 'C')
-        .get();
+    console.log('Calibrations 1:', calibrations.get(), `\r\n`);
 
-    console.log(results);
+    purchases.push({ customer: 'David', speed: 20, rating: 1 });
+
+    console.log('Calibrations 2:', calibrations.get());

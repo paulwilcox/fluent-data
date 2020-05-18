@@ -810,11 +810,13 @@ class dataset {
     }
 
     get (func) {
-        return recurseToArray(
+        let arr = recurseToArray(
             func || function(x) { return x }, 
             this.data,
             this.groupLevel
         );
+        this.data = arr;
+        return arr;
     }
 
     toJsonString(func) {
@@ -823,24 +825,6 @@ class dataset {
     }
 
 }
-
-// Untested
-dataset.fromJson = function(json) {
-
-    console.log({json});
-
-    if (json.constructor.name == 'Response') 
-        return json.json().then(parsed => {
-            this.data = parsed.data;
-            this.groupLevel = parsed.groupLevel;
-            return this;
-        });
-
-    let parsed = isString(json) ? JSON.parse(json) : json;
-    this.data = parsed.data;
-    this.groupLevel = parsed.groupLevel;
-
-};
 
 function* recurse (func, data, levelCountdown) {
 
