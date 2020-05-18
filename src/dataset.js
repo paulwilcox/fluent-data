@@ -158,24 +158,6 @@ export default class dataset {
 
 }
 
-// Untested
-dataset.fromJson = function(json) {
-
-    console.log({json})
-
-    if (json.constructor.name == 'Response') 
-        return json.json().then(parsed => {
-            this.data = parsed.data;
-            this.groupLevel = parsed.groupLevel;
-            return this;
-        });
-
-    let parsed = g.isString(json) ? JSON.parse(json) : json;
-    this.data = parsed.data;
-    this.groupLevel = parsed.groupLevel;
-
-}
-
 function* recurse (func, data, levelCountdown) {
 
     if (levelCountdown === 0)
