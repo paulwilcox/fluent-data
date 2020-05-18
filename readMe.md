@@ -1,70 +1,126 @@
 ** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
 
-Work with datasets (arrays of objects) by chaining methods -- similar to c# linq method syntax, though in many ways more pleasant. 
+Maipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
 
-- To get up and running, see [Prerequisites](https://github.com/paulwilcox/FluentDB/wiki/Prerequisites)
-- To better understand what kind of data this package is intended for, see the [SampleDB](https://github.com/paulwilcox/SampleDB) GitHub page.
+FluentDB works like many of the methods on `Array.prototype`.  However, FluentDB makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
-## Database Syntax
+FluentDB syntax is similar to LINQ in c#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by FluentDB.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
-Operations on **_FluentDB_** datasets typically involve arrow functions inside chained method calls.  The return value of most methods is the **_FluentDB_** instance calling the method.  This chaining approach is often referred to as 'fluent' syntax.  Hence the name 'FluentDB'.
+## Getting Started
 
-One significant feature of **_FluentDB_** is that the parameters of the arrow functions refer to the object aliases of the loaded datasets.  So, for instance, the 'c' parameter in the filter method below refers to the 'customers' dataset that was passed in during instantiation: 
+### To install:
 
-    let result = $$({
-        c: sample.customers
-    })
-    .filter(c => c.id != 1); 
+    npm install FluentDB 
 
-These features promote concise syntax:
+### To import:
 
-    let result = $$({
-        o: sample.orders,
-        p: sample.products,
-        c: sample.customers,
-        pc: sample.potentialCustomers,
-        s: sample.shoplifters 
-    })
-    .merge((o,p) => o.product == p.id, 'both null')  // inner join
-    .merge((o,c) => o.customer == c.id, 'both left') // left join
-    .merge((o,s) => o.customer == s.id, 'null left') // not exists
-    .group(o => o.customer) 
-    .reduce(o => ({
-        customerId: $$.first(o.customer || 'n/a'), 
-        customer: $$.first(o.fullname || 'No Name'),
-        orders: $$.count(o.id), 
-        price: $$.avg(o.price),
-        speed: $$.avg(o.speed),
-        rating: $$.avg(o.rating),
-        correlation: $$.cor(o.speed, o.rating)
-    }))
-    .get(o => o);
+    // client
+    import $$ from './node_modules/FluentDB/dist/FluentDB.client.js';
+
+    // server
+    let $$ = require('FluentDB');
+
+    // but the examples in this documentation will use
+    let $$ = require('./dist/FluentDB.server.js');
+
+### Example:
+
+Consider these datasets:
+
+    ```javascript {id=import}
+    let customers = [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Benny' } 
+    ];
+
+    let purchases = [
+        { customer: 2, speed: 15, rating: 50, storeId: 1 },
+        { customer: 1, speed: 5, rating: 90, storeId: 1 },
+        { customer: 1, speed: 7, rating: 55, storeId: 1 },
+        { customer: 2, speed: 6, rating: 88, storeId: 1 },
+        { customer: 1, speed: 25, rating: 35, storeId: 1 },
+        { customer: 1, speed: 40, rating: 2, storeId: 3, closed: true },
+        { customer: 2, speed: 4, rating: 88, storeId: 1 },
+        { customer: 1, speed: 1, rating: 96, storeId: 2 },
+        { customer: 1, speed: 2, rating: 94, storeId: 2 },
+        { customer: 1, speed: 1, rating: 94, storeId: 2 }
+    ];
+    ```
+
+The following exmaple uses many of the methods available to analyze the two datasets.
+
+    ```javascript {log=true, setup=import}
+    let $$ = require('./dist/FluentDB.server.js');
+
+    let result = 
+        $$(purchases)
+        .filter(p => !p.closed)
+        .merge(customers, (p,c) => p.customer == c.id, 'both null') // inner join
+        .group(p => [p.customer, p.storeId]) 
+        .reduce(p => ({
+            customer: $$.first(p.name),
+            store: $$.first(p.storeId),
+            orders: $$.count(p.id), 
+            speed: $$.avg(p.speed),
+            rating: $$.avg(p.rating),
+            correlation: $$.cor(p.speed, p.rating)
+        }))
+        .sort(p => [p.customer, -p.rating])
+        .get(p => ({
+            ...p, 
+            speed: $$.round(p.speed, 2),
+            rating: $$.round(p.rating, 2),
+            orders: undefined // won't show in final results
+        }));
 
     console.log(result);
+    ```
 
-The example above will produce an array of objects grouped by customer, with other properties aggregating information about their ordering behavior. 
+This results in three rows for analysis:
 
-## Dataset Syntax
-
-If the database mentality is not desired, there is also a syntax that allows you to work at the dataset level.  Instead of passing an object of arrays, just pass an array:
-
-    result = 
-        $$(sample.orders)
-        .merge(sample.products, (o,p) => o.product == p.id, 'both null') 
-        .get(o => ({o.customerId, o.rating}));
-
-In this syntax, the parameters don't serve as aliases for anything, so you are free to use any labels you like.  For any method, if a second dataset is referenced in the aliases of the database syntax, the actual dataset is passed as a parameter before the lambda.
+    ```javascript{output=true}
+    [
+      {
+        customer: 'Alice',
+        store: 2,
+        speed: 1.33,
+        rating: 94.67,
+        correlation: -0.5
+      },
+      {
+        customer: 'Alice',
+        store: 1,
+        speed: 12.33,
+        rating: 60,
+        correlation: -0.8315708645692353
+      },
+      {
+        customer: 'Benny',
+        store: 1,
+        speed: 8.33,
+        rating: 75.33,
+        correlation: -0.9853292781642932
+      }
+    ]
+    ```
 
 ## Operations and Features
 
-The following operations are available on **_FluentDB_**:
+The following operations are available on FluentDB:
 
-* [filter](https://github.com/paulwilcox/FluentDB/wiki/Using-filter()): Eliminate rows from a dataset. 
-* [map](https://github.com/paulwilcox/FluentDB/wiki/Using-map()): Replace each row in a dataset with the result of a function called on each row. 
-* [sort](https://github.com/paulwilcox/FluentDB/wiki/Using-sort()): Sort a dataset.  Supports multi-level sorting.
-* [join](https://github.com/paulwilcox/FluentDB/wiki/Using-join()): Horizontally join rows from two datasets.  Can do inner, left, right, and full joins. Will use hash algorithm (default) or loop algorithm.
-* [group](https://github.com/paulwilcox/FluentDB/wiki/Using-[un]group()): Group rows of a dataset into nested arrays internally sharing a common criteria.
-* [reduce](https://github.com/paulwilcox/FluentDB/wiki/Using-reduce[r](https://github.com/paulwilcox/FluentDB/wiki/)): Aggregate a dataset.  Custom aggregations are possible.
-* [merge](https://github.com/paulwilcox/FluentDB/wiki/Using-merge()): Merge values from a source dataset into a target dataset.  
-* [with](https://github.com/paulwilcox/FluentDB/wiki/Using-with()): Work with a dataset without breaking the fluency/chaining syntax. 
-* [get](https://github.com/paulwilcox/FluentDB/wiki/Using-get()): Outputs the dataset in question.
+* [get](https://github.com/paulwilcox/FluentDB/wiki/Map-and-Get#Getting): Returns the dataset as an array.
+* [map](https://github.com/paulwilcox/FluentDB/wiki/Map-and-Get#Mapping): Replaces each row in a dataset with the result of 
+  a function called on each row. 
+* [filter](https://github.com/paulwilcox/FluentDB/wiki/Filtering): Chooses particular rows from a dataset. 
+* [sort](https://github.com/paulwilcox/FluentDB/wiki/Sorting): Sorts a dataset.  
+* [distinct](https://github.com/paulwilcox/FluentDB/wiki/Distinct): Eliminates duplicates in a dataset.
+* [merge](https://github.com/paulwilcox/FluentDB/wiki/Merging): Brings in values from another set of data.  Can be done 
+  horizontally (such as with a join) or vertically (such as with an insert).
+* [group](https://github.com/paulwilcox/FluentDB/wiki/Grouping): Group rows of a dataset into nested datasets.  Or reverse 
+  this with [ungroup](https://github.com/paulwilcox/FluentDB/wiki/Grouping#Ungrouping-Rows)
+* [reduce](https://github.com/paulwilcox/FluentDB/wiki/Reducing): Aggregate a dataset.  Create custom aggregators with 
+  [reducer](https://github.com/paulwilcox/FluentDB/wiki/Reducing#Simple-Custom-Reducers).
+* [with](https://github.com/paulwilcox/FluentDB/wiki/With): Work with a dataset without breaking the fluency/chaining
+  syntax. 
+
+Click on the links to go to the wiki and learn more about them.
