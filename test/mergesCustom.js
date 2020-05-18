@@ -21,7 +21,7 @@ async function test () {
             $$(data.philosophites)
             .merge(
                 data.mathematicians,
-                p.id == m.id, 
+                (p,m) => p.id == m.id, 
                 {
                     leftHasher: x => x.id,
                     rightHasher: x => x.id,
@@ -51,11 +51,15 @@ async function test () {
 
     // Will merge work inside groupings?
 
+        let customers = $$(data.customers).get(
+            c => ({...c, customer: c.id})
+        );
+
         results = 
             $$(data.orders)
             .group(o => o.customer)
             .merge(
-                data.customers,
+                customers,
                 (o,c) => o.customer = c.id,
                 'both both'
             )
