@@ -3,7 +3,7 @@ import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import parser from './parser.js';
 import { runEmulators } from './reducer.js';
-import { merge as mrg, mergeMethod } from './mergeTools.js';
+import { merge as mrg } from './mergeTools.js';
 
 export default class dataset {
 

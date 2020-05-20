@@ -4,7 +4,7 @@
         { customer: 'Alice', speed: 5, rating: 5 },
         { customer: 'Benny', speed: 10, rating: 25 },
         { customer: 'Cathy', speed: 15, rating: 75 }
-    ];;    let calibrations = 
+    ];;    var calibrations = 
         $$(purchases).map(p => ({
             ...p, 
             recalibrated: p.speed - 10
