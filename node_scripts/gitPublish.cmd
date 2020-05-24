@@ -1,1 +1,1 @@
-git push https://github.com/paulwilcox/FluentDB master
+git push https://github.com/paulwilcox/fluent-data master

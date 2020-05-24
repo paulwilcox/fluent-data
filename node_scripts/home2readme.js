@@ -1,7 +1,7 @@
 let fs = require('fs');
 
 let contents = fs.readFileSync('.\\wiki\\Home.md').toString();
-let url = 'https://github.com/paulwilcox/FluentDB/wiki';
+let url = 'https://github.com/paulwilcox/fluent-data/wiki';
 
 // finds '](' in '... [text](link) ...' provided that 
 // 'link' does not begin with 'http:' or 'https:'
