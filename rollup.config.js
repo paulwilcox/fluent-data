@@ -4,24 +4,24 @@ import license from 'rollup-plugin-license';
 // array.  Otherwise, the third party licence file gets 
 // overwritten, not appended to.
 let licensePlugin = license({
-    banner: { content: { file: 'license.md' } },
+    banner: { content: { file: 'license.md' } }/*,
     thirdParty: {
         output: 'license-3rd-party',
         includePrivate: true
-    }
+    }*/
 });
 
 export default [{
-    input: 'src/FluentDB.js',
+    input: 'src/fluent-data.js',
     output: {
-        file: 'dist/FluentDB.server.js',
+        file: 'dist/fluent-data.server.js',
         format: 'cjs'
     },
     plugins: licensePlugin
 }, {
-    input: 'src/FluentDB.js',
+    input: 'src/fluent-data.js',
     output: {
-        file: 'dist/FluentDB.client.js',
+        file: 'dist/fluent-data.client.js',
         format: 'esm'
     },
     plugins: licensePlugin

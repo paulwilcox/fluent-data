@@ -5,7 +5,7 @@ import * as g from './general.js';
 
 export default function _(obj) { 
     if (!g.isIterable(obj))
-        throw 'Object instantiating FluentDB must be iterable';
+        throw 'Object instantiating fluent_data must be iterable';
     return obj instanceof dataset ? obj : new dataset(obj);
 }
 

@@ -1,35 +1,25 @@
-## Moved
-
-** FluentDB has been renamed to fluent-data. **  
-
-If you are here, search for fluent-data in npmjs or github.
-
-## Introduction
-
-** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
-
 Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
 
-FluentDB works like many of the methods on `Array.prototype`.  However, FluentDB makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
+`fluent-data` works like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
-FluentDB syntax is similar to LINQ in c#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by FluentDB.  Some of the syntax can even be friendlier and more powerful in comparison.   
+`fluent-data` syntax is similar to LINQ in c#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
 ## Getting Started
 
 ### To install:
 
-    npm install FluentDB 
+    npm install fluent-data
 
 ### To import:
 
     // client
-    import $$ from './node_modules/FluentDB/dist/FluentDB.client.js';
+    import $$ from './node_modules/fluent-data/dist/fluent-data.client.js';
 
     // server
-    let $$ = require('FluentDB');
+    let $$ = require('fluent-data');
 
     // but the examples in this documentation will use
-    let $$ = require('./dist/FluentDB.server.js');
+    let $$ = require('./dist/fluent-data.server.js');
 
 ### Example:
 
@@ -61,7 +51,7 @@ The following exmaple uses many of the methods available to analyze the two data
 
 [javascript]: # (log=true,setup=import)
 
-    let $$ = require('./dist/FluentDB.server.js');
+    let $$ = require('./dist/fluent-data.server.js');
 
     let result = 
         $$(purchases)
@@ -120,7 +110,7 @@ This results in three rows for analysis:
 
 ## Operations and Features
 
-The following operations are available on FluentDB:
+The following operations are available on fluent-data:
 
 * [get](https://github.com/paulwilcox/FluentDB/wiki/Map-and-Get#Getting): Returns the dataset as an array.
 * [map](https://github.com/paulwilcox/FluentDB/wiki/Map-and-Get#Mapping): Replaces each row in a dataset with the result of 
