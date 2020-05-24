@@ -116,8 +116,6 @@ export default class dataset {
 
     }
 
-    // TODO: Test whether this consumes the external dataset
-    // by iterating it.
     merge (incoming, matcher, options, method) {
 
         if (matcher == '=') 

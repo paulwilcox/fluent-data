@@ -33,8 +33,6 @@ export let isPromise = obj =>
 
 export let stringifyObject = obj => {
 
-    // todo: find out if this is bad.  But for now it's
-    // fixing something.
     if (obj === undefined) 
         return '';
 
