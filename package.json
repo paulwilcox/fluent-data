@@ -36,9 +36,7 @@
   "author": "Paul Wilcox",
   "license": "ISC",
   "dependencies": {},
-  "optionalDependencies": {
-    "mongodb": "^3.2.5"
-  },
+  "optionalDependencies": {},
   "devDependencies": {
     "console.table": "^0.10.0",
     "glimp": "0.0.3",
