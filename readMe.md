@@ -1,3 +1,11 @@
+## Moved
+
+** FluentDB has been renamed to fluent-data. **  
+
+If you are here, search for fluent-data in npmjs or github.
+
+## Introduction
+
 ** **I am close to release of Version 1!  Go to [The Future](https://github.com/paulwilcox/FluentDB/wiki/The-Future) and check out 'Before Version 1 Release'.** **
 
 Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
