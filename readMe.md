@@ -27,7 +27,8 @@ FluentDB syntax is similar to LINQ in c#.  C# developers frustrated with the lac
 
 Consider these datasets:
 
-    ```javascript {id=import}
+[javascript]: # (id=import)
+
     let customers = [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Benny' } 
@@ -45,11 +46,13 @@ Consider these datasets:
         { customer: 1, speed: 2, rating: 94, storeId: 2 },
         { customer: 1, speed: 1, rating: 94, storeId: 2 }
     ];
-    ```
+
+[--]: # ()
 
 The following exmaple uses many of the methods available to analyze the two datasets.
 
-    ```javascript {log=true, setup=import}
+[javascript]: # (log=true,setup=import)
+
     let $$ = require('./dist/FluentDB.server.js');
 
     let result = 
@@ -74,11 +77,13 @@ The following exmaple uses many of the methods available to analyze the two data
         }));
 
     console.log(result);
-    ```
+
+[--]: # ()
 
 This results in three rows for analysis:
 
-    ```javascript{output=true}
+[--]: # (output=true)
+
     [
       {
         customer: 'Alice',
@@ -102,7 +107,8 @@ This results in three rows for analysis:
         correlation: -0.9853292781642932
       }
     ]
-    ```
+
+[--]: # ()
 
 ## Operations and Features
 
