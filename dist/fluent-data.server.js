@@ -87,8 +87,6 @@ let runEmulators = function (
 
 let stringifyObject = obj => {
 
-    // todo: find out if this is bad.  But for now it's
-    // fixing something.
     if (obj === undefined) 
         return '';
 
@@ -784,8 +782,6 @@ class dataset {
 
     }
 
-    // TODO: Test whether this consumes the external dataset
-    // by iterating it.
     merge (incoming, matcher, options, method) {
 
         if (matcher == '=') 

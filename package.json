@@ -2,7 +2,7 @@
   "name": "fluent-data",
   "version": "1.0.0",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, mergings, reducings (aggregations), and similar operations on datast style objects.  A 'Dataset' is an array of objects with named properties.  Inspired by c# linq method syntax.",
-  "main": ".dist/FluentDB.server.next.js",
+  "main": "./dist/FluentDB.server.next.js",
   "directories": {
     "example": "example"
   },

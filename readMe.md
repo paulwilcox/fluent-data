@@ -1,3 +1,13 @@
+## Announcement(s)
+
+Going through a period where I'm not updating the project that often.  Doens't nececarily mean I've abandoned it.  Just 
+means that I'm working on some other priorities for a little while.  I plan on returning to this.
+
+Anticipate yet another name change in the near future.  I apologize.  I checked github and npm to avoid collisions, but 
+then I saw a 'fluentData' as a tag on stack overflow.  Realized theres yet another area I have to check for naming.
+
+## Summary 
+
 Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
 
 `fluent-data` works like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
