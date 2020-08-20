@@ -11,7 +11,7 @@ async function test () {
             speed_cor: $$.cor(o.speed, o.rating),
             n: $$.count(o.id)
         }))
-        .get();
+        .get(o => ({ ...o, speed_cor: o.speed_cor.cor }));
 
     if(results.n != 12) throw `
         results.n does not equal 12
@@ -26,7 +26,7 @@ async function test () {
             rating: $$.avg(o.rating),
             speed_cor: $$.cor(o.speed, o.rating)
         }))
-        .get();
+        .get(o => ({ ...o, speed_cor: o.speed_cor.cor }));
 
     let row0 = prop => Math.round(results[0][prop] * 100) / 100;
 

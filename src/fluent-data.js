@@ -64,8 +64,11 @@ _.cor = reducer((x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: _.avg(row.x), 
-        yAvg: _.avg(row.y) 
+        yAvg: _.avg(row.y),
+        n: _.count(row) 
     }));
+
+    let n = agg.n;
 
     for(let ix in data) 
         data[ix] = { 
@@ -76,10 +79,20 @@ _.cor = reducer((x,y) => ({ x, y }), data => {
     agg = runEmulators(data, row => ({
         xyDiff: _.sum(row.xDiff * row.yDiff), 
         xDiffSq: _.sum(row.xDiff ** 2),
-        yDiffSq: _.sum(row.yDiff ** 2)    
+        yDiffSq: _.sum(row.yDiff ** 2)
     }));
 
-    return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
+    let cor = agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5)
+    let df = n - 2;
+    let t =  g.studentsTfromCor(cor, n);
+
+    return {
+        cor: cor,
+        pVal: g.studentsTcdf(t, df), 
+        n: n,
+        df: df,
+        t: t
+    };
     
 });
 

@@ -162,6 +162,55 @@ let eq = (obj1, obj2) => {
 
 };
 
+
+// vassarstats.net/tabs_r.html
+function studentsTfromCor (cor, n) {
+    return  cor / Math.pow((1-cor*cor) / (n-2), 0.5); 
+}
+    
+// www.stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf
+function studentsTcdf(t, df) {
+    
+    if(df < 1)
+        return undefined;
+
+    else if (df % 2 == 0) {
+
+        let x = t / Math.pow(df,0.5);
+
+        let s = 1;
+        let u = 1;
+        for(let i = 1; i <= df/2 - 1; i++) {
+            u *= (1 - 1/(2*i))/(1 + x*x);
+            s += u;
+        }
+
+        return 0.5 - 0.5 * s * x / Math.pow(1 + x*x, 0.5);
+        
+    }
+
+    else if (df == 1) {
+        let x = t / Math.pow(df,0.5);
+        return 0.5 - 1/Math.PI * Math.atan(x);
+    }
+
+    else {
+
+        let x = t / Math.pow(df,0.5);
+
+        let s = 1;
+        let u = 1;
+        for(let i = 2; i <= (df-1)/2; i++) {
+            u *= (1 - 1/(2*i-1))/(1 + x*x);
+            s += u;
+        }
+
+        return 0.5 - 1/Math.PI * ( s * x/(1+x*x) + Math.atan(x));
+
+    }
+
+}
+
 class hashBuckets extends Map {
     
     constructor (
@@ -806,6 +855,11 @@ class dataset {
     }
 
     get (func) {
+        if (!isIterable(this.data)) {
+            if (func)
+                this.data = func(this.data);
+            return this.data;
+        }
         let arr = recurseToArray(
             func || function(x) { return x }, 
             this.data,
@@ -914,8 +968,11 @@ _.cor = reducer((x,y) => ({ x, y }), data => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: _.avg(row.x), 
-        yAvg: _.avg(row.y) 
+        yAvg: _.avg(row.y),
+        n: _.count(row) 
     }));
+
+    let n = agg.n;
 
     for(let ix in data) 
         data[ix] = { 
@@ -926,10 +983,20 @@ _.cor = reducer((x,y) => ({ x, y }), data => {
     agg = runEmulators(data, row => ({
         xyDiff: _.sum(row.xDiff * row.yDiff), 
         xDiffSq: _.sum(row.xDiff ** 2),
-        yDiffSq: _.sum(row.yDiff ** 2)    
+        yDiffSq: _.sum(row.yDiff ** 2)
     }));
 
-    return agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
+    let cor = agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
+    let df = n - 2;
+    let t =  studentsTfromCor(cor, n);
+
+    return {
+        cor: cor,
+        pVal: studentsTcdf(t, df), 
+        n: n,
+        df: df,
+        t: t
+    };
     
 });
 

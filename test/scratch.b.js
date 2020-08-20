@@ -1,19 +1,20 @@
 async function test () {
 
-    let json = `{
-        "data":[
-            {"id":1,"name":"Alice","initial":"A"},
-            {"id":2,"name":"Benny","initial":"B"},
-            {"id":3,"name":"Cathy","initial":"C"}
-        ],
-        "groupLevel":1
-    }`;
+    let data = await sample('orders');
 
     let results = 
-        $$.fromJson(json)
-        .filter(c => c.initial != 'C')
+        $$(data.orders)
+        .reduce(o => ({
+            firstCustomer: $$.first(o.customer), 
+            speed: $$.avg(o.speed),
+            rating: $$.avg(o.rating),
+            speed_cor: $$.cor(o.speed, o.rating),
+            n: $$.count(o.id)
+        }))
         .get();
 
     console.log(results);
+
+    return true;
 
 }

@@ -142,6 +142,11 @@ export default class dataset {
     }
 
     get (func) {
+        if (!g.isIterable(this.data)) {
+            if (func)
+                this.data = func(this.data);
+            return this.data;
+        }
         let arr = recurseToArray(
             func || function(x) { return x }, 
             this.data,

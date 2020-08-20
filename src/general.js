@@ -168,3 +168,52 @@ export let PromiseAllObjectEntries = obj =>
             obj[entry[0]] = entry[1];
         return obj;
     });
+
+
+// vassarstats.net/tabs_r.html
+export function studentsTfromCor (cor, n) {
+    return  cor / Math.pow((1-cor*cor) / (n-2), 0.5); 
+}
+    
+// www.stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf
+export function studentsTcdf(t, df) {
+    
+    if(df < 1)
+        return undefined;
+
+    else if (df % 2 == 0) {
+
+        let x = t / Math.pow(df,0.5);
+
+        let s = 1;
+        let u = 1;
+        for(let i = 1; i <= df/2 - 1; i++) {
+            u *= (1 - 1/(2*i))/(1 + x*x);
+            s += u;
+        }
+
+        return 0.5 - 0.5 * s * x / Math.pow(1 + x*x, 0.5);
+        
+    }
+
+    else if (df == 1) {
+        let x = t / Math.pow(df,0.5);
+        return 0.5 - 1/Math.PI * Math.atan(x);
+    }
+
+    else {
+
+        let x = t / Math.pow(df,0.5);
+
+        let s = 1;
+        let u = 1;
+        for(let i = 2; i <= (df-1)/2; i++) {
+            u *= (1 - 1/(2*i-1))/(1 + x*x);
+            s += u;
+        }
+
+        return 0.5 - 1/Math.PI * ( s * x/(1+x*x) + Math.atan(x));
+
+    }
+
+}
