@@ -92,6 +92,20 @@ export default class dataset {
         return this;
     }    
 
+    reduce2 (obj) {
+
+        let agg = {};
+
+        for(let [key,reducer] of Object.entries(obj)) {
+            agg[key] = reducer(this.data);
+        }
+
+        this.data = agg;
+
+        return this;
+
+    }
+
     distinct (func, sorter) {
 
         func = func || (x => x);

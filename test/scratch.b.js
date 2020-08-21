@@ -4,14 +4,14 @@ async function test () {
 
     let results = 
         $$(data.orders)
-        .reduce(o => ({
-            firstCustomer: $$.first(o.customer), 
-            speed: $$.avg(o.speed),
-            rating: $$.avg(o.rating),
-            speed_cor: $$.cor(o.speed, o.rating),
-            n: $$.count(o.id)
-        }))
+        .reduce2({
+            sum: $$.sum2(o => o.id),
+            n: $$.count2(o => o.id),
+            avg: $$.avg2(o => o.id)
+        })
         .get();
+
+    console.log(data)
 
     console.log(results);
 

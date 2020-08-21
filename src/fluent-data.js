@@ -30,6 +30,35 @@ _.fromJson = function(json) {
 
 _.mergeMethod = mergeMethod;
 
+_.sum2 = (shaper, options) => 
+    data => {
+        let agg = 0;
+        for (let row of data) 
+            agg += shaper(row);
+        if (options && options.test) 
+            agg = -agg;
+        return agg;
+    };
+
+_.count2 = shaper => 
+    data => {
+        let agg = 0;
+        for (let row of data) {
+            let r = shaper(row)
+            if (r !== undefined && r !== null)
+                agg += 1;
+        }
+        return agg;
+    };
+
+_.avg2 = shaper => 
+    data => {
+        let s = _.sum2(shaper)(data);
+        let n = _.count2(shaper)(data);
+        return s / n;
+    };
+
+
 _.reducer = reducer;
 _.runEmulators = runEmulators;
 
@@ -60,7 +89,7 @@ _.mad = reducer(v => v, array => {
     
 });
 
-_.cor = reducer((x,y) => ({ x, y }), data => {
+_.cor = reducer((x,y) => ({ x, y }), (data) => {
 
     let agg = runEmulators(data, row => ({ 
         xAvg: _.avg(row.x), 

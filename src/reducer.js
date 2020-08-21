@@ -9,11 +9,7 @@ export function reducer (
     processor
 
 ) {
-    return (...vals) => 
-        new emulator(
-            processor, 
-            inputShaper(...vals)
-        );
+    return (...vals) => new emulator(processor, inputShaper(...vals));
 }
 
 // Aggregators such as 'sum' or 'avg' operate on
