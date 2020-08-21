@@ -7,82 +7,6 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-function reducer (
-    
-    // Function: The parameters determine the number 
-    // of parameters expected to be passed in by the user.
-    // The object returned by is used by 'processor'.
-    inputShaper, 
-
-    // Function: The logic used to aggregate values.
-    processor
-
-) {
-    return (...vals) => 
-        new emulator(
-            processor, 
-            inputShaper(...vals)
-        );
-}
-
-// Aggregators such as 'sum' or 'avg' operate on
-// columnar data.  But the values passed to the
-// aggregators, such as 'x' in 'sum(x)' or 'avg(x)'
-// are point data.  'emulator' stores the row value,
-// but it also stores the the intented function (the 
-// one it emulates), for later loading into a master 
-// aggregators object.    
-class emulator {
-    constructor(processor, rowValue) {
-        this.rowValue = rowValue;
-        this.processor = processor;
-    }
-}
-
-// 'emulatorsFunc' is what the user will pass in.
-let runEmulators = function (
-    dataset,
-    emulatorsFunc
-) {
-
-    let keyStores = {};
-    let isNaked = false;
-
-    for (let row of dataset) {
-
-        let emulators = emulatorsFunc(row);
-        
-        if (emulators instanceof emulator) {
-            isNaked = true;
-            emulators = { x: emulators };
-        }
-
-        for (let key of Object.keys(emulators)) {
-
-            let rowValue = emulators[key].rowValue;
-
-            if (!keyStores[key]) 
-                keyStores[key] = {
-                    processor: emulators[key].processor,
-                    data: []
-                };
-
-            keyStores[key].data.push(rowValue);
-
-        }
-
-    }
-
-    for (let key of Object.keys(keyStores)) 
-        keyStores[key] = keyStores[key].processor(keyStores[key].data);
-
-    if (isNaked)
-        keyStores = keyStores.x;
-
-    return keyStores;
-
-};
-
 let stringifyObject = obj => {
 
     if (obj === undefined) 
@@ -796,14 +720,24 @@ class dataset {
 
     }
 
-    reduce (func, ungroup = true) {
-        // Wrap outerFunc result in array to restore the group level
-        let outerFunc = data => [runEmulators(data, func)];
+    reduce (obj, ungroup = true) {
+
+        let outerFunc = data => {
+            let agg = {};
+            for(let [key,reducer] of Object.entries(obj)) {
+                agg[key] = reducer(data);
+            }
+            return [agg]; // wrap in array to bring back to original nesting level
+        };
+
         this.data = recurse(outerFunc, this.data, this.groupLevel);
+
         if (ungroup)
-            this.ungroup(x => x);
+            this.ungroup();
+
         return this;
-    }    
+
+    }
 
     distinct (func, sorter) {
 
@@ -934,71 +868,95 @@ _.fromJson = function(json) {
 
 _.mergeMethod = mergeMethod;
 
-_.reducer = reducer;
-_.runEmulators = runEmulators;
-
-_.first = reducer(v => v, array => array.reduce((a,b) => a || b));
-_.last = reducer(v => v, array => array.reduce((a,b) => b || a));
-_.sum = reducer(v => v, array => array.reduce((a,b) => a + b));
-_.count = reducer(v => v, array => array.reduce((a,b) => a + 1, 0));
-
-_.avg = reducer(v => v, array => {
-
-    let agg = runEmulators(array, val => ({
-        sum: _.sum(val), 
-        count: _.count(val)     
-    }));
-
-    return agg.sum / agg.count
-
-});
-
-_.mad = reducer(v => v, array => {
-
-    let agg = runEmulators(array, val => _.avg(val));
-
-    for (let ix in array)
-        array[ix] = Math.abs(array[ix] - agg);
-
-    return runEmulators(array, val => _.avg(val));
-    
-});
-
-_.cor = reducer((x,y) => ({ x, y }), data => {
-
-    let agg = runEmulators(data, row => ({ 
-        xAvg: _.avg(row.x), 
-        yAvg: _.avg(row.y),
-        n: _.count(row) 
-    }));
-
-    let n = agg.n;
-
-    for(let ix in data) 
-        data[ix] = { 
-            xDiff: data[ix].x - agg.xAvg, 
-            yDiff: data[ix].y - agg.yAvg
-        };
-
-    agg = runEmulators(data, row => ({
-        xyDiff: _.sum(row.xDiff * row.yDiff), 
-        xDiffSq: _.sum(row.xDiff ** 2),
-        yDiffSq: _.sum(row.yDiff ** 2)
-    }));
-
-    let cor = agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5);
-    let df = n - 2;
-    let t =  studentsTfromCor(cor, n);
-
-    return {
-        cor: cor,
-        pVal: studentsTcdf(t, df), 
-        n: n,
-        df: df,
-        t: t
+_.first = rowFunc =>
+    data => {
+        for (let row of data )
+            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
+                return rowFunc(data);
+        return null;
     };
+
+_.last = rowFunc => 
+    data => {
+        for (let i = data.length - 1; i >= 0; i++)
+            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
+                return rowFunc(data);
+        return null;
+    };
+
+_.sum = (rowFunc, options) => 
+    data => {
+        let agg = 0;
+        for (let row of data) 
+            agg += rowFunc(row);
+        if (options && options.test) 
+            agg = -agg;
+        return agg;
+    };
+
+_.count = rowFunc => 
+    data => {
+        let agg = 0;
+        for (let row of data) {
+            let r = rowFunc(row);
+            if (r !== undefined && r !== null)
+                agg += 1;
+        }
+        return agg;
+    };
+
+_.avg = rowFunc => 
+    data => {
+        let s = _.sum(rowFunc)(data);
+        let n = _.count(rowFunc)(data);
+        return s / n;
+    };
+
+_.mad = rowFunc => 
+    data => {
+
+        let avg = _.avg(rowFunc)(data);
+        let devs = [];
+
+        for (let ix in data)
+            devs[ix] = Math.abs(data[ix] - avg);
     
-});
+        return _.avg(x => x)(devs);    
+
+    };
+
+_.cor = (rowFunc, options) => 
+    data => {
+    
+        let xAvg = _.avg(v => rowFunc(v)[0])(data);
+        let yAvg = _.avg(v => rowFunc(v)[1])(data);
+        let n = _.count(v => rowFunc(v))(data);
+
+        let diffs = [];
+        for(let row of data) 
+            diffs.push({ 
+                xDiff: rowFunc(row)[0] - xAvg, 
+                yDiff: rowFunc(row)[1] - yAvg
+            });
+
+        let xyDiff = _.sum(row => row.xDiff * row.yDiff)(diffs);
+        let xDiffSq = _.sum(row => row.xDiff ** 2)(diffs);
+        let yDiffSq = _.sum(row => row.yDiff ** 2)(diffs);
+
+        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5);
+        let df = n - 2;
+        let t =  studentsTfromCor(cor, n);
+        let pVal = studentsTcdf(t, df);
+            
+        if (options === undefined)
+            return cor;
+
+        if (options.tails == 2)
+            pVal *= 2;
+
+        return { cor, pVal, n, df, t };
+        
+    };
 
 _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 

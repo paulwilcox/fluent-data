@@ -4,14 +4,14 @@ async function test () {
 
     let results = 
         $$(data.orders)
-        .reduce(o => ({
-            firstCustomer: $$.first(o.customer), 
-            speed: $$.avg(o.speed),
-            rating: $$.avg(o.rating),
-            speed_cor: $$.cor(o.speed, o.rating),
-            n: $$.count(o.id)
-        }))
-        .get(o => ({ ...o, speed_cor: o.speed_cor.cor }));
+        .reduce({
+            firstCustomer: $$.first(o => o.customer), 
+            speed: $$.avg(o => o.speed),
+            rating: $$.avg(o => o.rating),
+            speed_cor: $$.cor(o => [o.speed, o.rating]),
+            n: $$.count(o => o.id)
+        })
+        .get();
 
     if(results.n != 12) throw `
         results.n does not equal 12
@@ -19,14 +19,29 @@ async function test () {
 
     results = 
         $$(data.orders)
+        .reduce({
+            firstCustomer: $$.first(o => o.customer), 
+            speed: $$.avg(o => o.speed),
+            rating: $$.avg(o => o.rating),
+            speed_cor: $$.cor(o => [o.speed, o.rating], { tails: 1 }),
+            n: $$.count(o => o.id)
+        })
+        .get();
+
+    if($$.round(results.speed_cor.pVal, 5) !=  0.01843) throw `
+        results.n does not round to 0.01843
+    `;
+
+    results = 
+        $$(data.orders)
         .group(o => o.customer) 
-        .reduce(o => ({
-            customer: $$.first(o.customer), 
-            speed: $$.avg(o.speed),
-            rating: $$.avg(o.rating),
-            speed_cor: $$.cor(o.speed, o.rating)
-        }))
-        .get(o => ({ ...o, speed_cor: o.speed_cor.cor }));
+        .reduce({
+            customer: $$.first(o => o.customer), 
+            speed: $$.avg(o => o.speed),
+            rating: $$.avg(o => o.rating),
+            speed_cor: $$.cor(o => [o.speed, o.rating])
+        })
+        .get();
 
     let row0 = prop => Math.round(results[0][prop] * 100) / 100;
 
