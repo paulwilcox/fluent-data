@@ -1,10 +1,9 @@
 ## Announcement(s)
 
-Going through a period where I'm not updating the project that often.  Doens't nececarily mean I've abandoned it.  Just 
-means that I'm working on some other priorities for a little while.  I plan on returning to this.
+Added p-value to correlation output.  However, in doing so, I realized that I wanted to allow the user to add options so that you can output just the coefficient, or output an objet with analysis with p-value for 1 or 2 tails.  But the syntax and implementation of aggregations at the time just wasn't going to cut it.  The ability to pass options is just too crucial for future development.  So I have no choice to change the syntax for `reduce`.  Unfortunately, this is a breaking change.
 
-Anticipate yet another name change in the near future.  I apologize.  I checked github and npm to avoid collisions, but 
-then I saw a 'fluentData' as a tag on stack overflow.  Realized theres yet another area I have to check for naming.
+Also, possibly anticipate yet another name change.  I apologize for this.  I checked github and npm to avoid collisions for 'fluent-data', but 
+then I saw a 'fluentData' as a tag on stack overflow.  I don't know if that's a huge problem, but it weighs on my mind.
 
 ## Summary 
 

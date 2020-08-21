@@ -724,12 +724,17 @@ class dataset {
 
     reduce (obj, ungroup = true) {
 
+        let isNaked = Object.keys(obj).length == 0;
+
+        // wrap result in array to bring back to original nesting level
         let outerFunc = data => {
             let agg = {};
+            if (isNaked)
+                return [obj(data)];
             for(let [key,reducer] of Object.entries(obj)) {
                 agg[key] = reducer(data);
             }
-            return [agg]; // wrap in array to bring back to original nesting level
+            return [agg]; 
         };
 
         this.data = recurse(outerFunc, this.data, this.groupLevel);
@@ -873,16 +878,16 @@ _.mergeMethod = mergeMethod;
 _.first = rowFunc =>
     data => {
         for (let row of data )
-            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
-                return rowFunc(data);
+            if (rowFunc(row) !== undefined && rowFunc(row) !== null)
+                return rowFunc(row);
         return null;
     };
 
 _.last = rowFunc => 
     data => {
         for (let i = data.length - 1; i >= 0; i++)
-            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
-                return rowFunc(data);
+            if (rowFunc(data[i]) !== undefined && rowFunc(data[i]) !== null)
+                return rowFunc(data[i]);
         return null;
     };
 
@@ -921,7 +926,7 @@ _.mad = rowFunc =>
         let devs = [];
 
         for (let ix in data)
-            devs[ix] = Math.abs(data[ix] - avg);
+            devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
     
         return _.avg(x => x)(devs);    
 

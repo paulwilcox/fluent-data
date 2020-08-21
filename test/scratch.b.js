@@ -5,15 +5,17 @@ async function test () {
     let results = 
         $$(data.orders)
         .reduce({
-            sum: $$.sum(o => o.rating),
-            n: $$.count(o => o.rating),
-            avg: $$.avg(o => o.rating),
-            cor: $$.cor(o => [o.speed,o.rating], { tails: 1 })
+            first: $$.first(p => p.customer),
+            last: $$.last(p => p.customer),
+            sum: $$.sum(p => p.rating),
+            count: $$.count(p => p.rating),
+            avg: $$.avg(p => p.rating),
+            mad: $$.mad(p => p.rating),
+            cor: $$.cor(p => [p.speed, p.rating]),
+            corFull: $$.cor(p => [p.speed, p.rating], { tails: 1 })
         })
         .get();
-
-    console.log(data)
-
+        
     console.log(results);
 
     return true;
