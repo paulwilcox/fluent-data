@@ -4,10 +4,11 @@ async function test () {
 
     let results = 
         $$(data.orders)
-        .reduce2({
-            sum: $$.sum2(o => o.id),
-            n: $$.count2(o => o.id),
-            avg: $$.avg2(o => o.id)
+        .reduce({
+            sum: $$.sum(o => o.rating),
+            n: $$.count(o => o.rating),
+            avg: $$.avg(o => o.rating),
+            cor: $$.cor(o => [o.speed,o.rating], { tails: 1 })
         })
         .get();
 

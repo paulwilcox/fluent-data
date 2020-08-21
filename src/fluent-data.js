@@ -1,4 +1,3 @@
-import { reducer, runEmulators } from './reducer.js';
 import dataset from './dataset.js';
 import { mergeMethod } from './mergeTools.js';
 import * as g from './general.js';
@@ -30,100 +29,95 @@ _.fromJson = function(json) {
 
 _.mergeMethod = mergeMethod;
 
-_.sum2 = (shaper, options) => 
+_.first = rowFunc =>
+    data => {
+        for (let row of data )
+            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
+                return rowFunc(data);
+        return null;
+    }
+
+_.last = rowFunc => 
+    data => {
+        for (let i = data.length - 1; i >= 0; i++)
+            if (rowFunc(data) !== undefined && rowFunc(data) !== null)
+                return rowFunc(data);
+        return null;
+    }
+
+_.sum = (rowFunc, options) => 
     data => {
         let agg = 0;
         for (let row of data) 
-            agg += shaper(row);
+            agg += rowFunc(row);
         if (options && options.test) 
             agg = -agg;
         return agg;
     };
 
-_.count2 = shaper => 
+_.count = rowFunc => 
     data => {
         let agg = 0;
         for (let row of data) {
-            let r = shaper(row)
+            let r = rowFunc(row)
             if (r !== undefined && r !== null)
                 agg += 1;
         }
         return agg;
     };
 
-_.avg2 = shaper => 
+_.avg = rowFunc => 
     data => {
-        let s = _.sum2(shaper)(data);
-        let n = _.count2(shaper)(data);
+        let s = _.sum(rowFunc)(data);
+        let n = _.count(rowFunc)(data);
         return s / n;
     };
 
+_.mad = rowFunc => 
+    data => {
 
-_.reducer = reducer;
-_.runEmulators = runEmulators;
+        let avg = _.avg(rowFunc)(data);
+        let devs = [];
 
-_.first = reducer(v => v, array => array.reduce((a,b) => a || b));
-_.last = reducer(v => v, array => array.reduce((a,b) => b || a));
-_.sum = reducer(v => v, array => array.reduce((a,b) => a + b));
-_.count = reducer(v => v, array => array.reduce((a,b) => a + 1, 0));
-
-_.avg = reducer(v => v, array => {
-
-    let agg = runEmulators(array, val => ({
-        sum: _.sum(val), 
-        count: _.count(val)     
-    }));
-
-    return agg.sum / agg.count
-
-});
-
-_.mad = reducer(v => v, array => {
-
-    let agg = runEmulators(array, val => _.avg(val));
-
-    for (let ix in array)
-        array[ix] = Math.abs(array[ix] - agg);
-
-    return runEmulators(array, val => _.avg(val));
+        for (let ix in data)
+            devs[ix] = Math.abs(data[ix] - avg);
     
-});
+        return _.avg(x => x)(devs);    
 
-_.cor = reducer((x,y) => ({ x, y }), (data) => {
-
-    let agg = runEmulators(data, row => ({ 
-        xAvg: _.avg(row.x), 
-        yAvg: _.avg(row.y),
-        n: _.count(row) 
-    }));
-
-    let n = agg.n;
-
-    for(let ix in data) 
-        data[ix] = { 
-            xDiff: data[ix].x - agg.xAvg, 
-            yDiff: data[ix].y - agg.yAvg
-        };
-
-    agg = runEmulators(data, row => ({
-        xyDiff: _.sum(row.xDiff * row.yDiff), 
-        xDiffSq: _.sum(row.xDiff ** 2),
-        yDiffSq: _.sum(row.yDiff ** 2)
-    }));
-
-    let cor = agg.xyDiff / (agg.xDiffSq ** 0.5 * agg.yDiffSq ** 0.5)
-    let df = n - 2;
-    let t =  g.studentsTfromCor(cor, n);
-
-    return {
-        cor: cor,
-        pVal: g.studentsTcdf(t, df), 
-        n: n,
-        df: df,
-        t: t
     };
+
+_.cor = (rowFunc, options) => 
+    data => {
     
-});
+        let xAvg = _.avg(v => rowFunc(v)[0])(data);
+        let yAvg = _.avg(v => rowFunc(v)[1])(data);
+        let n = _.count(v => rowFunc(v))(data);
+
+        let diffs = [];
+        for(let row of data) 
+            diffs.push({ 
+                xDiff: rowFunc(row)[0] - xAvg, 
+                yDiff: rowFunc(row)[1] - yAvg
+            });
+
+        let xyDiff = _.sum(row => row.xDiff * row.yDiff)(diffs);
+        let xDiffSq = _.sum(row => row.xDiff ** 2)(diffs);
+        let yDiffSq = _.sum(row => row.yDiff ** 2)(diffs);
+
+        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5)
+        let df = n - 2;
+        let t =  g.studentsTfromCor(cor, n);
+        let pVal = g.studentsTcdf(t, df);
+            
+        if (options === undefined)
+            return cor;
+
+        if (options.tails == 2)
+            pVal *= 2;
+
+        return { cor, pVal, n, df, t };
+        
+    };
 
 _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
