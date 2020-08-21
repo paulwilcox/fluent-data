@@ -82,15 +82,20 @@ export default class dataset {
 
     }
 
-    reduce (obj) {
+    reduce (obj, ungroup = true) {
 
-        let agg = {};
-
-        for(let [key,reducer] of Object.entries(obj)) {
-            agg[key] = reducer(this.data);
+        let outerFunc = data => {
+            let agg = {};
+            for(let [key,reducer] of Object.entries(obj)) {
+                agg[key] = reducer(data);
+            }
+            return [agg]; // wrap in array to bring back to original nesting level
         }
 
-        this.data = agg;
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+
+        if (ungroup)
+            this.ungroup();
 
         return this;
 
