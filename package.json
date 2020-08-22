@@ -29,8 +29,7 @@
     "order",
     "sort",
     "group",
-    "ungroup",
-    "linq"
+    "ungroup"
   ],
   "author": "Paul Wilcox",
   "license": "ISC",
