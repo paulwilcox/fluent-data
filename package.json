@@ -29,7 +29,9 @@
     "order",
     "sort",
     "group",
-    "ungroup"
+    "ungroup",
+    "correlation",
+    "p-value"
   ],
   "author": "Paul Wilcox",
   "license": "ISC",
