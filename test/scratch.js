@@ -60,29 +60,63 @@ class Matrix {
 
     multiply(other) {
 
-        this.rowNames = null;
-        this.colNames = null;
+        if (!isNaN(other) && isFinite(other)) 
+            for (let r in this.data)
+                for (let c in this.data[r])
+                    this.data[r][c] *= other;
 
-        if (other instanceof Matrix)
-            this.data = this._matrixMultiply(other);
+        else if (Array.isArray(other))  {
+            this.colNames = null;
+            this.data = this._multiplyVector(other);
+        }
+
+        else if (other instanceof Matrix) {
+            // I don't know if I really have to blot out the names.
+            this.rowNames = null;
+            this.colNames = null;
+            this.data = this._multiplyMatrix(other);
+        }
 
         return this;
 
     }
 
-    _matrixMultiply(other) {
+    _multiplyVector(other) {
+
+        if (this.data[0].length != other.length)
+            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Vector has ${other.length + 1} elements.  ` + 
+                    `Cannot multiply matrix by vector unless these match.  `
 
         let result = [];
 
-        let otherLastColIx = other.data[0].length - 1;
+        for (let r in this.data) {
+            result.push([]);
+            let agg = 0;
+            for (let ix in this.data[r]) 
+                agg += this.data[r][ix] * other[ix];
+            result[r].push(agg);
+        }
+
+        return result;         
+
+    }
+
+    _multiplyMatrix(other) {
+
+        if (this.data[0].length != other.data.length) 
+            throw   `Left matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Right matrix has ${other.data.length + 1} rows.  ` + 
+                    `Matrix multiplication cannot be performed unless these match.  `;
+
+        let result = [];
 
         for (let r in this.data) {
             result.push([]);
-            for(let oCol = 0; oCol <= otherLastColIx; oCol++) {
+            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
                 let agg = 0;
-                for (let ix in this.data[r]) {
+                for (let ix in this.data[r]) 
                     agg += this.data[r][ix] * other.data[ix][oCol];
-                }
                 result[r].push(agg);
             }
         }
@@ -102,3 +136,16 @@ let matrix = new Matrix(
 
 let multiplied = matrix.clone().transpose().multiply(matrix);
 console.log(multiplied)
+
+/*
+    let matrix = new Matrix();
+    matrix.data = [
+        [1, -1, 2],
+        [0, -3, 1]
+    ];
+
+    let multiplied = matrix.multiply([2, 1, 0]);
+
+    console.log(multiplied);
+
+*/
