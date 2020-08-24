@@ -10,85 +10,95 @@ let data = [
 
 class Matrix {
 
-    constructor () {
-        this.data = [];
-    }
+    constructor (data, rowFunc, names) {
 
-    insert(data, rowFunc, names) {
+        if (!data)
+            return this;
+
         if (data.length > 0 && !Array.isArray(rowFunc(data[0])))
             throw 'rowFunc does not seem to return an array.';
-        this.names = names.map((name, ix) => ({ pos: [null, ix], val: name }));
-        this.data = [...this.normalize(data.map(rowFunc))];
-        return this;
+
+        this.colNames = names;
+        this.rowNames = null;
+        this.data = data.map(rowFunc);
+        
     }
 
-    arrayify () {
-        return [...this._arrayify(this.data)];
-    }
-
-    transpose(dimA = 1, dimB = 2) {
-        dimA--;
-        dimB--;
+    clone() {
+        let result = [];
         for(let row of this.data) {
-            let da = row.pos[0];
-            let db = row.pos[1];
-            row.pos[dimA] = db;
-            row.pos[dimB] = da;
+            result.push([]);
+            for (let cell of row) 
+                result[result.length - 1].push(cell);
         }
-        return this;
+        let matrix = new Matrix();
+        matrix.data = result;
+        matrix.colNames = this.colNames;
+        matrix.rowNames = this.rowNames;
+        return matrix;
     }
 
-    *_arrayify(input) {
+    transpose() {
 
-        if (input.length == 0) 
-            yield* input;
-
-        else if (input.length == 1) 
-            yield* input[0].val;
-
-        else {
-
-            let results = {};
-
-            for(let entry of input) {
-                let pos = [...entry.pos];
-                pos.shift();
-                let p = pos[pos.length - 1];
-                if(results[p] === undefined)
-                    results[p] = { pos, val: [entry.val] };
+        let result = [];
+        for(let r in this.data) 
+            for(let c in this.data[r]) 
+                if (r == 0)
+                    result.push([this.data[r][c]]);
                 else 
-                    results[p].val.push(entry.val) 
-            }
+                    result[c].push(this.data[r][c]);
+        this.data = result;
+        
+        let rn = this.rowNames;
+        let cn = this.colNames;
+        this.rowNames = cn;
+        this.colNames = rn;
 
-            yield* this._arrayify(Object.values(results))
-
-        }
+        return this;
 
     }
 
-    *normalize (input) {
+    multiply(other) {
 
-        if (input && input.pos === undefined) 
-            yield* this.normalize({ pos: [], val: input });
+        this.rowNames = null;
+        this.colNames = null;
 
-        else if (Symbol.iterator in Object(input.val) && typeof input.val !== 'string')
-            for(let i in input.val) { 
-                let n = parseInt(i);
-                yield* this.normalize({ pos: [...input.pos, n], val: input.val[i] })
+        if (other instanceof Matrix)
+            this.data = this._matrixMultiply(other);
+
+        return this;
+
+    }
+
+    _matrixMultiply(other) {
+
+        let result = [];
+
+        let otherLastColIx = other.data[0].length - 1;
+
+        for (let r in this.data) {
+            result.push([]);
+            for(let oCol = 0; oCol <= otherLastColIx; oCol++) {
+                let agg = 0;
+                for (let ix in this.data[r]) {
+                    agg += this.data[r][ix] * other.data[ix][oCol];
+                }
+                result[r].push(agg);
             }
-        else 
-            yield input;
+        }
+
+        return result;
 
     }
 
 }
 
 
-let matrix = new Matrix().insert(
+let matrix = new Matrix(
     data, 
-    row => [row.cases, row.distance],
-    ['cases', 'distance']
+    row => [1, row.cases, row.distance],
+    ['dummy', 'cases', 'distance']
 );
 
-console.log(matrix.arrayify())
-console.log(matrix.transpose().arrayify())
+let multiplied = matrix.clone().transpose().multiply(matrix);
+console.log(multiplied)
