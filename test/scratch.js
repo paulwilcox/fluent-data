@@ -92,8 +92,11 @@ class Matrix {
         }
 
         let rowMultiply = (row, multiplier) => {
-            for(let c in row)
+            for(let c in row) {
                 row[c] *= multiplier;
+                if (row[c] == -0)
+                    row[c] = 0
+            }
             return row;
         }
 
@@ -109,14 +112,7 @@ class Matrix {
                 result.push(cell);
             return result;
         }
-/*
-        let allLeading1s = () => {
-            for(let row of this.data) 
-                if (leadingItem(row).val > 1)
-                    return false;
-            return true;
-        }
-*/
+
         let sort = (onOrAfterIndex) => { 
 
             for(let r = this.data.length - 1; r >= onOrAfterIndex; r--) {
@@ -143,27 +139,25 @@ class Matrix {
 
         let subtractTopMultiple = (onOrAfterIndex) => {
                 
-            let topLead = leadingItem(this.data[0]);
+            let topLead = leadingItem(this.data[onOrAfterIndex]);
 
-            rowMultiply(this.data[0], 1 / topLead.val);
+            rowMultiply(this.data[onOrAfterIndex], 1 / topLead.val);
 
-            for(let r = onOrAfterIndex; r < this.data.length; r++) {
+            for(let r = onOrAfterIndex + 1; r < this.data.length; r++) {
                 let row = this.data[r];
                 let counterpart = row[topLead.pos];
                 if (counterpart == 0)
                     continue;
                 let multipliedRow = rowMultiply(
-                    clone(this.data[0]), 
-                    counterpart / topLead.val
+                    clone(this.data[onOrAfterIndex]), 
+                    -counterpart
                 );
-                console.log({td: this.data})
-                console.log(`tdr: ${this.data[r]}, mr: ${multipliedRow}`);
                 rowAdd(this.data[r], multipliedRow);
             }
 
         }
 
-        for (let i = 0; i < 1; i++) {
+        for (let i = 0; i < this.data.length; i++) {
             sort(i);
             subtractTopMultiple(i);
         }
