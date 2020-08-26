@@ -27,9 +27,10 @@ class Matrix {
     clone() {
         let result = [];
         for(let row of this.data) {
-            result.push([]);
+            let newRow = [];
             for (let cell of row) 
-                result[result.length - 1].push(cell);
+                newRow.push(cell);
+            result.push(newRow);
         }
         let matrix = new Matrix();
         matrix.data = result;
@@ -75,6 +76,96 @@ class Matrix {
             this.rowNames = null;
             this.colNames = null;
             this.data = this._multiplyMatrix(other);
+        }
+
+        return this;
+
+    }
+
+    inverse() {
+
+        let leadingItem = (row) => {
+            for(let c in row) 
+                if (row[c] != 0)
+                    return { pos: c, val: row[c] };
+            return { pos: -1, val: null }
+        }
+
+        let rowMultiply = (row, multiplier) => {
+            for(let c in row)
+                row[c] *= multiplier;
+            return row;
+        }
+
+        let rowAdd = (rowA, rowB) => {
+            for(let c in rowA) 
+                rowA[c] += rowB[c];
+            return rowA;
+        }
+
+        let clone = (row) => {
+            let result = [];
+            for(let cell of row)
+                result.push(cell);
+            return result;
+        }
+/*
+        let allLeading1s = () => {
+            for(let row of this.data) 
+                if (leadingItem(row).val > 1)
+                    return false;
+            return true;
+        }
+*/
+        let sort = (onOrAfterIndex) => { 
+
+            for(let r = this.data.length - 1; r >= onOrAfterIndex; r--) {
+
+                let prev = this.data[r + 1];
+                let cur = this.data[r];
+                let prevLeader = leadingItem(prev);
+                let curLeader = leadingItem(cur);
+
+                let needsPromote = 
+                    prevLeader.pos > curLeader.pos || 
+                    (prevLeader.pos == curLeader.pos && prevLeader.val > curLeader.val)
+
+                if (needsPromote) {
+                    this.data[r + 1] = cur;
+                    this.data[r] = prev;
+                }
+                
+                prevLeader = curLeader;
+
+            }
+
+        }
+
+        let subtractTopMultiple = (onOrAfterIndex) => {
+                
+            let topLead = leadingItem(this.data[0]);
+
+            rowMultiply(this.data[0], 1 / topLead.val);
+
+            for(let r = onOrAfterIndex; r < this.data.length; r++) {
+                let row = this.data[r];
+                let counterpart = row[topLead.pos];
+                if (counterpart == 0)
+                    continue;
+                let multipliedRow = rowMultiply(
+                    clone(this.data[0]), 
+                    counterpart / topLead.val
+                );
+                console.log({td: this.data})
+                console.log(`tdr: ${this.data[r]}, mr: ${multipliedRow}`);
+                rowAdd(this.data[r], multipliedRow);
+            }
+
+        }
+
+        for (let i = 0; i < 1; i++) {
+            sort(i);
+            subtractTopMultiple(i);
         }
 
         return this;
@@ -135,17 +226,11 @@ let matrix = new Matrix(
 );
 
 let multiplied = matrix.clone().transpose().multiply(matrix);
-console.log(multiplied)
+let x = multiplied.data[0];
+let y = multiplied.data[1];
+multiplied.data[0] = x;
+multiplied.data[1] = y;
+console.log(multiplied.data)
 
-/*
-    let matrix = new Matrix();
-    matrix.data = [
-        [1, -1, 2],
-        [0, -3, 1]
-    ];
-
-    let multiplied = matrix.multiply([2, 1, 0]);
-
-    console.log(multiplied);
-
-*/
+let inversed = multiplied.clone().inverse();
+console.log(inversed.data);
