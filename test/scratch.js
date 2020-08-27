@@ -82,7 +82,9 @@ class Matrix {
 
     }
 
-    inverse() {
+    // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
+    // Though, to save some logic, I believe I do more steps in sorting than necessary.
+    inverse(other) {
 
         let leadingItem = (row) => {
             for(let c in row) 
@@ -92,11 +94,8 @@ class Matrix {
         }
 
         let rowMultiply = (row, multiplier) => {
-            for(let c in row) {
+            for(let c in row) 
                 row[c] *= multiplier;
-                if (row[c] == -0)
-                    row[c] = 0
-            }
             return row;
         }
 
@@ -121,6 +120,8 @@ class Matrix {
                 let cur = this.data[r];
                 let prevLeader = leadingItem(prev);
                 let curLeader = leadingItem(cur);
+                let otherPrev = other[r + 1];
+                let otherCur = other[r];
 
                 let needsPromote = 
                     prevLeader.pos > curLeader.pos || 
@@ -129,6 +130,8 @@ class Matrix {
                 if (needsPromote) {
                     this.data[r + 1] = cur;
                     this.data[r] = prev;
+                    other[r + 1] = otherCur;
+                    other[r] = otherPrev;
                 }
                 
                 prevLeader = curLeader;
@@ -142,8 +145,11 @@ class Matrix {
             let topLead = leadingItem(this.data[onOrAfterIndex]);
 
             rowMultiply(this.data[onOrAfterIndex], 1 / topLead.val);
+            rowMultiply(other[onOrAfterIndex], 1 / topLead.val);
 
-            for(let r = onOrAfterIndex + 1; r < this.data.length; r++) {
+            for(let r = 0; r < this.data.length; r++) {
+                if (r == onOrAfterIndex)
+                    continue;
                 let row = this.data[r];
                 let counterpart = row[topLead.pos];
                 if (counterpart == 0)
@@ -153,17 +159,38 @@ class Matrix {
                     -counterpart
                 );
                 rowAdd(this.data[r], multipliedRow);
+                let multipliedOther = rowMultiply(
+                    clone(other[onOrAfterIndex]),
+                    -counterpart
+                )
+                rowAdd(other[r], multipliedOther);
             }
 
         }
+
+        if (other instanceof Matrix)
+            other = other.data;
+        other = clone(other);
 
         for (let i = 0; i < this.data.length; i++) {
             sort(i);
             subtractTopMultiple(i);
         }
 
+        this.data = other;
+
         return this;
 
+    }
+
+    round(digits) {
+        for(let row of this.data) 
+            for(let c in row) {
+                row[c] = parseFloat(row[c].toFixed(digits));
+                if(row[c] == -0)
+                    row[c] = 0;
+            }
+        return this;
     }
 
     _multiplyVector(other) {
@@ -220,11 +247,12 @@ let matrix = new Matrix(
 );
 
 let multiplied = matrix.clone().transpose().multiply(matrix);
-let x = multiplied.data[0];
-let y = multiplied.data[1];
-multiplied.data[0] = x;
-multiplied.data[1] = y;
 console.log(multiplied.data)
 
-let inversed = multiplied.clone().inverse();
-console.log(inversed.data);
+let inversed = 
+    multiplied.clone().inverse(
+        [ [1,0,0], [0,1,0], [0,0,1] ]
+    );
+
+console.log(inversed.data)
+console.log(inversed.multiply(multiplied).round(2).data);
