@@ -321,10 +321,11 @@ let matrix =
     new Matrix(data, row => [1, row.cases, row.distance])
     .setColNames('dummy, cases, distance');
 
+let vector = data.map(row => row.time);
+
 let transposed = matrix.clone().transpose();
 let squared = transposed.clone().multiply(matrix);
 let inversed = squared.clone().inverse();
+let betaHat = inversed.clone().multiply(transposed).multiply(vector);
 
-
-
-console.log(inversed.round(8).data)
+console.log(betaHat.data) // Matches lm() coefficients in R!
