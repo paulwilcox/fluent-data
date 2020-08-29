@@ -1,10 +1,15 @@
 ## Announcement(s)
 
-Breaking change, hence the major tick in semver.  This is for the reduce function.  New syntax is shown in the example below and [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing).
-This new syntax makes under-the-hood code much more straigtforward, and allows more flexibility in the input parameters.  For instance, I added
-the capacity to output p-value to correlation output (see [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing#Built-In-Reducers)).  I could not make this happen using the old syntax.
+Version 2.0.0 has a breaking change, hence the major tick in semver.  This is for the reduce function.  New syntax is shown in the example 
+below and [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing).  This new syntax makes under-the-hood code much more straigtforward, and allows more flexibility in the input parameters.  For instance, I added the capacity to output p-value to correlation output (see [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing#Built-In-Reducers)).  I could 
+not make this happen using the old syntax.
 
-## Summary Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
+Version 2.1.0 adds non-production code (see scratch.js).  Basically, I'm preparing to develop multiple-regression functionality.  In doing
+so, I'm adding matrix algebra capabilities.  So some of [the future](https://github.com/paulwilcox/fluent-data/wiki/The-Future) is coming sooner than expected.      
+
+## Summary 
+
+Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
 
 `fluent-data` works like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
