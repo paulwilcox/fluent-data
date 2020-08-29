@@ -117,6 +117,29 @@ class Matrix {
 
     }
 
+    inverse() {
+
+        if (this.data.length == 0)
+            throw `Matrix is empty.  Cannot take inverse.`;
+
+        let rowCount = this.data.length;
+        let colCount = this.data[0].length;
+
+        if (rowCount != colCount)
+            throw `Matrix is not a square.  Cannot take inverse.`;
+
+        let identity = [];
+        for (let r = 0; r < rowCount; r++) {
+            let row = [];
+            for (let c = 0; c < colCount; c++) 
+                row.push(r == c ? 1 : 0);
+            identity.push(row);
+        }
+
+        return this.solve(identity);
+
+    }
+
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
     // Though, to save some logic, I believe I do more steps in sorting than necessary.
     solve(other) {
@@ -298,13 +321,10 @@ let matrix =
     new Matrix(data, row => [1, row.cases, row.distance])
     .setColNames('dummy, cases, distance');
 
-let multiplied = matrix.clone().transpose().multiply(matrix);
-console.log(multiplied.data)
+let transposed = matrix.clone().transpose();
+let squared = transposed.clone().multiply(matrix);
+let inversed = squared.clone().inverse();
 
-let inversed = 
-    multiplied.clone().solve(
-        [ [1,0,0], [0,1,0], [0,0,1] ]
-    );
 
-console.log(inversed.data)
-console.log(inversed.multiply(multiplied).round(2).data);
+
+console.log(inversed.round(8).data)
