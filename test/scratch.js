@@ -209,17 +209,17 @@ class Matrix {
                 other = other.data;
             else if (!Array.isArray(other))
                 throw `'other' must be an array or matrix.`;
-                
+
             if (other.length > 0 && !Array.isArray(other[0])) 
                 for(let r in other)
                     other[r] = [other[r]]; 
 
             other = clone(other);
 
-            if (this.data.length == 0 || other.data.length == 0) 
+            if (this.data.length == 0 || other.length == 0) 
                 throw 'cannot solve when either input is empty';
 
-            if (this.data.length != other.data.length)
+            if (this.data.length != other.length)
                 throw 'cannot solve when input lengths do not match';
 
         }
