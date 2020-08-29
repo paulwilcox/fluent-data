@@ -203,9 +203,28 @@ class Matrix {
 
         }
 
-        if (other instanceof Matrix)
-            other = other.data;
-        other = clone(other);
+        let initializations = () => {
+                
+            if (other instanceof Matrix)
+                other = other.data;
+            else if (!Array.isArray(other))
+                throw `'other' must be an array or matrix.`;
+                
+            if (other.length > 0 && !Array.isArray(other[0])) 
+                for(let r in other)
+                    other[r] = [other[r]]; 
+
+            other = clone(other);
+
+            if (this.data.length == 0 || other.data.length == 0) 
+                throw 'cannot solve when either input is empty';
+
+            if (this.data.length != other.data.length)
+                throw 'cannot solve when input lengths do not match';
+
+        }
+
+        initializations();
 
         for (let i = 0; i < this.data.length; i++) {
             sort(i);
