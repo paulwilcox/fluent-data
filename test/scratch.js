@@ -321,7 +321,8 @@ let matrix =
     new Matrix(data, row => [1, row.cases, row.distance])
     .setColNames('dummy, cases, distance');
 
-let vector = data.map(row => row.time);
+//let vector = data.map(row => row.time);
+let vector = new Matrix(data, 'time');
 
 let transposed = matrix.clone().transpose();
 let squared = transposed.clone().multiply(matrix);
