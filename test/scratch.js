@@ -1,4 +1,3 @@
-
 let data = [
     { cases: 7, distance: 560, time: 16.68 },
     { cases: 3, distance: 220, time: 11.50 },
@@ -8,20 +7,56 @@ let data = [
     { cases: 7, distance: 330, time: 18.11 }
 ];
 
+// TODO: replace with g.isString where applicable
 class Matrix {
 
-    constructor (data, rowFunc, names) {
+    constructor (
+        data, 
+        selector, // csv of prop names or func returning array of numbers
+        skipChecks = false // if true, skips validity checks
+    ) {
 
-        if (!data)
-            return this;
-
-        if (data.length > 0 && !Array.isArray(rowFunc(data[0])))
-            throw 'rowFunc does not seem to return an array.';
-
-        this.colNames = names;
+        this.colNames = null;
         this.rowNames = null;
-        this.data = data.map(rowFunc);
+        this.data;
+
+        if (!data) {
+            this.data = [];
+            return;
+        }
         
+        if (typeof selector === 'string') {
+            this.colNames = selector.split(',').map(name => name.trim());
+            selector = (row) => this.colNames.map(name => row[name]);
+        }
+
+        this.data = data.map(selector)
+
+        if (!skipChecks)
+            this.validate();
+
+    }
+    
+    setColNames (colNames) {
+        if (typeof colNames === 'string')
+            colNames = colNames.split(',').map(name => name.trim());
+        if (this.data.length > 0 && this.data[0].length != colNames.length)
+            throw `options.colNames is not of the same length as a row of data.`
+        this.colNames = colNames;
+        return this;
+    }
+
+    validate() {
+        for(let r in this.data) {
+            if (!Array.isArray(this.data[r]))
+                throw `Row ${r} is not an array;`
+            for(let c in this.data[r]) {
+                if (!isFinite(this.data[r][c]))
+                    if(this.colNames) throw `'${this.colNames[c]}' in row ${r} is not a finite number`;
+                    else throw `Cell ${c} in row ${r} is not a finite number;` 
+            }
+        }
+        return this;
     }
 
     clone() {
@@ -84,7 +119,7 @@ class Matrix {
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
     // Though, to save some logic, I believe I do more steps in sorting than necessary.
-    inverse(other) {
+    solve(other) {
 
         let leadingItem = (row) => {
             for(let c in row) 
@@ -240,17 +275,15 @@ class Matrix {
 }
 
 
-let matrix = new Matrix(
-    data, 
-    row => [1, row.cases, row.distance],
-    ['dummy', 'cases', 'distance']
-);
+let matrix = 
+    new Matrix(data, row => [1, row.cases, row.distance])
+    .setColNames('dummy, cases, distance');
 
 let multiplied = matrix.clone().transpose().multiply(matrix);
 console.log(multiplied.data)
 
 let inversed = 
-    multiplied.clone().inverse(
+    multiplied.clone().solve(
         [ [1,0,0], [0,1,0], [0,0,1] ]
     );
 
