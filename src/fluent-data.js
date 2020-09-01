@@ -1,4 +1,5 @@
 import dataset from './dataset.js';
+import matrix from './matrix.js';
 import { mergeMethod } from './mergeTools.js';
 import * as g from './general.js';
 
@@ -126,23 +127,23 @@ _.regress = (ivSelector, dvSelector) =>
         let outerIvSelector = (row) => ivKeys.map(key => ivSelector(row)[key])
 
         let dvKeys = Object.keys(dvSelector({}));
-        let outerDvSelector = (row) => dvSelector(row)[key];
+        let outerDvSelector = (row) => dvKeys.map(key => dvSelector(row)[key]);
 
         if (ivKeys.length == 0)
             throw `ivSelector must return an object with explicit keys defined.`
         if (dvKeys.length != 1)
             throw `dvSelector must return an object with exactly one key defined.`
 
-        let matrix = $$(data)
-            .matrix(row => [1, ...(outerIvSelector(row))])
-            .setColNames(`dummy,${keys.join(',')}`);
-        
-        let vector = $$(dvSelector).matrix(row => outerDvSelector(row));
-        let transposed = matrix.clone().transpose();
+        let ivs = 
+            new matrix(data, row => [1, ...outerIvSelector(row)] )
+            .setColNames(`dummy,${ivKeys.join(',')}`);
+            
+        let vector = new matrix(data, row => outerDvSelector(row));
+        let transposed = ivs.clone().transpose();
         
         let results = 
             transposed.clone()
-            .multiply(matrix)
+            .multiply(ivs)
             .inverse()
             .multiply(transposed)
             .multiply(vector);

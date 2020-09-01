@@ -1,3 +1,4 @@
+
 async function test () {
 
     //let data = await sample('orders');
@@ -26,6 +27,23 @@ async function test () {
         .multiply(vector);
     
     console.log(results.data) // Matches lm() coefficients in R!
+
+    results = 
+        $$(data)
+        .reduce({
+            model: $$.regress(
+                d => ({ 
+                    cases: d.cases, 
+                    distance: d.distance 
+                }),
+                d => ({
+                    time: d.time
+                })
+            )
+        })
+        .get();
+
+    console.log(results.model)
 
     return true;
 
