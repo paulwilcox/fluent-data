@@ -1,14 +1,6 @@
-let data = [
-    { cases: 7, distance: 560, time: 16.68 },
-    { cases: 3, distance: 220, time: 11.50 },
-    { cases: 3, distance: 340, time: 12.03 },
-    { cases: 4, distance: 80, time: 14.88 },
-    { cases: 6, distance: 150, time: 13.75 },
-    { cases: 7, distance: 330, time: 18.11 }
-];
+import * as g from './general.js';
 
-// TODO: replace with g.isString where applicable
-class Matrix {
+export default class matrix {
 
     constructor (
         data, 
@@ -25,7 +17,8 @@ class Matrix {
             return;
         }
         
-        if (typeof selector === 'string') {
+        // if selector is csv, split and turn it into a property selecctor
+        if (g.isString(selector)) {
             this.colNames = selector.split(',').map(name => name.trim());
             selector = (row) => this.colNames.map(name => row[name]);
         }
@@ -38,7 +31,7 @@ class Matrix {
     }
     
     setColNames (colNames) {
-        if (typeof colNames === 'string')
+        if (g.isString(colNames))
             colNames = colNames.split(',').map(name => name.trim());
         if (this.data.length > 0 && this.data[0].length != colNames.length)
             throw `options.colNames is not of the same length as a row of data.`
@@ -67,11 +60,11 @@ class Matrix {
                 newRow.push(cell);
             result.push(newRow);
         }
-        let matrix = new Matrix();
-        matrix.data = result;
-        matrix.colNames = this.colNames;
-        matrix.rowNames = this.rowNames;
-        return matrix;
+        let mx = new matrix();
+        mx.data = result;
+        mx.colNames = this.colNames;
+        mx.rowNames = this.rowNames;
+        return mx;
     }
 
     transpose() {
@@ -106,7 +99,7 @@ class Matrix {
             this.data = this._multiplyVector(other);
         }
 
-        else if (other instanceof Matrix) {
+        else if (other instanceof matrix) {
             // I don't know if I really have to blot out the names.
             this.rowNames = null;
             this.colNames = null;
@@ -228,7 +221,7 @@ class Matrix {
 
         let initializations = () => {
                 
-            if (other instanceof Matrix)
+            if (other instanceof matrix)
                 other = other.data;
             else if (!Array.isArray(other))
                 throw `'other' must be an array or matrix.`;
@@ -315,18 +308,3 @@ class Matrix {
     }
 
 }
-
-
-let matrix = 
-    new Matrix(data, row => [1, row.cases, row.distance])
-    .setColNames('dummy, cases, distance');
-
-//let vector = data.map(row => row.time);
-let vector = new Matrix(data, 'time');
-
-let transposed = matrix.clone().transpose();
-let squared = transposed.clone().multiply(matrix);
-let inversed = squared.clone().inverse();
-let betaHat = inversed.clone().multiply(transposed).multiply(vector);
-
-console.log(betaHat.data) // Matches lm() coefficients in R!

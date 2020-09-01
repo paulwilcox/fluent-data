@@ -1,6 +1,7 @@
 import * as g from './general.js';
 import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
+import Matrix from './matrix.js';
 import parser from './parser.js';
 import { merge as mrg } from './mergeTools.js';
 
@@ -146,6 +147,13 @@ export default class dataset {
         this.data = recurse(outerFunc, this.data, this.groupLevel); 
         return this;
 
+    }
+
+    matrix(        
+        selector, // csv of prop names or func returning array of numbers
+        skipChecks = false // if true, skips validity checks)
+    ) {
+        return new Matrix(this.data, selector, skipChecks);
     }
 
     with (func) {

@@ -1,22 +1,31 @@
 async function test () {
 
-    let data = await sample('orders');
+    //let data = await sample('orders');
 
-    let results = 
-        $$(data.orders)
-        .reduce({
-            first: $$.first(p => p.customer),
-            last: $$.last(p => p.customer),
-            sum: $$.sum(p => p.rating),
-            count: $$.count(p => p.rating),
-            avg: $$.avg(p => p.rating),
-            mad: $$.mad(p => p.rating),
-            cor: $$.cor(p => [p.speed, p.rating]),
-            corFull: $$.cor(p => [p.speed, p.rating], { tails: 1 })
-        })
-        .get();
+    let data = [
+        { cases: 7, distance: 560, time: 16.68 },
+        { cases: 3, distance: 220, time: 11.50 },
+        { cases: 3, distance: 340, time: 12.03 },
+        { cases: 4, distance: 80, time: 14.88 },
+        { cases: 6, distance: 150, time: 13.75 },
+        { cases: 7, distance: 330, time: 18.11 }
+    ];
+    
+    let matrix = $$(data)
+        .matrix(row => [1, row.cases, row.distance])
+        .setColNames('dummy, cases, distance');
         
-    console.log(results);
+    let vector = $$(data).matrix('time');
+    let transposed = matrix.clone().transpose();
+    
+    let results = 
+        transposed.clone()
+        .multiply(matrix)
+        .inverse()
+        .multiply(transposed)
+        .multiply(vector);
+    
+    console.log(results.data) // Matches lm() coefficients in R!
 
     return true;
 
