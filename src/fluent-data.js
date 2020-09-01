@@ -119,5 +119,37 @@ _.cor = (rowFunc, options) =>
         
     };
 
+_.regress = (ivSelector, dvSelector) => 
+    data => {
+
+        let ivKeys = Object.keys(ivSelector({}));
+        let outerIvSelector = (row) => ivKeys.map(key => ivSelector(row)[key])
+
+        let dvKeys = Object.keys(dvSelector({}));
+        let outerDvSelector = (row) => dvSelector(row)[key];
+
+        if (ivKeys.length == 0)
+            throw `ivSelector must return an object with explicit keys defined.`
+        if (dvKeys.length != 1)
+            throw `dvSelector must return an object with exactly one key defined.`
+
+        let matrix = $$(data)
+            .matrix(row => [1, ...(outerIvSelector(row))])
+            .setColNames(`dummy,${keys.join(',')}`);
+        
+        let vector = $$(dvSelector).matrix(row => outerDvSelector(row));
+        let transposed = matrix.clone().transpose();
+        
+        let results = 
+            transposed.clone()
+            .multiply(matrix)
+            .inverse()
+            .multiply(transposed)
+            .multiply(vector);
+        
+        return results.data; 
+
+    }
+
 _.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
