@@ -126,7 +126,7 @@ _.regress = (ivSelector, dvSelector) =>
         let processSelector = (selector) => {
             
             if (g.isString(selector)) {
-                let keys = selector.split(',');
+                let keys = selector.split(',').map(key => key.trim());
                 return [
                     keys,
                     (row) => keys.map(key => row[key])
@@ -148,8 +148,6 @@ _.regress = (ivSelector, dvSelector) =>
             throw `ivSelector must return an object with explicit keys defined.`
         if (dvKeys.length != 1)
             throw `dvSelector must return an object with exactly one key defined.`
-
-console.log({d: data.map(row => [1, ...outerIvSelector(row)])})
 
         let ivs = 
             new matrix(data, row => [1, ...outerIvSelector(row)] )
