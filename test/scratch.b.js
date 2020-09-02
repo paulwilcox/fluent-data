@@ -31,15 +31,7 @@ async function test () {
     results = 
         $$(data)
         .reduce({
-            model: $$.regress(
-                d => ({ 
-                    cases: d.cases, 
-                    distance: d.distance 
-                }),
-                d => ({
-                    time: d.time
-                })
-            )
+            model: $$.regress('cases, distance', 'time')
         })
         .get();
 
