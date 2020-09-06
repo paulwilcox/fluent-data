@@ -32,7 +32,7 @@ async function test () {
         $$(data)
         .reduce({
             model: $$.regress('cases, distance', 'time'),
-            std: $$.std(row => row.cases)
+            std: $$.std(row => row.cases, true)
         })
         .get();
 

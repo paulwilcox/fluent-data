@@ -74,11 +74,13 @@ _.avg = rowFunc =>
         return s / n;
     };
 
-_.std = rowFunc => 
+_.std = (rowFunc, isSample = false) => 
     data => {
         let m = _.avg(rowFunc)(data);
         let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
         let n = _.count(rowFunc)(data);
+        if (isSample)
+            n--;
         return Math.pow(ssd/n, 0.5);
     }
 
@@ -187,6 +189,9 @@ _.regress = (ivSelector, dvSelector) =>
                 actual
             });
         }
+
+        let Fnum = $$.std(row => row.estimate)(estimates); // around the mean (intercept-only);
+        
 
         return {
             coefficients,
