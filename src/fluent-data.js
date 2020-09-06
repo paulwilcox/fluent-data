@@ -74,6 +74,14 @@ _.avg = rowFunc =>
         return s / n;
     };
 
+_.std = rowFunc => 
+    data => {
+        let m = _.avg(rowFunc)(data);
+        let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
+        let n = _.count(rowFunc)(data);
+        return Math.pow(ssd/n, 0.5);
+    }
+
 _.mad = rowFunc => 
     data => {
 
@@ -123,6 +131,8 @@ _.cor = (rowFunc, options) =>
 _.regress = (ivSelector, dvSelector) => 
     data => {
 
+        // Output a selector of row properties that returns an array
+        // and a set of labels (keys) that pertain to the array
         let processSelector = (selector) => {
             
             if (g.isString(selector)) {
@@ -153,17 +163,35 @@ _.regress = (ivSelector, dvSelector) =>
             new matrix(data, row => [1, ...outerIvSelector(row)] )
             .setColNames(`dummy,${ivKeys.join(',')}`);
             
-        let vector = new matrix(data, row => outerDvSelector(row));
-        let transposed = ivs.clone().transpose();
+        let dvs = new matrix(data, row => outerDvSelector(row));
+        let transposedIvs = ivs.clone().transpose();
         
-        let results = 
-            transposed.clone()
+        let coefficients = 
+            transposedIvs.clone()
             .multiply(ivs)
             .inverse()
-            .multiply(transposed)
-            .multiply(vector);
+            .multiply(transposedIvs)
+            .multiply(dvs)
+            .data.map(row => row[0]);
         
-        return results.data; 
+        let estimates = [];
+        for(let row of data)  {
+            let actual = outerDvSelector(row);
+            actual = actual.length == 1 ? actual[0] : undefined;
+            estimates.push({
+                estimate: 
+                    outerIvSelector(row)
+                    .map((iv,ivIx) => iv * coefficients[ivIx + 1])
+                    .reduce((a,b) => a + b, 0)
+                    + coefficients[0], // intercept
+                actual
+            });
+        }
+
+        return {
+            coefficients,
+            estimates
+        }; 
 
     }
 

@@ -31,11 +31,12 @@ async function test () {
     results = 
         $$(data)
         .reduce({
-            model: $$.regress('cases, distance', 'time')
+            model: $$.regress('cases, distance', 'time'),
+            std: $$.std(row => row.cases)
         })
         .get();
 
-    console.log(results.model)
+    console.log(results.std)
 
     return true;
 
