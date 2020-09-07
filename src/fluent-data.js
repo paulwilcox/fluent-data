@@ -168,15 +168,16 @@ _.regress = (ivSelector, dvSelector, options) =>
                 .setColNames(`intercept,${ivKeys.join(',')}`);
                 
             let dvs = new matrix(data, row => outerDvSelector(row));
+
+            let transposedIvs = ivs.clone().transpose();
+
+            // I think this translates to variances.
+            let variances = transposedIvs.clone().multiply(ivs).inverse();
             
         // Calcaulate the coefficients
-            
-            let transposedIvs = ivs.clone().transpose();
-            
+                        
             let coefficients = 
-                transposedIvs.clone()
-                .multiply(ivs)
-                .inverse()
+                variances.clone()
                 .multiply(transposedIvs)
                 .multiply(dvs);
 
@@ -205,23 +206,20 @@ _.regress = (ivSelector, dvSelector, options) =>
 
             // kokminglee.125mb.com/math/linearreg3.html
 
-            let xtxi = transposedIvs.clone().multiply(ivs).inverse();
-            
             let s = Math.pow(
                 (1 / (estimates.length - coefficients.length)) 
                 * _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates),
                 0.5
             )
 
-            let res = xtxi.multiply(Math.pow(s,2)).data;
+            let stdErrs = 
+                variances
+                .multiply(Math.pow(s,2))
+                .apply(cell => Math.pow(cell,0.5))
+                .getDiagonalVector();
             
-            for(let r in res)
-                for(let c in res[r]) {
-                    console.log({rrc: res[r][c]})
-                    res[r][c] = Math.pow(res[r][c],0.5);
-                }
-
-            console.log({res}); // diagonals match std error in R
+            for(let c in coefficients) 
+                coefficients[c].stdErr = stdErrs[c];
 
         // Calculate the F statistic
 

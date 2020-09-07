@@ -11,17 +11,8 @@ async function test () {
         { cases: 6, distance: 150, time: 13.75 },
         { cases: 7, distance: 330, time: 18.11 }
     ];
-    
-    let matrix = $$(data).matrix('cases, distance, time');
-        
-    console.log(matrix.data);
 
-    matrix.apply(a => a / 10);
-    console.log(matrix.data);
-
-    return true;
-
-    results = 
+    let results = 
         $$(data)
         .reduce({
             model: $$.regress('cases, distance', 'time'),

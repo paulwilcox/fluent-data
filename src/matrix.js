@@ -52,6 +52,14 @@ export default class matrix {
         return this;
     }
 
+    isSquare() {
+        if (this.data.length == 0)
+            return true;
+        let rows = this.data.length;
+        let cols = this.data[0].length;
+        return rows == cols;
+    }
+
     clone() {
         let result = [];
         for(let row of this.data) {
@@ -65,6 +73,15 @@ export default class matrix {
         mx.colNames = this.colNames;
         mx.rowNames = this.rowNames;
         return mx;
+    }
+
+    getDiagonalVector() {
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        let vector = [];
+        for (let i = 0; i < this.data.length; i++)
+            vector.push(this.data[i][i]);
+        return vector;
     }
 
     apply(func) {
