@@ -12,21 +12,13 @@ async function test () {
         { cases: 7, distance: 330, time: 18.11 }
     ];
     
-    let matrix = $$(data)
-        .matrix(row => [1, row.cases, row.distance])
-        .setColNames('dummy, cases, distance');
+    let matrix = $$(data).matrix('cases, distance, time');
         
-    let vector = $$(data).matrix('time');
-    let transposed = matrix.clone().transpose();
-    
-    let results = 
-        transposed.clone()
-        .multiply(matrix)
-        .inverse()
-        .multiply(transposed)
-        .multiply(vector);
-    
-    console.log(results.data) // Matches lm() coefficients in R!
+    matrix.reduce('row', (a,b) => a + b, 0);
+    console.log(matrix);
+
+
+    return true;
 
     results = 
         $$(data)

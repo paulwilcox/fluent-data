@@ -67,6 +67,30 @@ export default class matrix {
         return mx;
     }
 
+    apply(func) {
+        for(let r in this.data)
+            for (let c in this.data[r])
+                this.data[r][c] = func(this.data[r][c]);
+        return this;
+    }
+
+    reduce(direction, func, seed = undefined) {
+
+        let aggregated = [];
+        
+        if (direction == 'row' || direction == 1) 
+            for (let row of this.data) 
+                if (seed != undefined)
+                    aggregated.push(row.reduce(func, seed));
+                else 
+                    aggregated.push(row.reduce(func));
+
+        this.data = aggregated;
+
+        return this;
+
+    }
+
     transpose() {
 
         let result = [];

@@ -133,93 +133,125 @@ _.cor = (rowFunc, options) =>
 _.regress = (ivSelector, dvSelector, options) => 
     data => {
 
-        // Output a selector of row properties that returns an array
-        // and a set of labels (keys) that pertain to the array
-        let processSelector = (selector) => {
-            
-            if (g.isString(selector)) {
-                let keys = selector.split(',').map(key => key.trim());
+        // Initializations
+
+            // Output a selector of row properties that returns an array
+            // and a set of labels (keys) that pertain to the array
+            let processSelector = (selector) => {
+                
+                if (g.isString(selector)) {
+                    let keys = selector.split(',').map(key => key.trim());
+                    return [
+                        keys,
+                        (row) => keys.map(key => row[key])
+                    ];
+                }
+
+                let keys = Object.keys(selector({}));
                 return [
-                    keys,
-                    (row) => keys.map(key => row[key])
+                    keys, 
+                    (row) => keys.map(key => selector(row)[key])
                 ];
+
             }
 
-            let keys = Object.keys(selector({}));
-            return [
-                keys, 
-                (row) => keys.map(key => selector(row)[key])
-            ];
+            let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
+            let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
 
-        }
+            if (ivKeys.length == 0)
+                throw `ivSelector must return an object with explicit keys defined.`
+            if (dvKeys.length != 1)
+                throw `dvSelector must return an object with exactly one key defined.`
 
-        let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
-        let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
-
-        if (ivKeys.length == 0)
-            throw `ivSelector must return an object with explicit keys defined.`
-        if (dvKeys.length != 1)
-            throw `dvSelector must return an object with exactly one key defined.`
-
-        let ivs = 
-            new matrix(data, row => [1, ...outerIvSelector(row)] )
-            .setColNames(`intercept,${ivKeys.join(',')}`);
+            let ivs = 
+                new matrix(data, row => [1, ...outerIvSelector(row)] )
+                .setColNames(`intercept,${ivKeys.join(',')}`);
+                
+            let dvs = new matrix(data, row => outerDvSelector(row));
             
-        let dvs = new matrix(data, row => outerDvSelector(row));
-        let transposedIvs = ivs.clone().transpose();
-        
-        let coefficients = 
-            transposedIvs.clone()
-            .multiply(ivs)
-            .inverse()
-            .multiply(transposedIvs)
-            .multiply(dvs);
+        // Calcaulate the coefficients
+            
+            let transposedIvs = ivs.clone().transpose();
+            
+            let coefficients = 
+                transposedIvs.clone()
+                .multiply(ivs)
+                .inverse()
+                .multiply(transposedIvs)
+                .multiply(dvs);
 
-        coefficients = coefficients.data.map((row,ix) => ({ 
-            name: coefficients.rowNames[ix], 
-            value: row[0]
-        }));
+            coefficients = coefficients.data.map((row,ix) => ({ 
+                name: coefficients.rowNames[ix], 
+                value: row[0]
+            }));
         
-        let estimates = [];
-        for(let row of data)  {
-            let actual = outerDvSelector(row);
-            actual = actual.length == 1 ? actual[0] : undefined;
-            estimates.push({
-                estimate: 
-                    outerIvSelector(row)
-                    .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
-                    .reduce((a,b) => a + b, 0)
-                    + coefficients[0].value, // intercept
-                actual
-            });
-        }
+        // Calculate the estimates given the coefficients
+
+            let estimates = [];
+            for(let row of data)  {
+                let actual = outerDvSelector(row);
+                actual = actual.length == 1 ? actual[0] : undefined;
+                estimates.push({
+                    estimate: 
+                        outerIvSelector(row)
+                        .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
+                        .reduce((a,b) => a + b, 0)
+                        + coefficients[0].value, // intercept
+                    actual
+                });
+            }
+
+        // Calculate the T statistics
+
+            // kokminglee.125mb.com/math/linearreg3.html
+
+            let xtxi = transposedIvs.clone().multiply(ivs).inverse();
+            
+            let s = Math.pow(
+                (1 / (estimates.length - coefficients.length)) 
+                * _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates),
+                0.5
+            )
+
+            let res = xtxi.multiply(Math.pow(s,2)).data;
+            
+            for(let r in res)
+                for(let c in res[r]) {
+                    console.log({rrc: res[r][c]})
+                    res[r][c] = Math.pow(res[r][c],0.5);
+                }
+
+            console.log({res}); // diagonals match std error in R
 
         // Calculate the F statistic
-        // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
-        let mean = _.avg(row => row.actual)(estimates);
-        let n = _.count(row => row.actual)(estimates);
 
-        let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates);
-        let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(estimates);
-        let paramsComplex = coefficients.length;
-        let paramsSimple = 1;
+            // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
+            let mean = _.avg(row => row.actual)(estimates);
+            let n = _.count(row => row.actual)(estimates);
 
-        let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
-                (ssComplex/(n-paramsComplex))
+            let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates);
+            let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(estimates);
+            let paramsComplex = coefficients.length;
+            let paramsSimple = 1;
 
-        let results = {
-            coefficients,
-            F,
-            pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
-        }; 
+            let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
+                    (ssComplex/(n-paramsComplex))
 
-        if (!options)
+        // Terminations
+            
+            let results = {
+                coefficients,
+                F,
+                pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
+            }; 
+
+            if (!options)
+                return results;
+
+            if (options.estimates)
+                results.estimates = estimates;
+
             return results;
-
-        if (options.estimates)
-            results.estimates = estimates;
-
-        return results;
 
     }
 
