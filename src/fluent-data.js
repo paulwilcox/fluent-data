@@ -163,7 +163,7 @@ _.regress = (ivSelector, dvSelector) =>
 
         let ivs = 
             new matrix(data, row => [1, ...outerIvSelector(row)] )
-            .setColNames(`dummy,${ivKeys.join(',')}`);
+            .setColNames(`intercept,${ivKeys.join(',')}`);
             
         let dvs = new matrix(data, row => outerDvSelector(row));
         let transposedIvs = ivs.clone().transpose();
@@ -173,8 +173,12 @@ _.regress = (ivSelector, dvSelector) =>
             .multiply(ivs)
             .inverse()
             .multiply(transposedIvs)
-            .multiply(dvs)
-            .data.map(row => row[0]);
+            .multiply(dvs);
+
+        coefficients = coefficients.data.map((row,ix) => ({ 
+            name: coefficients.rowNames[ix], 
+            value: row[0]
+        }));
         
         let estimates = [];
         for(let row of data)  {
@@ -183,9 +187,9 @@ _.regress = (ivSelector, dvSelector) =>
             estimates.push({
                 estimate: 
                     outerIvSelector(row)
-                    .map((iv,ivIx) => iv * coefficients[ivIx + 1])
+                    .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
                     .reduce((a,b) => a + b, 0)
-                    + coefficients[0], // intercept
+                    + coefficients[0].value, // intercept
                 actual
             });
         }
@@ -206,6 +210,7 @@ _.regress = (ivSelector, dvSelector) =>
         return {
             coefficients,
             F,
+            pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex),
             estimates
         }; 
 
