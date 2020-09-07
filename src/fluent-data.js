@@ -130,7 +130,7 @@ _.cor = (rowFunc, options) =>
         
     };
 
-_.regress = (ivSelector, dvSelector) => 
+_.regress = (ivSelector, dvSelector, options) => 
     data => {
 
         // Output a selector of row properties that returns an array
@@ -207,12 +207,19 @@ _.regress = (ivSelector, dvSelector) =>
         let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
                 (ssComplex/(n-paramsComplex))
 
-        return {
+        let results = {
             coefficients,
             F,
-            pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex),
-            estimates
+            pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
         }; 
+
+        if (!options)
+            return results;
+
+        if (options.estimates)
+            results.estimates = estimates;
+
+        return results;
 
     }
 
