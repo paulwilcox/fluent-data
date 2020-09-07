@@ -14,9 +14,10 @@ async function test () {
     
     let matrix = $$(data).matrix('cases, distance, time');
         
-    matrix.reduce('row', (a,b) => a + b, 0);
-    console.log(matrix);
+    console.log(matrix.data);
 
+    matrix.apply(a => a / 10);
+    console.log(matrix.data);
 
     return true;
 

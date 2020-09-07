@@ -78,15 +78,37 @@ export default class matrix {
 
         let aggregated = [];
         
-        if (direction == 'row' || direction == 1) 
+        if (direction == 'row' || direction == 1) {
+            this.colNames = null;
             for (let row of this.data) 
                 if (seed != undefined)
-                    aggregated.push(row.reduce(func, seed));
+                    aggregated.push([row.reduce(func, seed)]);
                 else 
-                    aggregated.push(row.reduce(func));
+                    aggregated.push([row.reduce(func)]);
+        }
+
+        else if (direction == 'col' || direction == 'column' || direction == 2) {
+            this.rowNames = null;
+            let colCount = this.data.length == 0 ? 0 : this.data[0].length;
+            for (let c = 0; c < colCount; c++) {
+                let agg = seed || 0;
+                for(let row of this.data) 
+                    agg = func(agg, row[c]);
+                aggregated.push([agg]);
+            }
+        }
+
+        else if (direction == 'all' || direction == 0) {
+            this.rowNames = null;
+            this.colNames = null;
+            let agg = seed || 0;
+            for (let row of this.data)
+                for (let cell of row)
+                    agg = func(agg, cell);
+            aggregated.push([agg]);
+        }
 
         this.data = aggregated;
-
         return this;
 
     }
