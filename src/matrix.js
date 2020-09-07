@@ -100,9 +100,7 @@ export default class matrix {
         }
 
         else if (other instanceof matrix) {
-            // I don't know if I really have to blot out the names.
-            this.rowNames = null;
-            this.colNames = null;
+            this.colNames = other.colNames;
             this.data = this._multiplyMatrix(other);
         }
 
