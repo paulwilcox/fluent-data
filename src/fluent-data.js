@@ -190,11 +190,22 @@ _.regress = (ivSelector, dvSelector) =>
             });
         }
 
-        let Fnum = $$.std(row => row.estimate)(estimates); // around the mean (intercept-only);
-        
+        // Calculate the F statistic
+        // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
+        let mean = _.avg(row => row.actual)(estimates);
+        let n = _.count(row => row.actual)(estimates);
+
+        let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates);
+        let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(estimates);
+        let paramsComplex = coefficients.length;
+        let paramsSimple = 1;
+
+        let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
+                (ssComplex/(n-paramsComplex))
 
         return {
             coefficients,
+            F,
             estimates
         }; 
 

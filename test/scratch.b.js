@@ -36,7 +36,7 @@ async function test () {
         })
         .get();
 
-    console.log(results.std)
+    console.log(results.model)
 
     return true;
 
