@@ -1,3 +1,4 @@
+import * as g from '../src/general.js';
 
 async function test () {
 

@@ -218,8 +218,12 @@ _.regress = (ivSelector, dvSelector, options) =>
                 .apply(cell => Math.pow(cell,0.5))
                 .getDiagonalVector();
             
-            for(let c in coefficients) 
+            for(let c in coefficients) {
                 coefficients[c].stdErr = stdErrs[c];
+                coefficients[c].t = coefficients[c].value / stdErrs[c];
+                coefficients[c].df = data.length - coefficients.length;
+                coefficients[c].pVal = g.studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
+            }
 
         // Calculate the F statistic
 
