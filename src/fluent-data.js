@@ -169,6 +169,7 @@ _.regress = (ivSelector, dvSelector, options) =>
                 
             let dvs = new matrix(data, row => outerDvSelector(row));
 
+            let n = data.length;
             let transposedIvs = ivs.clone().transpose();
 
             // I think this translates to variances.
@@ -186,7 +187,7 @@ _.regress = (ivSelector, dvSelector, options) =>
                 value: row[0]
             }));
         
-        // Calculate the estimates given the coefficients
+        // Calculate the estimates
 
             let estimates = [];
             for(let row of data)  {
@@ -202,7 +203,7 @@ _.regress = (ivSelector, dvSelector, options) =>
                 });
             }
 
-        // Calculate the T statistics
+        // Calculate the coefficient statistics
 
             // kokminglee.125mb.com/math/linearreg3.html
 
@@ -225,12 +226,10 @@ _.regress = (ivSelector, dvSelector, options) =>
                 coefficients[c].pVal = g.studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
             }
 
-        // Calculate the F statistic
+        // Calculate the model-level statistics
 
             // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
             let mean = _.avg(row => row.actual)(estimates);
-            let n = _.count(row => row.actual)(estimates);
-
             let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates);
             let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(estimates);
             let paramsComplex = coefficients.length;
@@ -239,10 +238,17 @@ _.regress = (ivSelector, dvSelector, options) =>
             let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
                     (ssComplex/(n-paramsComplex))
 
+            let rSquared = 1 - ssComplex / ssSimple; 
+
+            // n - p - 1 = n - coefficients.length becasue p does not include the intercept
+            let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
+
         // Terminations
             
             let results = {
                 coefficients,
+                rSquared,
+                rSquaredAdj,
                 F,
                 pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
             }; 
