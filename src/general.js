@@ -257,6 +257,48 @@ export function regBeta (x, p, q) {
     return iBeta(x, p, q) / iBeta(1, p, q);
 }
 
+export function invRegBeta (x, a, b) {
+
+    // This is a very crude implementation.  For the future, look into the following references:
+        // boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_beta/ibeta_inv_function.html
+        // malishoaib.wordpress.com/2014/05/30/inverse-of-incomplete-beta-function-computational-statisticians-wet-dream/
+
+    // Get the middle number and round it appropriately so that 
+    // it outputs matching digits and hides unmatching digits
+    let roundedMid = (a, b) => {
+        let roundMultiplier = 1 / Number((b - a).toFixed(20).match(/^0.0*/)[0] + '1');
+        let mid = (a + b) / 2;
+        return Math.round(mid * roundMultiplier) / roundMultiplier;
+    }
+
+    let honeIn = (min, max, iterations, accuracy) => {
+
+        let mid = (min + max) / 2;
+        
+        if (max - min < accuracy)
+            return roundedMid(min, max);
+
+        if (iterations == 0)
+            throw `inverse beta function could not reach accuracy within the maximum number of iterations.`
+
+        let _min = regBeta(min, a, b);
+        let _mid = regBeta(mid, a, b);
+        let _max = regBeta(max, a, b);
+
+        if (x > _max) return null;
+        if (x < _min) return null;
+        if (x == _min) return min;
+        if (x == _mid) return mid;
+        if (x == _max) return max; 
+        if (x < _mid) return honeIn(min, mid, iterations - 1, accuracy);
+        if (x > _mid) return honeIn(mid, max, iterations - 1, accuracy);
+
+    } 
+
+    return honeIn(0, 1, 1000, 0.000001);
+
+}
+
 export function Fcdf (F, numDf, denDf) {
     let x = (F * numDf) / (denDf + (F * numDf));
     return 1 - regBeta(x, numDf/2, denDf/2);

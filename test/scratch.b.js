@@ -2,6 +2,35 @@ import * as g from '../src/general.js';
 
 async function test () {
 
+
+    console.log({
+        rb: g.regBeta(0.738198, 3, 4),
+        irb: g.invRegBeta(0.9558308297866224, 3, 4)
+    })
+
+
+return;
+    /*
+
+    let u = 0.9;
+    let n = 15;
+
+    let sign = Math.sign(u - 0.5);
+    let ib = g.regBeta(u < 0.5 ? 2 * u : 2 * (1-u), n/2, 0.5);
+    let inner = n * (1/ib - 1);
+
+    let result = sign * Math.pow(inner, 0.5);
+
+    console.log({
+        result,
+        sign, 
+        ib,
+        inner
+    });
+
+    return;
+    */
+
     //let data = await sample('orders');
 
     let data = [
@@ -26,3 +55,4 @@ async function test () {
     return true;
 
 }
+
