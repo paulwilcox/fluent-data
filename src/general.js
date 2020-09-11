@@ -226,7 +226,35 @@ export function studentsTcdf(t, df) {
 
 }
 
-//stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf (p66)
+export function gamma (z) {
+
+    // link.springer.com/content/pdf/bbm%3A978-3-319-43561-9%2F1.pdf
+    // use of 7.5 below seems odd, but from other sources it seems that it's because it's length of p - 1.
+
+    let p = [
+        0.99999999999980993,
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7
+    ];
+
+    let sum = p[0];
+    for (let i = 1; i <= 8; i++) 
+        sum += p[i] / (z + i);
+
+    return (Math.pow(2 * Math.PI, 0.5) / z) 
+         * sum 
+         * Math.pow(z + 7.5, z + 0.5) 
+         * Math.pow(Math.E, -(z + 7.5)); 
+
+}
+
+// stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf (p66)
 export function iBeta (x, p, q) {
         
     // Convergence is better when p > q, so if that's not
@@ -236,7 +264,7 @@ export function iBeta (x, p, q) {
 
     let sum = 0;
     let t = 1/p;
-    for(let r = 0; r <= 1000; r++) {
+    for(let r = 0; r <= 100000; r++) {
 
         if (r > 0)
             t *= (x * (r-q) * (p + r - 1)) 
@@ -244,9 +272,10 @@ export function iBeta (x, p, q) {
 
         sum += t;
 
-        if (Math.abs(t) <= 0.00000000000001)
+        if (Math.abs(t) <= 0.00000000000001) {
+            console.log(r);
             break;
-
+        }
     }
 
     return Math.pow(x,p) * sum;
@@ -262,6 +291,9 @@ export function invRegBeta (x, a, b) {
     // This is a very crude implementation.  For the future, look into the following references:
         // boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_beta/ibeta_inv_function.html
         // malishoaib.wordpress.com/2014/05/30/inverse-of-incomplete-beta-function-computational-statisticians-wet-dream/
+        // Apparently, I'm not the only one who thinks it's difficult:
+            // en.wikipedia.org/wiki/Quantile_function#Student's_t-distribution 
+            // "This has historically been one of the more intractable cases..."
 
     // Get the middle number and round it appropriately so that 
     // it outputs matching digits and hides unmatching digits
@@ -275,7 +307,7 @@ export function invRegBeta (x, a, b) {
 
         let mid = (min + max) / 2;
         
-        if (max - min < accuracy)
+        if (max - min < accuracy) 
             return roundedMid(min, max);
 
         if (iterations == 0)
@@ -295,7 +327,7 @@ export function invRegBeta (x, a, b) {
 
     } 
 
-    return honeIn(0, 1, 1000, 0.000001);
+    return honeIn(0, 1, 1000, 0.00000001);
 
 }
 
