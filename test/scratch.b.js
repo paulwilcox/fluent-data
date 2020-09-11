@@ -1,10 +1,62 @@
 import * as g from '../src/general.js';
 
+
 async function test () {
 
-    console.log({gamma: g.gamma(7.33)});
+    // dlmf.nist.gov/8.17#SS5.p1
+    // aip.scitation.org/doi/pdf/10.1063/1.4822777
 
-return;
+    let x = 0.99943427471;
+    let a = 5000;
+    let b = 0.5;
+
+    // swapping even and odd implementatinos becasue
+    // we want index of 1 to start at Lentz's a1 position,
+    // whearas 8.17.22 has d1 starting at a2 
+    let athTerm = (i) => {
+
+        if (i == 1)
+            return 1;
+        else if (i % 2 == 0) {
+            let num = (a + i) * (a + b + i) * x;
+            let den = (a + 2*i) * (a + 2*i + 1);
+            return -num/den;
+        }
+        else {
+            let num = i * (b - i) * x;
+            let den = (a + 2*i - 1) * (a + 2*i);
+            return num/den;
+        }
+
+    }
+
+
+    let AprevPrev = 1;
+    let Aprev = 0; // there is no b0
+    let BprevPrev = 0;
+    let Bprev = 1;
+
+    let Aratio = Aprev / AprevPrev;
+    let Bratio = BprevPrev / Bprev;
+    let bthTerm = 1;
+
+    // TODO: What is Fn0?  Is it 0 or 
+    // do I use A and B ratio rignt now?
+
+    for (let i = 1; i <= 10; i++) {
+
+        Aratio = bthTerm + athTerm(i) / Aratio;
+        Bratio = 1 / (bthTerm + athTerm(i)*Bratio); 
+    }
+
+
+    console.log({
+        gamma: g.gamma(7.33),
+        iBeta: g.iBeta(0.99943427471, 5000, 0.5),
+        iBeta2: ""
+    });
+
+/*
 
     let b = g.iBeta(0.99943427471, 5000, 0.5);
 
@@ -24,8 +76,7 @@ return;
         c_ib: ib
     });
     
-return;
-
+*/
     
     /*
 
