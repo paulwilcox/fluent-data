@@ -272,10 +272,8 @@ export function iBeta (x, p, q) {
 
         sum += t;
 
-        if (Math.abs(t) <= 0.00000000000001) {
-            console.log(r);
+        if (Math.abs(t) <= 0.00000000000001) 
             break;
-        }
     }
 
     return Math.pow(x,p) * sum;
