@@ -10,51 +10,67 @@ async function test () {
     let a = 5000;
     let b = 0.5;
 
-    // swapping even and odd implementatinos becasue
-    // we want index of 1 to start at Lentz's a1 position,
-    // whearas 8.17.22 has d1 starting at a2 
     let athTerm = (i) => {
 
-        if (i == 1)
-            return 1;
-        else if (i % 2 == 0) {
-            let num = (a + i) * (a + b + i) * x;
-            let den = (a + 2*i) * (a + 2*i + 1);
-            return -num/den;
-        }
-        else {
+        if (i % 2 == 0) {
             let num = i * (b - i) * x;
             let den = (a + 2*i - 1) * (a + 2*i);
             return num/den;
         }
+        else {
+            let num = (a + i) * (a + b + i) * x;
+            let den = (a + 2*i) * (a + 2*i + 1);
+            return -num/den;
+        }
 
     }
 
 
-    let AprevPrev = 1;
-    let Aprev = 0; // there is no b0
-    let BprevPrev = 0;
-    let Bprev = 1;
+    let iota = 0.000000000001;
 
-    let Aratio = Aprev / AprevPrev;
-    let Bratio = BprevPrev / Bprev;
-    let bthTerm = 1;
+    let strategy = (id, AratioStart, BratioStart, Fstart) => {
 
-    // TODO: What is Fn0?  Is it 0 or 
-    // do I use A and B ratio rignt now?
+        let bthTerm = 1;
+        let Aratio = AratioStart; 
+        let Bratio = BratioStart; 
+        let F = Fstart; 
 
-    for (let i = 1; i <= 10; i++) {
+        if (Aratio == 0) Aratio = iota;
+        if (Bratio == 0) Bratio = iota;
+        if (F == 0) F = iota;
 
-        Aratio = bthTerm + athTerm(i) / Aratio;
-        Bratio = 1 / (bthTerm + athTerm(i)*Bratio); 
+        for (let i = 0; i <= 100; i++) {
+
+            F = F * Aratio * Bratio;
+            if (F == 0) F = iota;
+
+            Aratio = bthTerm + athTerm(i) / Aratio;
+            if (Aratio == 0) Aratio = iota;
+
+            Bratio = 1 / (bthTerm + athTerm(i)*Bratio); 
+            if (Bratio == 0) Bratio = iota;
+
+        }
+
+        let leadMulti = (Math.pow(x,a) * Math.pow(1 - x, b)) / (a * 0.02506690941121089696 /*g.iBeta(1, a, b)*/)
+
+        console.log({['strategy' + id]: F * leadMulti})        
+
     }
 
+    console.log({gamma: g.gamma(7.33)})
+    console.log({iBeta: g.iBeta(0.99943427471, 5000, 0.5)})
+    //console.log({iBeta2: F * leadMulti});
 
-    console.log({
-        gamma: g.gamma(7.33),
-        iBeta: g.iBeta(0.99943427471, 5000, 0.5),
-        iBeta2: ""
-    });
+    // okay at least now we know the ratios really just adjust the magnitude
+    strategy(1, 0, 0, 0);
+    strategy(2, 0, 0, 1);
+    strategy(3, 0, 1, 0);
+    strategy(4, 0, 1, 1);
+    strategy(5, 1, 0, 0);
+    strategy(6, 1, 0, 1);
+    strategy(7, 1, 1, 0);
+    strategy(8, 1, 1, 1);
 
 /*
 
