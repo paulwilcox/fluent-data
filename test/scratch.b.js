@@ -10,25 +10,30 @@ async function test () {
     let a = 5000;
     let b = 0.5;
 
-    let athTerm = (i) => {
-
-        if (i % 2 == 0) {
-            let num = i * (b - i) * x;
-            let den = (a + 2*i - 1) * (a + 2*i);
-            return num/den;
-        }
-        else {
-            let num = (a + i) * (a + b + i) * x;
-            let den = (a + 2*i) * (a + 2*i + 1);
-            return -num/den;
-        }
-
-    }
-
-
     let iota = 0.000000000001;
 
-    let strategy = (id, AratioStart, BratioStart, Fstart) => {
+    let strategy = (id, AratioStart, BratioStart, Fstart, Frecalc, iDiv2) => {
+
+        let athTerm = (i) => {
+
+            let j = iDiv2 ? i/2 : i;
+
+            if (i == 0)
+                return 1;
+            else if (i % 2 == 0) {
+                let j = i / 2;
+                let num = j * (b - j) * x;
+                let den = (a + 2*j - 1) * (a + 2*j);
+                return num/den;
+            }
+            else {
+                let j = i/2 - 1
+                let num = (a + j) * (a + b + j) * x;
+                let den = (a + 2*j) * (a + 2*j + 1);
+                return -num/den;
+            }
+    
+        }
 
         let bthTerm = 1;
         let Aratio = AratioStart; 
@@ -41,14 +46,24 @@ async function test () {
 
         for (let i = 0; i <= 100; i++) {
 
-            F = F * Aratio * Bratio;
-            if (F == 0) F = iota;
+            if (Frecalc == 0) {
+                F = F * Aratio * Bratio;
+                if (F == 0) F = iota;
+            }
 
             Aratio = bthTerm + athTerm(i) / Aratio;
             if (Aratio == 0) Aratio = iota;
 
             Bratio = 1 / (bthTerm + athTerm(i)*Bratio); 
             if (Bratio == 0) Bratio = iota;
+
+            F = F * Aratio * Bratio;
+            if (F == 0) F = iota;
+
+            if (Frecalc == 0) {
+                F = F * Aratio * Bratio;
+                if (F == 0) F = iota;
+            }
 
         }
 
@@ -63,14 +78,14 @@ async function test () {
     //console.log({iBeta2: F * leadMulti});
 
     // okay at least now we know the ratios really just adjust the magnitude
-    strategy(1, 0, 0, 0);
-    strategy(2, 0, 0, 1);
-    strategy(3, 0, 1, 0);
-    strategy(4, 0, 1, 1);
-    strategy(5, 1, 0, 0);
-    strategy(6, 1, 0, 1);
-    strategy(7, 1, 1, 0);
-    strategy(8, 1, 1, 1);
+    let n = 0;
+    for (let AratioStart = 0; AratioStart <= 1; AratioStart++)
+    for (let BratioStart = 0; BratioStart <= 1; BratioStart++)
+    for (let FStart = 0; FStart <= 1; FStart++)
+    for (let FRecalc = 0; FRecalc <= 1; FRecalc++) 
+    for (let iDiv2 = 0; iDiv2 <= 1; iDiv2++) 
+        strategy(++n, AratioStart, BratioStart, FStart, FRecalc);
+
 
 /*
 
