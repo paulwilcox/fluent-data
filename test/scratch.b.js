@@ -1,6 +1,93 @@
 import * as g from '../src/general.js';
 
 
+function hyperGeoLog (a,b,c,z) {
+
+    let pochLogged = (q, n) => {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    let factLogged = (num) => {
+        let prod = Math.log(num);
+        for (let i = num - 1; i >= 1; i--)
+            prod += Math.log(i);
+        return prod;
+    }
+
+    let sum = 0;
+
+    for(let n = 1; n <= 50; n++) {
+
+        let zn = Math.log(Math.pow(z,n));
+        if (zn == 0)
+            zn = 1e-10;
+
+        let add = ( (pochLogged(a,n) + pochLogged(b,n)) - pochLogged(c,n) ) 
+                + (zn - factLogged(n));
+
+        add = Math.pow(Math.E, add);
+
+        if (!isFinite(add)) {
+            console.log(`Not finite: ${add}`)
+            break;
+        }
+
+        sum += add;
+
+        if(Math.abs(add) <= 1e-10)
+            return sum;
+
+    }
+
+    throw `Couldn't get within in in 1e-10 (${sum})`;
+
+}
+
+
+function hyperGeo (a,b,c,z) {
+
+    let pochhammer = (q, n) => {
+        if (n == 0)
+            return 1;
+        let prod = q;
+        for (let i = 1; i < n; i++) 
+            prod *= (q + i);
+        return prod;
+    }
+
+    let fact = (num) => {
+        let prod = num;
+        for (let i = num - 1; i >= 1; i--)
+            prod *= i;
+        return prod;
+    }
+
+    let sum = 0;
+
+    for(let n = 1; n <= 100; n++) {
+        let add = ( (pochhammer(a,n) * pochhammer(b,n)) / pochhammer(c,n) ) 
+                * (Math.pow(z,n) / fact(n));
+        
+        if (!isFinite(add)) {
+            console.log(`Not finite: ${add}`)
+            break;
+        }
+        sum += add;
+        if(add <= 1e-10)
+            return sum;
+    }
+
+    throw `Couldn't get within in 1e-10 (${sum})`;
+
+}
+
 async function test () {
 
     // dlmf.nist.gov/8.17#SS5.p1
@@ -10,81 +97,18 @@ async function test () {
     let a = 5000;
     let b = 0.5;
 
-    let iota = 0.000000000001;
-
-    let strategy = (id, AratioStart, BratioStart, Fstart, Frecalc, iDiv2) => {
-
-        let athTerm = (i) => {
-
-            let j = iDiv2 ? i/2 : i;
-
-            if (i == 0)
-                return 1;
-            else if (i % 2 == 0) {
-                let j = i / 2;
-                let num = j * (b - j) * x;
-                let den = (a + 2*j - 1) * (a + 2*j);
-                return num/den;
-            }
-            else {
-                let j = i/2 - 1
-                let num = (a + j) * (a + b + j) * x;
-                let den = (a + 2*j) * (a + 2*j + 1);
-                return -num/den;
-            }
+    console.log(hyperGeo(2,3,4,0.5))
+    console.log(hyperGeoLog(2, 3, 4, 0.5))
+    console.log(Math.pow(1-0.5, -2) * hyperGeo(2,4-3,4,0.5/(0.5-1)))
     
-        }
 
-        let bthTerm = 1;
-        let Aratio = AratioStart; 
-        let Bratio = BratioStart; 
-        let F = Fstart; 
-
-        if (Aratio == 0) Aratio = iota;
-        if (Bratio == 0) Bratio = iota;
-        if (F == 0) F = iota;
-
-        for (let i = 0; i <= 100; i++) {
-
-            if (Frecalc == 0) {
-                F = F * Aratio * Bratio;
-                if (F == 0) F = iota;
-            }
-
-            Aratio = bthTerm + athTerm(i) / Aratio;
-            if (Aratio == 0) Aratio = iota;
-
-            Bratio = 1 / (bthTerm + athTerm(i)*Bratio); 
-            if (Bratio == 0) Bratio = iota;
-
-            F = F * Aratio * Bratio;
-            if (F == 0) F = iota;
-
-            if (Frecalc == 0) {
-                F = F * Aratio * Bratio;
-                if (F == 0) F = iota;
-            }
-
-        }
-
-        let leadMulti = (Math.pow(x,a) * Math.pow(1 - x, b)) / (a * 0.02506690941121089696 /*g.iBeta(1, a, b)*/)
-
-        console.log({['strategy' + id]: F * leadMulti})        
-
-    }
+    //console.log(hyperGeo(30,1,20,0.8))
+    //console.log(Math.pow(1-0.8,-30)*hyperGeo(30, 20-1, 20, 0.8 / (0.8 - 1)))
+    
+return;
 
     console.log({gamma: g.gamma(7.33)})
     console.log({iBeta: g.iBeta(0.99943427471, 5000, 0.5)})
-    //console.log({iBeta2: F * leadMulti});
-
-    // okay at least now we know the ratios really just adjust the magnitude
-    let n = 0;
-    for (let AratioStart = 0; AratioStart <= 1; AratioStart++)
-    for (let BratioStart = 0; BratioStart <= 1; BratioStart++)
-    for (let FStart = 0; FStart <= 1; FStart++)
-    for (let FRecalc = 0; FRecalc <= 1; FRecalc++) 
-    for (let iDiv2 = 0; iDiv2 <= 1; iDiv2++) 
-        strategy(++n, AratioStart, BratioStart, FStart, FRecalc);
 
 
 /*
