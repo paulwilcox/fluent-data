@@ -21,9 +21,9 @@ function hyperGeoLog (a,b,c,z) {
         return prod;
     }
 
-    let sum = 0;
+    let sum = 1;
 
-    for(let n = 1; n <= 50; n++) {
+    for(let n = 1; n <= 1000; n++) {
 
         let zn = Math.log(Math.pow(z,n));
         if (zn == 0)
@@ -69,7 +69,7 @@ function hyperGeo (a,b,c,z) {
         return prod;
     }
 
-    let sum = 0;
+    let sum = 1;
 
     for(let n = 1; n <= 100; n++) {
         let add = ( (pochhammer(a,n) * pochhammer(b,n)) / pochhammer(c,n) ) 
@@ -97,13 +97,14 @@ async function test () {
     let a = 5000;
     let b = 0.5;
 
+    // Wait, I'm off by one?  When did that happen?  At least my hypergeolog is working now for the second params.
+    // Ah, x must be less than 0.5 to transform (mathworld.wolfram.com/PfaffTransformation.html)
+    
     console.log(hyperGeo(2,3,4,0.5))
     console.log(hyperGeoLog(2, 3, 4, 0.5))
-    console.log(Math.pow(1-0.5, -2) * hyperGeo(2,4-3,4,0.5/(0.5-1)))
     
-
     //console.log(hyperGeo(30,1,20,0.8))
-    //console.log(Math.pow(1-0.8,-30)*hyperGeo(30, 20-1, 20, 0.8 / (0.8 - 1)))
+    console.log(hyperGeoLog(30,1,20,0.8))
     
 return;
 
