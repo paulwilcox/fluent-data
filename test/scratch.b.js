@@ -1,7 +1,7 @@
 import * as g from '../src/general.js';
 
 
-function hyperGeoLog (a,b,c,z) {
+function hyperGeo (a,b,c,z) {
 
     let pochLogged = (q, n) => {
         if (n == 0)
@@ -48,43 +48,6 @@ function hyperGeoLog (a,b,c,z) {
 
 }
 
-
-function hyperGeo (a,b,c,z) {
-
-    let pochhammer = (q, n) => {
-        if (n == 0)
-            return 1;
-        let prod = q;
-        for (let i = 1; i < n; i++) 
-            prod *= (q + i);
-        return prod;
-    }
-
-    let fact = (num) => {
-        let prod = num;
-        for (let i = num - 1; i >= 1; i--)
-            prod *= i;
-        return prod;
-    }
-
-    let sum = 1;
-
-    for(let n = 1; n <= 100; n++) {
-        let add = ( (pochhammer(a,n) * pochhammer(b,n)) / pochhammer(c,n) ) 
-                * (Math.pow(z,n) / fact(n));
-        
-        if (!isFinite(add)) 
-            throw `The next value to add is not finite (sum til now: ${sum})`
-
-        sum += add;
-        if(add <= 1e-10)
-            return sum;
-    }
-
-    throw `Couldn't get within in 1e-10 (sum: ${sum})`;
-
-}
-
 async function test () {
 
     // dlmf.nist.gov/8.17#SS5.p1
@@ -114,7 +77,7 @@ async function test () {
         i++;
         let h;
         try { 
-            console.log({i,a,b,c,z,h:hyperGeoLog(a,b,c,z)})
+            console.log({i,a,b,c,z,h:hyperGeo(a,b,c,z)})
         }
         catch(err) { 
             console.log({e:i,a,b,c,z,h:err})
