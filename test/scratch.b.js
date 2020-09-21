@@ -34,10 +34,8 @@ function hyperGeoLog (a,b,c,z) {
 
         add = Math.pow(Math.E, add);
 
-        if (!isFinite(add)) {
-            console.log(`Not finite: ${add}`)
-            break;
-        }
+        if (!isFinite(add)) 
+            throw `The next value to add is not finite (sum til now: ${sum})`
 
         sum += add;
 
@@ -46,7 +44,7 @@ function hyperGeoLog (a,b,c,z) {
 
     }
 
-    throw `Couldn't get within in in 1e-10 (${sum})`;
+    throw `Couldn't get within in in 1e-10 (sum: ${sum})`;
 
 }
 
@@ -75,16 +73,15 @@ function hyperGeo (a,b,c,z) {
         let add = ( (pochhammer(a,n) * pochhammer(b,n)) / pochhammer(c,n) ) 
                 * (Math.pow(z,n) / fact(n));
         
-        if (!isFinite(add)) {
-            console.log(`Not finite: ${add}`)
-            break;
-        }
+        if (!isFinite(add)) 
+            throw `The next value to add is not finite (sum til now: ${sum})`
+
         sum += add;
         if(add <= 1e-10)
             return sum;
     }
 
-    throw `Couldn't get within in 1e-10 (${sum})`;
+    throw `Couldn't get within in 1e-10 (sum: ${sum})`;
 
 }
 
@@ -93,18 +90,43 @@ async function test () {
     // dlmf.nist.gov/8.17#SS5.p1
     // aip.scitation.org/doi/pdf/10.1063/1.4822777
 
+    /*
     let x = 0.99943427471;
     let a = 5000;
     let b = 0.5;
+    */
 
-    // Wait, I'm off by one?  When did that happen?  At least my hypergeolog is working now for the second params.
     // Ah, x must be less than 0.5 to transform (mathworld.wolfram.com/PfaffTransformation.html)
     
-    console.log(hyperGeo(2,3,4,0.5))
-    console.log(hyperGeoLog(2, 3, 4, 0.5))
+    let i = 0;
+    let max = 1000;
+    let step = (val) => {
+        let tests = [
+            0.5,1,5,10,50,100,500,
+            1000,5000,10000,50000,100000
+        ]
+        return tests.filter(t => t > val)[0];
+    }
+    for (let a = step(0); a <= max; a = step(a))
+    for (let b = step(0); b <= max; b = step(b))
+    for (let c = step(0); c <= max; c = step(c))
+    for (let z = 0.25; z < 1; z = z + 0.25) {
+        i++;
+        let h;
+        try { 
+            console.log({i,a,b,c,z,h:hyperGeoLog(a,b,c,z)})
+        }
+        catch(err) { 
+            console.log({e:i,a,b,c,z,h:err})
+        }
+        if (i >= 500)
+            return;
+    }
     
-    //console.log(hyperGeo(30,1,20,0.8))
-    console.log(hyperGeoLog(30,1,20,0.8))
+
+    //console.log(hyperGeoLog(2, 3, 4, 0.5))
+    
+
     
 return;
 
