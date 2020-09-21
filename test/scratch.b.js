@@ -61,6 +61,33 @@ async function test () {
 
     // Ah, x must be less than 0.5 to transform (mathworld.wolfram.com/PfaffTransformation.html)
     
+    let pochLogged = (q, n) => {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    let factLogged = (num) => {
+        let prod = Math.log(num);
+        for (let i = num - 1; i >= 1; i--)
+            prod += Math.log(i);
+        return prod;
+    }
+
+    // Well, it doesn't seem to be any of the component terms that is causing non-finite
+    // results.  
+    let pl = pochLogged(100000,1000);
+    let fl = factLogged(100000);
+
+    console.log({pl, fl});
+
+    return;
+
     let i = 0;
     let max = 1000;
     let step = (val) => {
