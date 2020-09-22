@@ -98,22 +98,39 @@ async function test () {
     // dlmf.nist.gov/8.17#SS5.p1
     // aip.scitation.org/doi/pdf/10.1063/1.4822777
     
+    // Okay, finally, at least I've got a working and accurate implementation.  
+    // 1 million iterations, which is ludicrus.  But it still processes quickly.  
+    // Now I can give second shot at Lentz's algorithm.
     
     let x = 0.9999999999//0.99943427471;
     let a = 5000;
     let b = 0.5;
     
-    let d2m = (m) => (m*x*(b-m)) / ((a+2*m-1) * (a+2*m));
-    let d2mp1 = (m) => - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1))
+    let d2m = (m) => {
+        m = m/2;
+        return (m*x*(b-m)) / ((a+2*m-1) * (a+2*m))
+    };
+    let d2mp1 = (m) => {
+        m = m - 1; m = m/2;
+        return - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1))
+    }
 
     // how does this even work when x = 1?
     let multiplier = (Math.pow(x,a)*Math.pow(1-x,b)) / (a*0.02506690941121089696);
     
-    let result = 
-          multiplier 
-        * 1/(1+d2mp1(1)/(1+d2m(2)/(1+d2mp1(3)/(1+d2m(4)/(1+d2mp1(5))))))
+    let result = 1;
+
+    for (let i = 1000000; i >= 1; i--) {
+        let dFunc = i % 2 == 0 ? d2m : d2mp1;
+        let dVal = dFunc(i);
+        result = 1 + dVal / result; 
+    }
+
+    result = 1 / result;
+    result = multiplier * result;
 
     console.log(result);
+
 }    
 
 
