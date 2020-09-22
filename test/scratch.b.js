@@ -12,24 +12,6 @@ class hyperGeo {
 
     execute (a,b,c,z) {
 
-        let pochLogged = (q, n) => {
-            if (n == 0)
-                return 1;
-            let prod = Math.log(q);
-            for (let i = 1; i < n; i++) 
-                prod += Math.log(q + i);
-            if (prod == 0) 
-                prod = 1e-10;
-            return prod;
-        }
-
-        let factLogged = (num) => {
-            let prod = Math.log(num);
-            for (let i = num - 1; i >= 1; i--)
-                prod += Math.log(i);
-            return prod;
-        }
-
         let sum = 1;
         let add;
 
@@ -39,8 +21,8 @@ class hyperGeo {
             if (zn == 0)
                 zn = 1e-10;
 
-            add = ( (pochLogged(a,n) + pochLogged(b,n)) - pochLogged(c,n) ) 
-                    + (zn - factLogged(n));
+            add = ( (this.pochLogged(a,n) + this.pochLogged(b,n)) - this.pochLogged(c,n) ) 
+                    + (zn - this.factLogged(n));
 
             add = Math.pow(Math.E, add);
 
@@ -62,6 +44,53 @@ class hyperGeo {
         return (Math.pow(x,a) / a) * this.execute(a, 1-b, a + 1, x);
     }
 
+    incBeta2(z,a,b) {
+
+        let sum = 0;
+        let add;
+
+        for (let n = 1; n <= this.iterations; n++) {
+            
+            add = Math.pow(Math.E, this.pochLogged(1-b,n)) 
+                / (Math.pow(Math.E, this.factLogged(n)) * (a+n))
+
+            add = Math.pow(z,n) * add;
+
+            if (!isFinite(add)) 
+                throw `The next value to add is not finite ` + 
+                      `(val til now: ${Math.pow(z,a) * sum}, adder: ${add})`
+
+            sum += add;
+
+            if (n <= this.precision)
+                return Math.pow(z,a) * sum;
+
+        }
+
+        throw `Couldn't get within in ${this.precision} (sum: ${Math.pow(z,a) * sum}, adder: ${add})`;
+
+    }
+
+
+    pochLogged(q, n) {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    factLogged(num) {
+        let prod = Math.log(num);
+        for (let i = num - 1; i >= 1; i--)
+            prod += Math.log(i);
+        return prod;
+    }
+
+
 }
 
 async function test () {
@@ -70,31 +99,28 @@ async function test () {
     // aip.scitation.org/doi/pdf/10.1063/1.4822777
     
     
-    //let x = 0.99943427471;
+    let x = 0.9999999999//0.99943427471;
     let a = 5000;
     let b = 0.5;
     
-    //let ib = new hyperGeo(10000).incBeta(x,a,b);
-    //console.log({ib});
+    let d2m = (m) => (m*x*(b-m)) / ((a+2*m-1) * (a+2*m));
+    let d2mp1 = (m) => - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1))
+
+    // how does this even work when x = 1?
+    let multiplier = (Math.pow(x,a)*Math.pow(1-x,b)) / (a*0.02506690941121089696);
     
-    let sum1 = 0;
-    let sum2 = 0;
-    let step = 0.000001;
-    for (let t = 0; t <= 1-step; t+=step) 
-        sum1 += Math.pow(t,a-1) * Math.pow(1-t,b-1) * step;
-    for (let t = step; t <= 1; t+=step)
-        sum2 += Math.pow(t,a-1) * Math.pow(1-t,b-1) * step;
+    let result = 
+          multiplier 
+        * 1/(1+d2mp1(1)/(1+d2m(2)/(1+d2mp1(3)/(1+d2m(4)/(1+d2mp1(5))))))
 
-    console.log({sum1, sum2, avg: (sum1 + sum2) / 2})
-
-    
-return;
-
-    console.log({gamma: g.gamma(7.33)})
-    console.log({iBeta: g.iBeta(0.99943427471, 5000, 0.5)})
+    console.log(result);
+}    
 
 
 /*
+    console.log({gamma: g.gamma(7.33)})
+    console.log({iBeta: g.iBeta(0.99943427471, 5000, 0.5)})
+
 
     let b = g.iBeta(0.99943427471, 5000, 0.5);
 
@@ -175,5 +201,5 @@ return;
 
     */
 
-}
+
 
