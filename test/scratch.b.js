@@ -69,54 +69,23 @@ async function test () {
     // dlmf.nist.gov/8.17#SS5.p1
     // aip.scitation.org/doi/pdf/10.1063/1.4822777
     
-    // Holy crap.  I may have to revisit the continued fraction approach, or 
-    // try yet another approach, like numerical integration.
-
-    let x = 0.99943427471;
+    
+    //let x = 0.99943427471;
     let a = 5000;
     let b = 0.5;
     
-    let ib = new hyperGeo(10000).incBeta(x,a,b);
-    console.log({ib});
-
-    // Ah, x must be less than 0.5 to transform (mathworld.wolfram.com/PfaffTransformation.html)
-
-return;
-
-    let i = 0;
-    let e = 0;
-    let max = 1000;
-    let step = (val) => {
-        let tests = [
-            0.5,1,5,10,50,100,500,
-            1000,5000,10000,50000,100000
-        ]
-        return tests.filter(t => t > val)[0];
-    }
-    for (let a = step(0); a <= max; a = step(a))
-    for (let b = step(0); b <= max; b = step(b))
-    for (let c = step(0); c <= max; c = step(c))
-    for (let z = 0.25; z < 1; z = z + 0.25) {
-        i++;
-        let h;
-        try { 
-            let obj = {i,a,b,c,z,h:hyperGeo(a,b,c,z)};
-            // console.log(obj);
-        }
-        catch(err) { 
-            e++;
-            console.log({e:i,a,b,c,z,h:err})
-        }
-        if (i >= 500) {
-            console.log({errors: e})
-            throw 'early stop';
-            return;
-        }
-    }
+    //let ib = new hyperGeo(10000).incBeta(x,a,b);
+    //console.log({ib});
     
-    console.log({errors: e})
-    //console.log(hyperGeoLog(2, 3, 4, 0.5))
-    
+    let sum1 = 0;
+    let sum2 = 0;
+    let step = 0.000001;
+    for (let t = 0; t <= 1-step; t+=step) 
+        sum1 += Math.pow(t,a-1) * Math.pow(1-t,b-1) * step;
+    for (let t = step; t <= 1; t+=step)
+        sum2 += Math.pow(t,a-1) * Math.pow(1-t,b-1) * step;
+
+    console.log({sum1, sum2, avg: (sum1 + sum2) / 2})
 
     
 return;
