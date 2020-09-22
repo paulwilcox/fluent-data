@@ -1,50 +1,66 @@
 import * as g from '../src/general.js';
 
-
-function hyperGeo (a,b,c,z) {
-
-    let pochLogged = (q, n) => {
-        if (n == 0)
-            return 1;
-        let prod = Math.log(q);
-        for (let i = 1; i < n; i++) 
-            prod += Math.log(q + i);
-        if (prod == 0) 
-            prod = 1e-10;
-        return prod;
+class hyperGeo {
+    
+    constructor(
+        iterations = 1000, 
+        precision = 1e-10
+    ) {
+        this.iterations = iterations;
+        this.precision = precision;
     }
 
-    let factLogged = (num) => {
-        let prod = Math.log(num);
-        for (let i = num - 1; i >= 1; i--)
-            prod += Math.log(i);
-        return prod;
+    execute (a,b,c,z) {
+
+        let pochLogged = (q, n) => {
+            if (n == 0)
+                return 1;
+            let prod = Math.log(q);
+            for (let i = 1; i < n; i++) 
+                prod += Math.log(q + i);
+            if (prod == 0) 
+                prod = 1e-10;
+            return prod;
+        }
+
+        let factLogged = (num) => {
+            let prod = Math.log(num);
+            for (let i = num - 1; i >= 1; i--)
+                prod += Math.log(i);
+            return prod;
+        }
+
+        let sum = 1;
+        let add;
+
+        for(let n = 1; n <= this.iterations; n++) {
+
+            let zn = Math.log(Math.pow(z,n));
+            if (zn == 0)
+                zn = 1e-10;
+
+            add = ( (pochLogged(a,n) + pochLogged(b,n)) - pochLogged(c,n) ) 
+                    + (zn - factLogged(n));
+
+            add = Math.pow(Math.E, add);
+
+            if (!isFinite(add)) 
+                throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
+
+            sum += add;
+
+            if(Math.abs(add) <= this.precision)
+                return sum;
+
+        }
+
+        throw `Couldn't get within in ${this.precision} (sum: ${sum}, adder: ${add})`;
+
     }
 
-    let sum = 1;
-
-    for(let n = 1; n <= 1000; n++) {
-
-        let zn = Math.log(Math.pow(z,n));
-        if (zn == 0)
-            zn = 1e-10;
-
-        let add = ( (pochLogged(a,n) + pochLogged(b,n)) - pochLogged(c,n) ) 
-                + (zn - factLogged(n));
-
-        add = Math.pow(Math.E, add);
-
-        if (!isFinite(add)) 
-            throw `The next value to add is not finite (sum til now: ${sum})`
-
-        sum += add;
-
-        if(Math.abs(add) <= 1e-10)
-            return sum;
-
+    incBeta(x,a,b) {
+        return (Math.pow(x,a) / a) * this.execute(a, 1-b, a + 1, x);
     }
-
-    throw `Couldn't get within in in 1e-10 (sum: ${sum})`;
 
 }
 
@@ -52,43 +68,23 @@ async function test () {
 
     // dlmf.nist.gov/8.17#SS5.p1
     // aip.scitation.org/doi/pdf/10.1063/1.4822777
+    
+    // Holy crap.  I may have to revisit the continued fraction approach, or 
+    // try yet another approach, like numerical integration.
 
-    /*
     let x = 0.99943427471;
     let a = 5000;
     let b = 0.5;
-    */
+    
+    let ib = new hyperGeo(10000).incBeta(x,a,b);
+    console.log({ib});
 
     // Ah, x must be less than 0.5 to transform (mathworld.wolfram.com/PfaffTransformation.html)
-    
-    let pochLogged = (q, n) => {
-        if (n == 0)
-            return 1;
-        let prod = Math.log(q);
-        for (let i = 1; i < n; i++) 
-            prod += Math.log(q + i);
-        if (prod == 0) 
-            prod = 1e-10;
-        return prod;
-    }
 
-    let factLogged = (num) => {
-        let prod = Math.log(num);
-        for (let i = num - 1; i >= 1; i--)
-            prod += Math.log(i);
-        return prod;
-    }
-
-    // Well, it doesn't seem to be any of the component terms that is causing non-finite
-    // results.  
-    let pl = pochLogged(100000,1000);
-    let fl = factLogged(100000);
-
-    console.log({pl, fl});
-
-    return;
+return;
 
     let i = 0;
+    let e = 0;
     let max = 1000;
     let step = (val) => {
         let tests = [
@@ -104,16 +100,21 @@ async function test () {
         i++;
         let h;
         try { 
-            console.log({i,a,b,c,z,h:hyperGeo(a,b,c,z)})
+            let obj = {i,a,b,c,z,h:hyperGeo(a,b,c,z)};
+            // console.log(obj);
         }
         catch(err) { 
+            e++;
             console.log({e:i,a,b,c,z,h:err})
         }
-        if (i >= 500)
+        if (i >= 500) {
+            console.log({errors: e})
+            throw 'early stop';
             return;
+        }
     }
     
-
+    console.log({errors: e})
     //console.log(hyperGeoLog(2, 3, 4, 0.5))
     
 
