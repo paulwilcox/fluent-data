@@ -1,111 +1,12 @@
 import * as g from '../src/general.js';
 
-class hyperGeo {
-    
-    constructor(
-        iterations = 1000, 
-        precision = 1e-10
-    ) {
-        this.iterations = iterations;
-        this.precision = precision;
-    }
 
-    execute (a,b,c,z) {
+function incBetaContFrac() {
 
-        let sum = 1;
-        let add;
-
-        for(let n = 1; n <= this.iterations; n++) {
-
-            let zn = Math.log(Math.pow(z,n));
-            if (zn == 0)
-                zn = 1e-10;
-
-            add = ( (this.pochLogged(a,n) + this.pochLogged(b,n)) - this.pochLogged(c,n) ) 
-                    + (zn - this.factLogged(n));
-
-            add = Math.pow(Math.E, add);
-
-            if (!isFinite(add)) 
-                throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
-
-            sum += add;
-
-            if(Math.abs(add) <= this.precision)
-                return sum;
-
-        }
-
-        throw `Couldn't get within in ${this.precision} (sum: ${sum}, adder: ${add})`;
-
-    }
-
-    incBeta(x,a,b) {
-        return (Math.pow(x,a) / a) * this.execute(a, 1-b, a + 1, x);
-    }
-
-    incBeta2(z,a,b) {
-
-        let sum = 0;
-        let add;
-
-        for (let n = 1; n <= this.iterations; n++) {
-            
-            add = Math.pow(Math.E, this.pochLogged(1-b,n)) 
-                / (Math.pow(Math.E, this.factLogged(n)) * (a+n))
-
-            add = Math.pow(z,n) * add;
-
-            if (!isFinite(add)) 
-                throw `The next value to add is not finite ` + 
-                      `(val til now: ${Math.pow(z,a) * sum}, adder: ${add})`
-
-            sum += add;
-
-            if (n <= this.precision)
-                return Math.pow(z,a) * sum;
-
-        }
-
-        throw `Couldn't get within in ${this.precision} (sum: ${Math.pow(z,a) * sum}, adder: ${add})`;
-
-    }
-
-
-    pochLogged(q, n) {
-        if (n == 0)
-            return 1;
-        let prod = Math.log(q);
-        for (let i = 1; i < n; i++) 
-            prod += Math.log(q + i);
-        if (prod == 0) 
-            prod = 1e-10;
-        return prod;
-    }
-
-    factLogged(num) {
-        let prod = Math.log(num);
-        for (let i = num - 1; i >= 1; i--)
-            prod += Math.log(i);
-        return prod;
-    }
-
-
-}
-
-async function test () {
-
-    // dlmf.nist.gov/8.17#SS5.p1
-    // aip.scitation.org/doi/pdf/10.1063/1.4822777
-    
-    // Okay, finally, at least I've got a working and accurate implementation.  
-    // 1 million iterations, which is ludicrus.  But it still processes quickly.  
-    // Now I can give second shot at Lentz's algorithm.
-    
     let x = 0.9999999999//0.99943427471;
     let a = 5000;
     let b = 0.5;
-    
+
     let d2m = (m) => {
         m = m/2;
         return (m*x*(b-m)) / ((a+2*m-1) * (a+2*m))
@@ -127,9 +28,65 @@ async function test () {
     }
 
     result = 1 / result;
-    result = multiplier * result;
+    return multiplier * result;    
 
-    console.log(result);
+}
+
+async function test () {
+
+    // dlmf.nist.gov/8.17#SS5.p1
+    // fresco.org.uk/programs/barnett/APP23.pdf (Most clear lentz reference, despite the title)
+    
+    // Okay, finally, at least I've got a working and accurate implementation.  
+    // 1 million iterations, which is ludicrus.  But it still processes quickly.  
+    // Now I can give second shot at Lentz's algorithm.
+    
+    let x = 0.9999999999//0.99943427471;
+    let a = 5000;
+    let b = 0.5;
+    let precision = 1e-8; // but maybe not quite "precision" as it's applied to CD, not F
+
+    let d2m = (m) => {
+        m = m/2;
+        return (m*x*(b-m)) / ((a+2*m-1) * (a+2*m));
+    };
+    let d2mp1 = (m) => {
+        m = m - 1; m = m/2;
+        return - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1));
+    }
+
+    let bn = (n) => 1;
+    let an = (n) => 
+          n == 1 ? 1 // first numerator is 1
+        : (n-1) %2 == 0 ? d2m(n-1) // after that, the d-sub-n is off by 1
+        : d2mp1(n-1); 
+    
+    // how does this even work when x = 1?
+    let multiplier = (Math.pow(x,a)*Math.pow(1-x,b)) / (a*0.02506690941121089696);
+    let small = 1e-16
+
+    let F = small;
+    let C = small;
+    let D = 0;
+
+    for (let n = 1; n <= 1000000; n++) {
+        let _bn = bn(n);
+        let _an = an(n);
+        C = (_bn + _an / C) || small; 
+        D = (_bn + _an * D) || small;
+        D = 1 / D;
+        let CD = C * D;
+        F *= CD;
+        if (Math.abs(CD) < precision)
+            break;
+    }
+
+    // OMG, it's about as bad as the non-lentz way.  I guess efficiency isn't the
+    // benefit.  Must only be the ability to stop at arbitrary precision.
+    console.log({
+        orig: incBetaContFrac(),
+        new: multiplier * F
+    })
 
 }    
 
@@ -219,4 +176,67 @@ async function test () {
     */
 
 
+class hyperGeo {
+    
+    constructor(
+        iterations = 1000, 
+        precision = 1e-10
+    ) {
+        this.iterations = iterations;
+        this.precision = precision;
+    }
 
+    execute (a,b,c,z) {
+
+        let sum = 1;
+        let add;
+
+        for(let n = 1; n <= this.iterations; n++) {
+
+            let zn = Math.log(Math.pow(z,n));
+            if (zn == 0)
+                zn = 1e-10;
+
+            add = ( (this.pochLogged(a,n) + this.pochLogged(b,n)) - this.pochLogged(c,n) ) 
+                    + (zn - this.factLogged(n));
+
+            add = Math.pow(Math.E, add);
+
+            if (!isFinite(add)) 
+                throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
+
+            sum += add;
+
+            if(Math.abs(add) <= this.precision)
+                return sum;
+
+        }
+
+        throw `Couldn't get within in ${this.precision} (sum: ${sum}, adder: ${add})`;
+
+    }
+
+    incBeta(x,a,b) {
+        return (Math.pow(x,a) / a) * this.execute(a, 1-b, a + 1, x);
+    }
+
+    pochLogged(q, n) {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    factLogged(num) {
+        let prod = Math.log(num);
+        for (let i = num - 1; i >= 1; i--)
+            prod += Math.log(i);
+        return prod;
+    }
+
+
+}
