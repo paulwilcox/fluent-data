@@ -226,10 +226,20 @@ export function studentsTcdf(t, df) {
 
 }
 
+export function Fcdf (F, numDf, denDf) {
+    let x = (F * numDf) / (denDf + (F * numDf));
+    return 1 - regBeta(x, numDf/2, denDf/2);
+}
+
 export function gamma (z) {
+    return Math.pow(Math.E, gammaLogged(z)); 
+}
+
+export function gammaLogged (z) {
 
     // link.springer.com/content/pdf/bbm%3A978-3-319-43561-9%2F1.pdf
-    // use of 7.5 below seems odd, but from other sources it seems that it's because it's length of p - 1.
+    // use of 7.5 below seems odd, but from other sources it seems that it's because it's length of p - 1 + 0.5.
+    // I am logging this to deal with very high values.
 
     let p = [
         0.99999999999980993,
@@ -247,41 +257,101 @@ export function gamma (z) {
     for (let i = 1; i <= 8; i++) 
         sum += p[i] / (z + i);
 
-    return (Math.pow(2 * Math.PI, 0.5) / z) 
-         * sum 
-         * Math.pow(z + 7.5, z + 0.5) 
-         * Math.pow(Math.E, -(z + 7.5)); 
+    return (0.5 * Math.log(2 * Math.PI) - Math.log(z))
+        + Math.log(sum)
+        + (z + 0.5) * Math.log(z + 7.5)
+        + -(z + 7.5);
 
 }
 
-// stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf (p66)
-export function iBeta (x, p, q) {
-        
-    // Convergence is better when p > q, so if that's not
-    // the case, use this equivalence.    
-    if(p < q) 
-        return iBeta(1, q, p) - iBeta(1-x, q, p);
+export function beta(a,b) {
+    return Math.pow(Math.E, gammaLogged(a) + gammaLogged(b) - gammaLogged(a + b));
+}
 
-    let sum = 0;
-    let t = 1/p;
-    for(let r = 0; r <= 100000; r++) {
+export function incBeta(
+    x, 
+    a, 
+    b, 
+    precision = 1e-8, // warning: this precision cannot go past what g.beta() can give (presently 1e-12).
+    maxIterations = 1000000,
+    verbose = false 
+) {
 
-        if (r > 0)
-            t *= (x * (r-q) * (p + r - 1)) 
-            /  (r * (p + r));
-
-        sum += t;
-
-        if (Math.abs(t) <= 0.00000000000001) 
-            break;
+    if (x == 1) {
+        if (verbose) 
+            console.log('x := 1, so beta() is used.');
+        return beta(a,b);
     }
 
-    return Math.pow(x,p) * sum;
+    // dlmf.nist.gov/8.17#SS5.p1
+    // fresco.org.uk/programs/barnett/APP23.pdf (Most clear lentz reference, despite the title)
+    // en.wikipedia.org/wiki/Continued_fraction (esp Theorem 4)
+
+    // OMG, it's about as bad as the non-lentz way.  I guess efficiency isn't the
+    // benefit.  Must only be the ability to stop at arbitrary precision.
+
+    let d2m = (m) => {
+        m = m/2;
+        return (m*x*(b-m)) / ((a+2*m-1) * (a+2*m));
+    };
+
+    let d2mp1 = (m) => {
+        m = m - 1; m = m/2;
+        return - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1));
+    }
+
+    let an = (n) => 
+          n == 1 ? 1 // first numerator is 1
+        : (n-1) %2 == 0 ? d2m(n-1) // after that, the d-sub-n is off by 1
+        : d2mp1(n-1); 
+
+    let bn = (n) => 1;
+
+    // how does this even work when x = 1?
+    let multiplier = (Math.pow(x,a)*Math.pow(1-x,b)) / (a*beta(a,b));
+    let small = 1e-32;
+
+    let F = small;
+    let C = small;
+    let D = 0;
+    let CD;
+
+    for (let n = 1; n <= maxIterations; n++) {
+        
+        let _bn = bn(n);
+        let _an = an(n);
+        C = (_bn + _an / C) || small; 
+        D = (_bn + _an * D) || small;
+        D = 1 / D;
+        CD = C * D;
+        F *= CD;
+
+        // Various literature shows that you can to set CD to be below a 
+        // ceratin precision, and stop there.  But this may cut it off
+        // earlier than you desire.  This is particularly true if your
+        // working result keeps rising very slowly.  Then any one change 
+        // can be small but the aggregate of many future iterations might
+        // be substantial, and so your approximation is off.  So I'm 
+        // multiplying CD by the number of iterations left.  This is 
+        // worst case for how much change can be expected.  If that is 
+        // under desired precision, then no point in going further.
+        if (Math.abs(CD-1) * (maxIterations - n) < precision) {
+            if (verbose)
+                console.log(`Reached desired precison in ${n} iterations.`)
+            return multiplier * F;
+        }
+
+    }
+
+    throw   `Could not reach desired CD precision of ${precision} ` +
+            `within ${maxIterations} iterations.  ` +
+            `Answer to this point is ${multiplier * F}, ` +
+            `and CD is ${CD}.`
 
 }
 
 export function regBeta (x, p, q) {
-    return iBeta(x, p, q) / iBeta(1, p, q);
+    return incBeta(x, p, q) / beta(p, q);
 }
 
 export function invRegBeta (x, a, b) {
@@ -329,8 +399,65 @@ export function invRegBeta (x, a, b) {
 
 }
 
-export function Fcdf (F, numDf, denDf) {
-    let x = (F * numDf) / (denDf + (F * numDf));
-    return 1 - regBeta(x, numDf/2, denDf/2);
-}
+// I'm not using this, but I worked so hard on it and I don't have any 
+// other place to put it right now.
+class hyperGeo {
+    
+    constructor(
+        iterations = 1000, 
+        precision = 1e-10
+    ) {
+        this.iterations = iterations;
+        this.precision = precision;
+    }
 
+    execute (a,b,c,z) {
+
+        let sum = 1;
+        let add;
+
+        for(let n = 1; n <= this.iterations; n++) {
+
+            let zn = Math.log(Math.pow(z,n));
+            if (zn == 0)
+                zn = 1e-10;
+
+            add = ( (this.pochLogged(a,n) + this.pochLogged(b,n)) - this.pochLogged(c,n) ) 
+                    + (zn - this.factLogged(n));
+
+            add = Math.pow(Math.E, add);
+
+            if (!isFinite(add)) 
+                throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
+
+            sum += add;
+
+            if(Math.abs(add) <= this.precision)
+                return sum;
+
+        }
+
+        throw `Couldn't get within in ${this.precision} (sum: ${sum}, adder: ${add})`;
+
+    }
+
+    pochLogged(q, n) {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    factLogged(num) {
+        let prod = Math.log(num);
+        for (let i = num - 1; i >= 1; i--)
+            prod += Math.log(i);
+        return prod;
+    }
+
+
+}
