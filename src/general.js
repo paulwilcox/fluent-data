@@ -226,6 +226,26 @@ export function studentsTcdf(t, df) {
 
 }
 
+// Get Student's T critical value from probability 
+export function studentsTquantile(quantile, df) {
+
+    // homepages.ucl.ac.uk/~ucahwts/lgsnotes/JCF_Student.pdf
+
+    if (quantile < 0 || quantile > 1)
+        throw `quantile passed to studentsT() must be between 0 and 1 (${quantile} passed)`;
+
+    let ib = invIncBeta(
+        quantile < 0.5 ? 2 * quantile : 2 * (1-quantile), 
+        df/2, 
+        0.5, 
+        1e-12
+    );
+
+    let inner = df * (1/ib - 1);
+    return Math.sign(quantile - 0.5) * Math.pow(inner, 0.5);
+
+}
+
 export function Fcdf (F, numDf, denDf) {
     let x = (F * numDf) / (denDf + (F * numDf));
     return 1 - regBeta(x, numDf/2, denDf/2);

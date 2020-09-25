@@ -4,22 +4,9 @@ import * as g from '../src/general.js';
 
 async function test () {
 
-    // Getting Student's T critical value from probability 
-    // homepages.ucl.ac.uk/~ucahwts/lgsnotes/JCF_Student.pdf
-    // boost.org/doc/libs/1_58_0/libs/math/doc/html/math_toolkit/dist_ref/dists/students_t_dist.html
-
-    let u = 0.95;
-    let n = 10000;
-
-    let sign = Math.sign(u - 0.5);
-    let ib = g.invIncBeta(u<0.5 ? 2*u : 2*(1-u), n/2, 0.5, 1e-12);
-
-    let inner = n * (1/ib - 1);
-    let result = sign * Math.pow(inner, 0.5);
-
     console.log({
         goal: 1.645006,
-        result
+        actual: g.studentsTquantile(0.95, 10000)
     });
 
     return;
