@@ -12,7 +12,7 @@ async function test () {
     let n = 10000;
 
     let sign = Math.sign(u - 0.5);
-    let ib = g.invIncBeta(0.5, 5000, 0.5, 1e-12);
+    let ib = g.invIncBeta(u<0.5 ? 2*u : 2*(1-u), n/2, 0.5, 1e-12);
 
     let inner = n * (1/ib - 1);
     let result = sign * Math.pow(inner, 0.5);
