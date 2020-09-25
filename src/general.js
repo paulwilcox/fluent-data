@@ -376,13 +376,11 @@ export function invIncBeta (
             throw `inverse beta function could not reach accuracy within the maximum number of iterations.`
 
         let _min = incBeta(min, a, b);
-        let _mid = incBeta(mid, a, b);
+        let _mid = incBeta(mid, a, b) || precision; // result can be so tiny that javascript registers 0.  E.g.: incBeta(0.5, 5000, 0.5)
         let _max = incBeta(max, a, b);
 
-        console.log({a, b, min, mid, max, _min, _mid, _max})
-
-        if (x > _max) return null;
-        if (x < _min) return null;
+        //if (x > _max) return null;
+        //if (x < _min) return null;
         if (x == _min) return min;
         if (x == _mid) return mid;
         if (x == _max) return max; 

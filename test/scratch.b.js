@@ -12,39 +12,15 @@ async function test () {
     let n = 10000;
 
     let sign = Math.sign(u - 0.5);
-    let ib = 0.9997294687270260303929;
+    let ib = g.invIncBeta(0.5, 5000, 0.5, 1e-12);
 
     let inner = n * (1/ib - 1);
     let result = sign * Math.pow(inner, 0.5);
 
-
-console.log({
-    bgoal: 0.02506690941121089696,
-    bactual: g.beta(5000, 0.5)
-})
-
-console.log({
-    ibgoal: 0.001773913287682948881835,
-    ibactual: g.incBeta(0.9990234375, 5000, 0.5)
-})
-
-return;
-
-    console.log('ib analysis', {
-        x: 0.1,
-        a: 5000,
-        b: 0.5,
-        actual: g.invRegBeta(
-            0.5, 
-            5000, 
-            0.5,
-            1e-14,
-            1000000
-        ),
-        goal: 0.9997294687270260303929
-    })
-
-    console.log(result);
+    console.log({
+        goal: 1.645006,
+        result
+    });
 
     return;
 
