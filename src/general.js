@@ -350,11 +350,13 @@ export function incBeta(
 
 }
 
-export function regBeta (x, p, q) {
-    return incBeta(x, p, q) / beta(p, q);
-}
-
-export function invRegBeta (x, a, b) {
+export function invIncBeta (
+    x, 
+    a,
+    b, 
+    precision = 1e-8, 
+    maxIterations = 1000
+) {
 
     // This is a very crude implementation.  For the future, look into the following references:
         // boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_beta/ibeta_inv_function.html
@@ -363,39 +365,33 @@ export function invRegBeta (x, a, b) {
             // en.wikipedia.org/wiki/Quantile_function#Student's_t-distribution 
             // "This has historically been one of the more intractable cases..."
 
-    // Get the middle number and round it appropriately so that 
-    // it outputs matching digits and hides unmatching digits
-    let roundedMid = (a, b) => {
-        let roundMultiplier = 1 / Number((b - a).toFixed(20).match(/^0.0*/)[0] + '1');
-        let mid = (a + b) / 2;
-        return Math.round(mid * roundMultiplier) / roundMultiplier;
-    }
-
-    let honeIn = (min, max, iterations, accuracy) => {
+    let honeIn = (min, max, iterations) => {
 
         let mid = (min + max) / 2;
         
-        if (max - min < accuracy) 
-            return roundedMid(min, max);
+        if (Math.abs(max - min) < precision) 
+            return mid;
 
         if (iterations == 0)
             throw `inverse beta function could not reach accuracy within the maximum number of iterations.`
 
-        let _min = regBeta(min, a, b);
-        let _mid = regBeta(mid, a, b);
-        let _max = regBeta(max, a, b);
+        let _min = incBeta(min, a, b);
+        let _mid = incBeta(mid, a, b);
+        let _max = incBeta(max, a, b);
+
+        console.log({a, b, min, mid, max, _min, _mid, _max})
 
         if (x > _max) return null;
         if (x < _min) return null;
         if (x == _min) return min;
         if (x == _mid) return mid;
         if (x == _max) return max; 
-        if (x < _mid) return honeIn(min, mid, iterations - 1, accuracy);
-        if (x > _mid) return honeIn(mid, max, iterations - 1, accuracy);
+        if (x < _mid) return honeIn(min, mid, iterations - 1);
+        if (x > _mid) return honeIn(mid, max, iterations - 1);
 
     } 
 
-    return honeIn(0, 1, 1000, 0.00000001);
+    return honeIn(0, 1, maxIterations);
 
 }
 
