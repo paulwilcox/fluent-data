@@ -130,10 +130,16 @@ _.cor = (rowFunc, options) =>
         
     };
 
+// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
 _.regress = (ivSelector, dvSelector, options) => 
     data => {
 
         // Initializations
+
+            options = Object.assign(
+                { estimates: true }, 
+                options
+            );
 
             // Output a selector of row properties that returns an array
             // and a set of labels (keys) that pertain to the array
@@ -187,20 +193,23 @@ _.regress = (ivSelector, dvSelector, options) =>
                 value: row[0]
             }));
         
-        // Calculate the estimates
+        // Calculate the row estimates and residuals
 
-            let estimates = [];
             for(let row of data)  {
+
                 let actual = outerDvSelector(row);
                 actual = actual.length == 1 ? actual[0] : undefined;
-                estimates.push({
-                    estimate: 
-                        outerIvSelector(row)
-                        .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
-                        .reduce((a,b) => a + b, 0)
-                        + coefficients[0].value, // intercept
-                    actual
-                });
+                
+                let estimate =  
+                    outerIvSelector(row)
+                    .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
+                    .reduce((a,b) => a + b, 0)
+                    + coefficients[0].value; // intercept
+                
+                row.estimate = estimate;
+                row.actual = actual;
+                row.residual = actual - estimate;
+
             }
 
         // Calculate the coefficient statistics
@@ -208,8 +217,8 @@ _.regress = (ivSelector, dvSelector, options) =>
             // kokminglee.125mb.com/math/linearreg3.html
 
             let s = Math.pow(
-                (1 / (estimates.length - coefficients.length)) 
-                * _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates),
+                (1 / (n - coefficients.length)) 
+                * _.sum(row => Math.pow(row.estimate - row.actual, 2))(data),
                 0.5
             )
 
@@ -224,14 +233,20 @@ _.regress = (ivSelector, dvSelector, options) =>
                 coefficients[c].t = coefficients[c].value / stdErrs[c];
                 coefficients[c].df = data.length - coefficients.length;
                 coefficients[c].pVal = g.studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
+                coefficients[c].ci = (quantile) => [
+                    coefficients[c].value - g.studentsTquantile(quantile, coefficients[c].df) * coefficients[c].stdErr,
+                    coefficients[c].value + g.studentsTquantile(quantile, coefficients[c].df) * coefficients[c].stdErr
+                ] 
+                if (options && options.ci) // If the user passed ci, process the ci function.
+                    coefficients[c].ci = coefficients[c].ci(options.ci);
             }
 
         // Calculate the model-level statistics
 
             // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
-            let mean = _.avg(row => row.actual)(estimates);
-            let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(estimates);
-            let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(estimates);
+            let mean = _.avg(row => row.actual)(data);
+            let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(data);
+            let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(data);
             let paramsComplex = coefficients.length;
             let paramsSimple = 1;
 
@@ -243,21 +258,29 @@ _.regress = (ivSelector, dvSelector, options) =>
             // n - p - 1 = n - coefficients.length becasue p does not include the intercept
             let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
 
+        // Regress the residuals
+/*
+            if (options.estimates) {
+                let residRegress = _.regress(
+                    ivSelector, 
+                    row => row.residual, 
+                    { estimates: false } // block estimtes to avoid invfinite recursion.
+                )(data);
+                console.log({residRegress})
+            }
+*/
         // Terminations
             
             let results = {
+                data,
                 coefficients,
-                rSquared,
-                rSquaredAdj,
-                F,
-                pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
+                model: {
+                    rSquared,
+                    rSquaredAdj,
+                    F,
+                    pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
+                }
             }; 
-
-            if (!options)
-                return results;
-
-            if (options.estimates)
-                results.estimates = estimates;
 
             return results;
 

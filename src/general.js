@@ -248,7 +248,7 @@ export function studentsTquantile(quantile, df) {
 
 export function Fcdf (F, numDf, denDf) {
     let x = (F * numDf) / (denDf + (F * numDf));
-    return 1 - regBeta(x, numDf/2, denDf/2);
+    return 1 - incBeta(x, numDf/2, denDf/2);
 }
 
 export function gamma (z) {

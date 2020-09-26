@@ -4,13 +4,6 @@ import * as g from '../src/general.js';
 
 async function test () {
 
-    console.log({
-        goal: 1.645006,
-        actual: g.studentsTquantile(0.95, 10000)
-    });
-
-    return;
-
     //let data = await sample('orders');
 
     let data = [
@@ -25,7 +18,7 @@ async function test () {
     let results = 
         $$(data)
         .reduce({
-            model: $$.regress('cases, distance', 'time'),
+            model: $$.regress('cases, distance', 'time', {ci: 0.95}),
             std: $$.std(row => row.cases, true)
         })
         .get();
