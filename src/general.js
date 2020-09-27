@@ -385,6 +385,8 @@ export function invIncBeta (
             // en.wikipedia.org/wiki/Quantile_function#Student's_t-distribution 
             // "This has historically been one of the more intractable cases..."
 
+    // TODO: See if this can work with getInverse.  Unfortunately, right now it's not.
+
     let honeIn = (min, max, iterations) => {
 
         let mid = (min + max) / 2;
@@ -418,6 +420,85 @@ export function invIncBeta (
 // inverses of cumulative distributions, which continuously increase (or 
 // decrease if looking for upper area under curve). 
 export function getInverse (
+    func,
+    desiredOutput,
+    precision, // precision to desired output
+    maxIterations,
+    minInputStart,
+    maxInputStart,
+    minInputPossible,
+    maxInputPossible
+) {
+
+    // for troubleshooting
+    let verboseStep = 0;
+    let verboseStop = 10;
+    
+    let bound = (val) => 
+          val < minInputPossible ? minInputPossible 
+        : val > maxInputPossible ? maxInputPossible
+        : val;
+
+    let minInput = minInputStart;
+    let maxInput = maxInputStart;
+
+    for (let i = 0; i <= maxIterations; i++) {
+
+        if (i == maxIterations)
+            throw   `Inverse with precision of ${precision} could not be found ` + 
+                    `within ${maxIterations} iterations.  Increase the max iterations ` +
+                    `allowed.  And be sure that your function is continuously increasing ` +
+                    `or decreasing (or else infinite recursion is possible), or else be ` +
+                    `sure that your input starts guarantee a solution.`;
+
+        let midInput = (minInput + maxInput) / 2;
+        let inputSpread = maxInput - minInput;
+
+        let minOutput = func(minInput);
+        let midOutput = func(midInput); 
+        let maxOutput = func(maxInput);
+
+        let isAscending = maxOutput > minOutput;
+        let conditioner = (condition) => isAscending ? condition : !condition; 
+
+        if(verboseStep && i % verboseStep == 0 && i <= verboseStop) {
+            console.log('');
+            console.log('iteration', i);
+            console.log('desiredOutput', desiredOutput);
+            console.log('minInput', minInput); 
+            console.log('midInput', midInput); 
+            console.log('maxInput', maxInput); 
+            console.log('minOutput', minOutput); 
+            console.log('midOutput', midOutput); 
+            console.log('maxOutput', maxOutput);
+            console.log('isAscending', isAscending)
+        }
+
+        if (desiredOutput == minOutput) return minInput;
+        if (desiredOutput == maxOutput) return maxInput;
+        if (Math.abs(desiredOutput - midOutput) < precision) return midInput;
+
+        if (midOutput == minOutput || midOutput == maxOutput)
+            midOutput = (minOutput + maxOutput) / 2; // sometimes precision is so close mid becomes equal to mid or max.
+
+        if (conditioner(desiredOutput < minOutput)) 
+            minInput = bound(minInput - 2*inputSpread);
+        else if (conditioner(desiredOutput > maxOutput)) 
+            maxInput = bound(maxInput + 2*inputSpread);
+        else if (conditioner(desiredOutput < midOutput)) 
+            maxInput = midInput;
+        else if (conditioner(desiredOutput > midOutput)) 
+            minInput = midInput;
+
+    } 
+
+}
+
+// I think 'func' must be continuously increasing or continuously decreasing 
+// for this to work.  But this means that this is good for finding
+// inverses of cumulative distributions, which continuously increase (or 
+// decrease if looking for upper area under curve). 
+export function getInverse2 (
     func,
     desiredOutput,
     precision, // precision to desired output
