@@ -413,6 +413,65 @@ export function invIncBeta (
 
 }
 
+// I think 'func' must be continuously increasing or continuously decreasing 
+// for this to work.  But this means that this is good for finding
+// inverses of cumulative distributions, which continuously increase (or 
+// decrease if looking for upper area under curve). 
+export function getInverse (
+    func,
+    desiredOutput,
+    precision, // precision to desired output
+    maxIterations,
+    minInputStart,
+    maxInputStart,
+    minInputPossible,
+    maxInputPossible
+) {
+
+    let i = 0;
+
+    let honeIn = (minInput, maxInput) => {
+
+        if (i++ == maxIterations)
+            throw   `Inverse with precision of ${precision} could not be found ` + 
+                    `within ${maxIterations} iterations.  Increase the max iterations ` +
+                    `allowed.  And be sure that your function is continuously increasing ` +
+                    `or decreasing (or else infinite recursion is possible), or else be ` +
+                    `sure that your input starts guarantee a solution.`;
+
+        let midInput = (minInput + maxInput) / 2;
+        let inputSpread = maxInput - minInput;
+
+        let minOutput = func(minInput);
+        let midOutput = func(midInput); 
+        let maxOutput = func(maxInput);
+
+        let isAscending = maxOutput > minOutput;
+
+        if (desiredOutput == minOutput) return minInput;
+        if (desiredOutput == maxOutput) return maxInput;
+        if (Math.abs(desiredOutput - midOutput) < precision) return midInput;
+
+        if (isAscending ? desiredOutput < minOutput : desiredOutput > minOutput) {
+            let newMin = minInput - 2*inputSpread;
+            newMin = newMin < minInputPossible ? minInputPossible : newMin;
+            return honeIn(newMin, minInput);
+        }
+        if (isAscending ? desiredOutput > maxOutput : desiredOutput < maxOutput) {
+            let newMax = maxInput + 2*inputSpread;
+            newMax = newMax > maxInputPossible ? maxInputPossible : newMax;
+            return honeIn(maxInput, newMax);
+        }
+
+        if (desiredOutput < midOutput) return honeIn(minInput, midInput);
+        if (desiredOutput > midOutput) return honeIn(midInput, maxInput);
+
+    } 
+
+    return honeIn(minInputStart, maxInputStart);
+    
+}
+
 // I'm not using this, but I worked so hard on it and I don't have any 
 // other place to put it right now.
 class hyperGeo {

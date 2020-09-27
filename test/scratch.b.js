@@ -4,6 +4,36 @@ import * as g from '../src/general.js';
 
 async function test () {
 
+/*
+    let F = g.getInverse(
+        (input) => g.Fcdf(input, 5, 10),
+        0.05,
+        1e-12, // precision to desired output
+        10000,
+        0,
+        5,
+        0,
+        null
+    )
+*/
+
+    let iib = g.getInverse(
+        (input) => g.incBeta(input, 5000, 0.5),
+        0.025066909411210896955,
+        1e-12,
+        1000000,
+        0,
+        1
+    )
+
+    console.log({
+        //F, 
+        iib
+    });
+
+    return;
+
+
     //let data = await sample('orders');
 
     let data = [

@@ -258,7 +258,9 @@ _.regress = (ivSelector, dvSelector, options) =>
             // n - p - 1 = n - coefficients.length becasue p does not include the intercept
             let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
 
-        // Regress the residuals
+        // Regress the squared residuals
+
+            // youtube.com/watch?v=wzLADO24CDk (I like the F-test version)
 
             if (options.estimates) {
                 let residRegress = _.regress(
