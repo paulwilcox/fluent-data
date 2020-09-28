@@ -4,6 +4,17 @@ import * as g from '../src/general.js';
 
 async function test () {
 
+    let z = 4;
+    let x = 0.5;
+    
+    console.log({
+        goal: 5.989490264662255058088,
+        result: g.incGamma(4, 0.5)
+    });
+
+
+/*
+
     let F = g.getInverse(
         (input) => g.Fcdf(input, 5, 10),
         0.05,
@@ -43,6 +54,6 @@ async function test () {
 
     return true;
 
-
+*/
 }
 

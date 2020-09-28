@@ -271,8 +271,8 @@ _.regress = (ivSelector, dvSelector, options) =>
                 let r2 = residRegress.model.rSquared;
                 let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
                 let bpF = (r2 / p) / ((1-r2)/(n - p - 1));
-                // let F = we need an F critical value for alpha = 0.05 (or whatever), df1 = p, df2 = n-p-1.
-                // let bpPass = bpF > F;
+                let F = g.Fquantile(0.95, p, n-p-1);
+                let bpPass = bpF > F;
                 console.log({residRegress})
             }
 

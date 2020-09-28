@@ -251,6 +251,21 @@ export function Fcdf (F, numDf, denDf) {
     return 1 - incBeta(x, numDf/2, denDf/2);
 }
 
+// Get Fisher's F critical value from probability
+// TODO: Make sure direction of quantile is same as student's t
+export function Fquantile(quantile, df1, df2) {
+    return g.getInverse(
+        (input) => g.Fcdf(input, df1, df2),
+        1 - quantile,
+        1e-12, // precision to desired output
+        1000,
+        0,
+        5,
+        0,
+        null
+    );
+}
+
 export function gamma (z) {
     return Math.pow(Math.E, gammaLogged(z)); 
 }
@@ -281,6 +296,57 @@ export function gammaLogged (z) {
         + Math.log(sum)
         + (z + 0.5) * Math.log(z + 7.5)
         + -(z + 7.5);
+
+}
+
+export function incGamma (
+    z,
+    x,
+    precision = 1e-8,
+    maxIterations = 1000,
+    verbose = false
+) {
+
+    // people.math.sfu.ca/~cbm/aands/page_263.htm
+
+    let a = (i) => {
+        if (i == 1) return 1;
+        return Math.ceil((i-1)/2) - z*((i-1)%2);
+    }
+
+    let b = (i) => (i % 2) == 0 ? 1 : x;
+
+    let small = 1e-32;
+    let multiplier = Math.pow(Math.E,-x) * Math.pow(x,z);    
+
+    let _b = 0;
+    let F = _b || small;
+    let C = _b || small;
+    let D = 0;
+    let CD;
+
+    for (let i = 1; i <= 100; i++) {
+
+        let _a = a(i);
+        let _b = b(i);
+        C = _b + _a / C || small;
+        D = _b + _a * D || small;
+        D = 1/D;
+        CD = C * D;
+        F *= CD;
+
+        if (Math.abs(CD-1) * (maxIterations - i) < precision) { 
+            if (verbose)
+                console.log(`Reached desired precison in ${n} iterations.`)
+            return multiplier * F;
+        }
+
+    }
+
+    throw   `Could not reach desired CD precision of ${precision} ` +
+            `within ${maxIterations} iterations.  ` +
+            `Answer to this point is ${multiplier * F}, ` +
+            `and CD is ${CD}.`
 
 }
 
