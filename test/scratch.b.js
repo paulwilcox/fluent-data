@@ -3,13 +3,35 @@ import * as g from '../src/general.js';
 
 
 async function test () {
-
-    let z = 4;
-    let x = 0.5;
     
+    // dlmf.nist.gov/8.11#ii (way better than continued fraction)
+
+    let a = 25;
+    let z = 0.5;
+
+    let pochLogged = (q, n) => {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
+    }
+
+    let sum = 0;
+    for (let k = 0; k <= 1000; k++) {
+        let numerator = Math.pow(z,k);
+        let denominator = Math.pow(Math.E, pochLogged(a, k+1));
+        sum += numerator / denominator;
+    }
+
+    let result = Math.pow(z,a) * Math.pow(Math.E, -z) * sum;
+
     console.log({
-        goal: 5.989490264662255058088,
-        result: g.incGamma(4, 0.5)
+        old: g.incGamma(a, z, 1e-20, 10000000, true),
+        new: g.gamma(a) - result
     });
 
 
