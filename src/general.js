@@ -299,67 +299,33 @@ export function gammaLogged (z) {
 
 }
 
+export function incGamma(a, z) {
+    return gamma(a) - incGammaLower(a, z);
+}
 
-// At x = 0.5, z starts to be integer-inaccurate at 9, and it gets worse from there
-export function incGamma (
-    z,
-    x,
-    precision = 1e-8,
-    maxIterations = 1000,
-    verbose = false
-) {
+export function incGammaLower (a, z) {
 
-    // people.math.sfu.ca/~cbm/aands/page_263.htm
+    // dlmf.nist.gov/8.11#ii (way better than continued fraction)
 
-    let a = (i) => {
-        if (i == 1) return 1;
-        return Math.ceil((i-1)/2) - z*((i-1)%2);
+    let pochLogged = (q, n) => {
+        if (n == 0)
+            return 1;
+        let prod = Math.log(q);
+        for (let i = 1; i < n; i++) 
+            prod += Math.log(q + i);
+        if (prod == 0) 
+            prod = 1e-10;
+        return prod;
     }
 
-    let b = (i) => (i % 2) == 0 ? 1 : x;
-
-    let small = 1e-32;
-    let multiplier = Math.pow(Math.E,-x) * Math.pow(x,z);    
-
-    let _b = 0;
-    let F = _b || small;
-    let C = _b || small;
-    let D = 0;
-    let CD;
-
-    for (let i = 1; i <= maxIterations; i++) {
-
-        let _a = a(i);
-        let _b = b(i);
-        C = (_b + _a / C) || small;
-        D = (_b + _a * D) || small;
-        D = 1/D;
-        CD = C * D;
-        F *= CD;
-/*
-        console.log('');
-        console.log('i', i);
-        console.log('_a', _a);
-        console.log('_b', _b);
-        console.log('C', C);
-        console.log('D', D);
-        console.log('CD', CD);
-        console.log('F', F);
-        console.log('Result', multiplier * F);
-*/
-
-        if (Math.abs(CD-1) * (maxIterations - i) < precision) { 
-            if (verbose)
-                console.log(`Reached desired precison in ${i} iterations.`)
-            return multiplier * F;
-        }
-
+    let sum = 0;
+    for (let k = 0; k <= 1000; k++) {
+        let numerator = Math.pow(z,k);
+        let denominator = Math.pow(Math.E, pochLogged(a, k+1));
+        sum += numerator / denominator;
     }
 
-    throw   `Could not reach desired CD precision of ${precision} ` +
-            `within ${maxIterations} iterations.  ` +
-            `Answer to this point is ${multiplier * F}, ` +
-            `and CD is ${CD}.`
+    return Math.pow(z,a) * Math.pow(Math.E, -z) * sum;
 
 }
 
