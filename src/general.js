@@ -307,17 +307,6 @@ export function incGammaLower (a, z) {
 
     // dlmf.nist.gov/8.11#ii (way better than continued fraction)
 
-    let pochLogged = (q, n) => {
-        if (n == 0)
-            return 1;
-        let prod = Math.log(q);
-        for (let i = 1; i < n; i++) 
-            prod += Math.log(q + i);
-        if (prod == 0) 
-            prod = 1e-10;
-        return prod;
-    }
-
     let sum = 0;
     for (let k = 0; k <= 1000; k++) {
         let numerator = Math.pow(z,k);
@@ -541,63 +530,50 @@ export function getInverse (
 
 // I'm not using this, but I worked so hard on it and I don't have any 
 // other place to put it right now.
-class hyperGeo {
-    
-    constructor(
-        iterations = 1000, 
-        precision = 1e-10
-    ) {
-        this.iterations = iterations;
-        this.precision = precision;
-    }
+function hyperGeo (a,b,c,z,iterations,precision) {
 
-    execute (a,b,c,z) {
+    let sum = 1;
+    let add;
 
-        let sum = 1;
-        let add;
+    for(let n = 1; n <= iterations; n++) {
 
-        for(let n = 1; n <= this.iterations; n++) {
+        let zn = Math.log(Math.pow(z,n));
+        if (zn == 0)
+            zn = 1e-10;
 
-            let zn = Math.log(Math.pow(z,n));
-            if (zn == 0)
-                zn = 1e-10;
+        add = ( (pochLogged(a,n) + pochLogged(b,n)) - pochLogged(c,n) ) 
+                + (zn - factLogged(n));
 
-            add = ( (this.pochLogged(a,n) + this.pochLogged(b,n)) - this.pochLogged(c,n) ) 
-                    + (zn - this.factLogged(n));
+        add = Math.pow(Math.E, add);
 
-            add = Math.pow(Math.E, add);
+        if (!isFinite(add)) 
+            throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
 
-            if (!isFinite(add)) 
-                throw `The next value to add is not finite (sum til now: ${sum}, adder: ${add})`
+        sum += add;
 
-            sum += add;
-
-            if(Math.abs(add) <= this.precision)
-                return sum;
-
-        }
-
-        throw `Couldn't get within in ${this.precision} (sum: ${sum}, adder: ${add})`;
+        if(Math.abs(add) <= precision)
+            return sum;
 
     }
 
-    pochLogged(q, n) {
-        if (n == 0)
-            return 1;
-        let prod = Math.log(q);
-        for (let i = 1; i < n; i++) 
-            prod += Math.log(q + i);
-        if (prod == 0) 
-            prod = 1e-10;
-        return prod;
-    }
+    throw `Couldn't get within in ${precision} (sum: ${sum}, adder: ${add})`;
 
-    factLogged(num) {
-        let prod = Math.log(num);
-        for (let i = num - 1; i >= 1; i--)
-            prod += Math.log(i);
-        return prod;
-    }
+}
 
+function pochLogged (q, n) {
+    if (n == 0)
+        return 1;
+    let prod = Math.log(q);
+    for (let i = 1; i < n; i++) 
+        prod += Math.log(q + i);
+    if (prod == 0) 
+        prod = 1e-10;
+    return prod;
+}
 
+function factLogged(num) {
+    let prod = Math.log(num);
+    for (let i = num - 1; i >= 1; i--)
+        prod += Math.log(i);
+    return prod;
 }
