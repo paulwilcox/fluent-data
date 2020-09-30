@@ -11,10 +11,7 @@ async function test () {
     let result = regGamma(k/2, x/2);
 
     console.log({
-        igl: g.incGammaLower(k/2, x/2),
-        g: g.gamma(k/2),
-        cdfResult: result,
-        pResult: 1 - result
+        pResult: g.chiCdf(x, k)
     });
 
 

@@ -266,6 +266,12 @@ export function Fquantile(quantile, df1, df2) {
     );
 }
 
+export function chiCdf (chi, df) {
+    let regGamma = (a,b) => incGammaLower(a, b) / gamma(a);
+    let result = regGamma(df/2, chi/2);
+    return 1 - result; // upper
+}
+
 export function gamma (z) {
     return Math.pow(Math.E, gammaLogged(z)); 
 }
