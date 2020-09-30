@@ -309,9 +309,9 @@ export function incGammaLower (a, z) {
 
     let sum = 0;
     for (let k = 0; k <= 1000; k++) {
-        let numerator = Math.pow(z,k);
-        let denominator = Math.pow(Math.E, pochLogged(a, k+1));
-        sum += numerator / denominator;
+        let numerator = k * Math.log(z);
+        let denominator = pochLogged(a, k+1);
+        sum += Math.pow(Math.E, numerator - denominator);
     }
 
     return Math.pow(z,a) * Math.pow(Math.E, -z) * sum;

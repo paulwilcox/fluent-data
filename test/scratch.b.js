@@ -3,8 +3,19 @@ import * as g from '../src/general.js';
 
 
 async function test () {
-    
-    console.log(g.incGamma(2, 0.5));
+
+    let k = 9; // # vars
+    let x = 5.38; // chi-square val
+
+    let regGamma = (a,b) => g.incGammaLower(a, b) / g.gamma(a);
+    let result = regGamma(k/2, x/2);
+
+    console.log({
+        igl: g.incGammaLower(k/2, x/2),
+        g: g.gamma(k/2),
+        cdfResult: result,
+        pResult: 1 - result
+    });
 
 
 /*
