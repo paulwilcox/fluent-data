@@ -4,35 +4,6 @@ import * as g from '../src/general.js';
 
 async function test () {
 
-    let k = 9; // # vars
-    let x = 5.38; // chi-square val
-
-    let regGamma = (a,b) => g.incGammaLower(a, b) / g.gamma(a);
-    let result = regGamma(k/2, x/2);
-
-    console.log({
-        pResult: g.chiCdf(x, k)
-    });
-
-
-/*
-
-    let F = g.getInverse(
-        (input) => g.Fcdf(input, 5, 10),
-        0.05,
-        1e-12, // precision to desired output
-        1000,
-        0,
-        5,
-        0,
-        null
-    )
-
-    console.log({F})
-
-    return;
-
-
     //let data = await sample('orders');
 
     let data = [
@@ -56,6 +27,6 @@ async function test () {
 
     return true;
 
-*/
+
 }
 

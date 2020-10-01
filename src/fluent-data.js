@@ -260,20 +260,34 @@ _.regress = (ivSelector, dvSelector, options) =>
 
         // Regress the squared residuals
 
-            // youtube.com/watch?v=wzLADO24CDk (I like the F-test version)
+            // youtube.com/watch?v=wzLADO24CDk
 
             if (options.estimates) {
                 let residRegress = _.regress(
                     ivSelector, 
-                    row => [Math.pow(row.residual)], 
+                    row => [Math.pow(row.residual,2)], 
                     { estimates: false } // block estimtes to avoid invfinite recursion.
                 )(data);
                 let r2 = residRegress.model.rSquared;
                 let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
+
                 let bpF = (r2 / p) / ((1-r2)/(n - p - 1));
-                let F = g.Fquantile(0.95, p, n-p-1);
-                let bpPass = bpF > F;
-                console.log({residRegress})
+                let bpFpval = g.Fcdf(bpF, p, n-p-1);
+
+                let bpChi = r2 * n;
+                let bpChiPval = g.chiCdf(bpChi, p);
+
+                console.log({
+                    r2,
+                    p,
+                    n,
+                    residRegress,
+                    bpF,
+                    bpFpval,
+                    bpChi,
+                    bpChiPval
+                })
+
             }
 
         // Terminations
