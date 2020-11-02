@@ -233,10 +233,13 @@ _.regress = (ivSelector, dvSelector, options) =>
                 coefficients[c].t = coefficients[c].value / stdErrs[c];
                 coefficients[c].df = data.length - coefficients.length;
                 coefficients[c].pVal = g.studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
-                coefficients[c].ci = (quantile) => [
-                    coefficients[c].value - g.studentsTquantile(quantile, coefficients[c].df) * coefficients[c].stdErr,
-                    coefficients[c].value + g.studentsTquantile(quantile, coefficients[c].df) * coefficients[c].stdErr
-                ] 
+                coefficients[c].ci = (quantile) => {
+                    console.log(`quantile:${quantile}, lower:${(1-quantile)/2}, upper:${1 - (1-quantile)/2}`);
+                    return [
+                        coefficients[c].value + g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
+                        coefficients[c].value - g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
+                    ]
+                } 
                 if (options && options.ci) // If the user passed ci, process the ci function.
                     coefficients[c].ci = coefficients[c].ci(options.ci);
             }
@@ -262,31 +265,21 @@ _.regress = (ivSelector, dvSelector, options) =>
 
             // youtube.com/watch?v=wzLADO24CDk
 
+            let breuchPagan;
+            let breuchPaganPval;
+
             if (options.estimates) {
+
                 let residRegress = _.regress(
                     ivSelector, 
                     row => [Math.pow(row.residual,2)], 
-                    { estimates: false } // block estimtes to avoid invfinite recursion.
+                    { estimates: false } // block estimtes to avoid infinite recursion.
                 )(data);
+
                 let r2 = residRegress.model.rSquared;
                 let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
-
-                let bpF = (r2 / p) / ((1-r2)/(n - p - 1));
-                let bpFpval = g.Fcdf(bpF, p, n-p-1);
-
-                let bpChi = r2 * n;
-                let bpChiPval = g.chiCdf(bpChi, p);
-
-                console.log({
-                    r2,
-                    p,
-                    n,
-                    residRegress,
-                    bpF,
-                    bpFpval,
-                    bpChi,
-                    bpChiPval
-                })
+                breuchPagan = r2 * n;
+                breuchPaganPval = g.chiCdf(breuchPagan, p);
 
             }
 
@@ -302,6 +295,9 @@ _.regress = (ivSelector, dvSelector, options) =>
                     pVal: g.Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
                 }
             }; 
+
+            if (breuchPagan != undefined) 
+                Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
             return results;
 
