@@ -1,19 +1,17 @@
 ## Announcement(s)
 
-Version 2.0.0 has a breaking change, hence the major tick in semver.  This is for the reduce function.  New syntax is shown in the example 
-below and [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing).  This new syntax makes under-the-hood code much more straigtforward, and allows more flexibility in the input parameters.  For instance, I added the capacity to output p-value to correlation output (see [here](https://github.com/paulwilcox/fluent-data/wiki/Reducing#Built-In-Reducers)).  I could 
-not make this happen using the old syntax.
+Version 2.2.0 allows multiple regression.  
 
-Version 2.1.0 adds non-production code (see scratch.js).  Basically, I'm preparing to develop multiple-regression functionality.  In doing
-so, I'm adding matrix algebra capabilities.  So some of [the future](https://github.com/paulwilcox/fluent-data/wiki/The-Future) is coming sooner than expected.      
+Be on the lookout for release of a matrix object and of the capacity for factor analysis with rotation.  
 
 ## Summary 
 
-Manipulate datasets by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
+Manipulate datasets and perform statistics by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
+Built in reducers includes multiple regression.  
 
 `fluent-data` works like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
-`fluent-data` syntax is similar to LINQ in c#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
+`fluent-data` syntax is similar to LINQ in C#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
 ## Getting Started
 
@@ -76,7 +74,8 @@ The following exmaple uses many of the methods available to analyze the two data
             orders: $$.count(p => p.id), 
             speed: $$.avg(p => p.speed),
             rating: $$.avg(p => p.rating),
-            correlation: $$.cor(p => [p.speed, p.rating])
+            correlation: $$.cor(p => [p.speed, p.rating]) 
+            // other reducers, such as multiple regression, are built in!
         })
         .sort(p => [p.customer, -p.rating])
         .get(p => ({
@@ -136,6 +135,8 @@ The following operations are available on fluent-data:
 * [group](https://github.com/paulwilcox/fluent-data/wiki/Grouping): Group rows of a dataset into nested datasets.  Or reverse 
   this with [ungroup](https://github.com/paulwilcox/fluent-data/wiki/Grouping#Ungrouping-Rows)
 * [reduce](https://github.com/paulwilcox/fluent-data/wiki/Reducing): Aggregate a dataset.  Create custom aggregators as well. 
+  Built in reducers allow some deeper [statistics](https://github.com/paulwilcox/fluent-data/wiki/Statistics), such as multiple 
+  regression.
 * [with](https://github.com/paulwilcox/fluent-data/wiki/With): Work with a dataset without breaking the fluency/chaining
   syntax. 
 

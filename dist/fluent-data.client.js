@@ -7,6 +7,8 @@
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+
 let stringifyObject = obj => {
 
     if (obj === undefined) 
@@ -45,6 +47,16 @@ let isFunction = input =>
 let isIterable = (input, includeStrings = false) => 
     !includeStrings && isString(includeStrings) ? false
     : Symbol.iterator in Object(input);
+
+function RoundObjectNumbers (obj, precision) {
+    for(let key of Object.keys(obj)) {
+        let type = typeof(obj[key]);
+        if (type === 'number') 
+            obj[key] = round(obj[key], precision);
+        else if (type === 'object') 
+            RoundObjectNumbers(obj[key], precision);
+    }
+}
 
 let noUndefined = obj => {
     
@@ -91,10 +103,16 @@ let eq = (obj1, obj2) => {
 function studentsTfromCor (cor, n) {
     return  cor / Math.pow((1-cor*cor) / (n-2), 0.5); 
 }
-    
-// www.stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf
+
+// stat.rice.edu/~dobelman/textfiles/DistributionsHandbook.pdf
+// Though the reference doesn't say it, seems that a negative t
+// needs to return 1 - result
+// TODO: redo some checks.  Particularly for negative. Also,
+// you may not need df == 1 logic.
 function studentsTcdf(t, df) {
     
+    let result;
+
     if(df < 1)
         return undefined;
 
@@ -109,30 +127,253 @@ function studentsTcdf(t, df) {
             s += u;
         }
 
-        return 0.5 - 0.5 * s * x / Math.pow(1 + x*x, 0.5);
+        result = 0.5 - 0.5 * s * x / Math.pow(1 + x*x, 0.5);
         
     }
 
     else if (df == 1) {
         let x = t / Math.pow(df,0.5);
-        return 0.5 - 1/Math.PI * Math.atan(x);
+        result = 0.5 - 1/Math.PI * Math.atan(x);
     }
 
     else {
 
         let x = t / Math.pow(df,0.5);
 
-        let s = 1;
+        let s = 0;
         let u = 1;
-        for(let i = 2; i <= (df-1)/2; i++) {
-            u *= (1 - 1/(2*i-1))/(1 + x*x);
+        for(let i = 1; i <= (df-1)/2; i++) {
             s += u;
+            u *= (1 - 1/(2*i-1))/(1 + x*x);
         }
 
-        return 0.5 - 1/Math.PI * ( s * x/(1+x*x) + Math.atan(x));
+        result = 0.5 - 1/Math.PI * ( s * x/(1+x*x) + Math.atan(x));
 
     }
 
+    return t < 0 ? 1 - result : result;
+
+}
+
+// Get Student's T critical value from probability 
+function studentsTquantile(quantile, df) {
+
+    // homepages.ucl.ac.uk/~ucahwts/lgsnotes/JCF_Student.pdf
+
+    if (quantile < 0 || quantile > 1)
+        throw `quantile passed to studentsT() must be between 0 and 1 (${quantile} passed)`;
+
+    let ib = invIncBeta(
+        quantile < 0.5 ? 2 * quantile : 2 * (1-quantile), 
+        df/2, 
+        0.5, 
+        1e-12
+    );
+
+    let inner = df * (1/ib - 1);
+    return Math.sign(quantile - 0.5) * Math.pow(inner, 0.5);
+
+}
+
+function Fcdf (F, numDf, denDf) {
+    let x = (F * numDf) / (denDf + (F * numDf));
+    return 1 - incBeta(x, numDf/2, denDf/2);
+}
+
+function chiCdf (chi, df) {
+    let regGamma = (a,b) => incGammaLower(a, b) / gamma(a);
+    let result = regGamma(df/2, chi/2);
+    return 1 - result; // upper
+}
+
+function gamma (z) {
+    return Math.pow(Math.E, gammaLogged(z)); 
+}
+
+function gammaLogged (z) {
+
+    // link.springer.com/content/pdf/bbm%3A978-3-319-43561-9%2F1.pdf
+    // use of 7.5 below seems odd, but from other sources it seems that it's because it's length of p - 1 + 0.5.
+    // I am logging this to deal with very high values.
+
+    let p = [
+        0.99999999999980993,
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7
+    ];
+
+    let sum = p[0];
+    for (let i = 1; i <= 8; i++) 
+        sum += p[i] / (z + i);
+
+    return (0.5 * Math.log(2 * Math.PI) - Math.log(z))
+        + Math.log(sum)
+        + (z + 0.5) * Math.log(z + 7.5)
+        + -(z + 7.5);
+
+}
+
+function incGammaLower (a, z) {
+
+    // dlmf.nist.gov/8.11#ii (way better than continued fraction)
+
+    let sum = 0;
+    for (let k = 0; k <= 1000; k++) {
+        let numerator = k * Math.log(z);
+        let denominator = pochLogged(a, k+1);
+        sum += Math.pow(Math.E, numerator - denominator);
+    }
+
+    return Math.pow(z,a) * Math.pow(Math.E, -z) * sum;
+
+}
+
+function beta(a,b) {
+    return Math.pow(Math.E, gammaLogged(a) + gammaLogged(b) - gammaLogged(a + b));
+}
+
+function incBeta(
+    x, 
+    a, 
+    b, 
+    precision = 1e-8, // warning: this precision cannot go past what g.beta() can give (presently 1e-12).
+    maxIterations = 1000000,
+    verbose = false 
+) {
+
+    if (x == 1) {
+        if (verbose) 
+            console.log('x := 1, so beta() is used.');
+        return beta(a,b);
+    }
+
+    // dlmf.nist.gov/8.17#SS5.p1
+    // fresco.org.uk/programs/barnett/APP23.pdf (Most clear lentz reference, despite the title)
+    // en.wikipedia.org/wiki/Continued_fraction (esp Theorem 4)
+
+    // OMG, it's about as bad as the non-lentz way.  I guess efficiency isn't the
+    // benefit.  Must only be the ability to stop at arbitrary precision.
+
+    let d2m = (m) => {
+        m = m/2;
+        return (m*x*(b-m)) / ((a+2*m-1) * (a+2*m));
+    };
+
+    let d2mp1 = (m) => {
+        m = m - 1; m = m/2;
+        return - ((a+m)*(a+b+m)*x) / ((a+2*m)*(a+2*m+1));
+    };
+
+    let an = (n) => 
+          n == 1 ? 1 // first numerator is 1
+        : (n-1) %2 == 0 ? d2m(n-1) // after that, the d-sub-n is off by 1
+        : d2mp1(n-1); 
+
+    let bn = (n) => 1;
+
+    // how does this even work when x = 1?
+    let multiplier = (Math.pow(x,a)*Math.pow(1-x,b)) / (a*beta(a,b));
+    let small = 1e-32;
+
+    let F = small;
+    let C = small;
+    let D = 0;
+    let CD;
+
+    for (let n = 1; n <= maxIterations; n++) {
+        
+        let _bn = bn();
+        let _an = an(n);
+        C = (_bn + _an / C) || small; 
+        D = (_bn + _an * D) || small;
+        D = 1 / D;
+        CD = C * D;
+        F *= CD;
+
+        // Various literature shows that you can to set CD to be below a 
+        // ceratin precision, and stop there.  But this may cut it off
+        // earlier than you desire.  This is particularly true if your
+        // working result keeps rising very slowly.  Then any one change 
+        // can be small but the aggregate of many future iterations might
+        // be substantial, and so your approximation is off.  So I'm 
+        // multiplying CD by the number of iterations left.  This is 
+        // worst case for how much change can be expected.  If that is 
+        // under desired precision, then no point in going further.
+        if (Math.abs(CD-1) * (maxIterations - n) < precision) {
+            if (verbose)
+                console.log(`Reached desired precison in ${n} iterations.`);
+            return multiplier * F;
+        }
+
+    }
+
+    throw   `Could not reach desired CD precision of ${precision} ` +
+            `within ${maxIterations} iterations.  ` +
+            `Answer to this point is ${multiplier * F}, ` +
+            `and CD is ${CD}.`
+
+}
+
+function invIncBeta (
+    x, 
+    a,
+    b, 
+    precision = 1e-8, 
+    maxIterations = 1000
+) {
+
+    // This is a very crude implementation.  For the future, look into the following references:
+        // boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_beta/ibeta_inv_function.html
+        // malishoaib.wordpress.com/2014/05/30/inverse-of-incomplete-beta-function-computational-statisticians-wet-dream/
+        // Apparently, I'm not the only one who thinks it's difficult:
+            // en.wikipedia.org/wiki/Quantile_function#Student's_t-distribution 
+            // "This has historically been one of the more intractable cases..."
+
+    // TODO: See if this can work with getInverse.  Unfortunately, right now it's not.
+
+    let honeIn = (min, max, iterations) => {
+
+        let mid = (min + max) / 2;
+        
+        if (Math.abs(max - min) < precision) 
+            return mid;
+
+        if (iterations == 0)
+            throw `inverse beta function could not reach accuracy within the maximum number of iterations.`
+
+        let _min = incBeta(min, a, b);
+        let _mid = incBeta(mid, a, b) || precision; // result can be so tiny that javascript registers 0.  E.g.: incBeta(0.5, 5000, 0.5)
+        let _max = incBeta(max, a, b);
+
+        //if (x > _max) return null;
+        //if (x < _min) return null;
+        if (x == _min) return min;
+        if (x == _mid) return mid;
+        if (x == _max) return max; 
+        if (x < _mid) return honeIn(min, mid, iterations - 1);
+        if (x > _mid) return honeIn(mid, max, iterations - 1);
+
+    }; 
+
+    return honeIn(0, 1, maxIterations);
+
+}
+
+function pochLogged (q, n) {
+    if (n == 0)
+        return 1;
+    let prod = Math.log(q);
+    for (let i = 1; i < n; i++) 
+        prod += Math.log(q + i);
+    if (prod == 0) 
+        prod = 1e-10;
+    return prod;
 }
 
 class hashBuckets extends Map {
@@ -287,6 +528,376 @@ function compareArrays (
     }
 
     return 0;
+
+}
+
+class matrix {
+
+    constructor (
+        data, 
+        selector, // csv of prop names or func returning array of numbers
+        skipChecks = false // if true, skips validity checks
+    ) {
+
+        this.colNames = null;
+        this.rowNames = null;
+        this.data;
+
+        if (!data) {
+            this.data = [];
+            return;
+        }
+        
+        // if selector is csv, split and turn it into a property selecctor
+        if (isString(selector)) {
+            this.colNames = selector.split(',').map(name => name.trim());
+            selector = (row) => this.colNames.map(name => row[name]);
+        }
+
+        this.data = data.map(selector);
+
+        if (!skipChecks)
+            this.validate();
+
+    }
+    
+    setColNames (colNames) {
+        if (isString(colNames))
+            colNames = colNames.split(',').map(name => name.trim());
+        if (this.data.length > 0 && this.data[0].length != colNames.length)
+            throw `options.colNames is not of the same length as a row of data.`
+        this.colNames = colNames;
+        return this;
+    }
+
+    validate() {
+        for(let r in this.data) {
+            if (!Array.isArray(this.data[r]))
+                throw `Row ${r} is not an array;`
+            for(let c in this.data[r]) {
+                if (!isFinite(this.data[r][c]))
+                    if(this.colNames) throw `'${this.colNames[c]}' in row ${r} is not a finite number`;
+                    else throw `Cell ${c} in row ${r} is not a finite number;` 
+            }
+        }
+        return this;
+    }
+
+    isSquare() {
+        if (this.data.length == 0)
+            return true;
+        let rows = this.data.length;
+        let cols = this.data[0].length;
+        return rows == cols;
+    }
+
+    clone() {
+        let result = [];
+        for(let row of this.data) {
+            let newRow = [];
+            for (let cell of row) 
+                newRow.push(cell);
+            result.push(newRow);
+        }
+        let mx = new matrix();
+        mx.data = result;
+        mx.colNames = this.colNames;
+        mx.rowNames = this.rowNames;
+        return mx;
+    }
+
+    getDiagonalVector() {
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        let vector = [];
+        for (let i = 0; i < this.data.length; i++)
+            vector.push(this.data[i][i]);
+        return vector;
+    }
+
+    apply(func) {
+        for(let r in this.data)
+            for (let c in this.data[r])
+                this.data[r][c] = func(this.data[r][c]);
+        return this;
+    }
+
+    reduce(direction, func, seed = undefined) {
+
+        let aggregated = [];
+        
+        if (direction == 'row' || direction == 1) {
+            this.colNames = null;
+            for (let row of this.data) 
+                if (seed != undefined)
+                    aggregated.push([row.reduce(func, seed)]);
+                else 
+                    aggregated.push([row.reduce(func)]);
+        }
+
+        else if (direction == 'col' || direction == 'column' || direction == 2) {
+            this.rowNames = null;
+            let colCount = this.data.length == 0 ? 0 : this.data[0].length;
+            for (let c = 0; c < colCount; c++) {
+                let agg = seed || 0;
+                for(let row of this.data) 
+                    agg = func(agg, row[c]);
+                aggregated.push([agg]);
+            }
+        }
+
+        else if (direction == 'all' || direction == 0) {
+            this.rowNames = null;
+            this.colNames = null;
+            let agg = seed || 0;
+            for (let row of this.data)
+                for (let cell of row)
+                    agg = func(agg, cell);
+            aggregated.push([agg]);
+        }
+
+        this.data = aggregated;
+        return this;
+
+    }
+
+    transpose() {
+
+        let result = [];
+        for(let r in this.data) 
+            for(let c in this.data[r]) 
+                if (r == 0)
+                    result.push([this.data[r][c]]);
+                else 
+                    result[c].push(this.data[r][c]);
+        this.data = result;
+        
+        let rn = this.rowNames;
+        let cn = this.colNames;
+        this.rowNames = cn;
+        this.colNames = rn;
+
+        return this;
+
+    }
+
+    multiply(other) {
+
+        if (!isNaN(other) && isFinite(other)) 
+            for (let r in this.data)
+                for (let c in this.data[r])
+                    this.data[r][c] *= other;
+
+        else if (Array.isArray(other))  {
+            this.colNames = null;
+            this.data = this._multiplyVector(other);
+        }
+
+        else if (other instanceof matrix) {
+            this.colNames = other.colNames;
+            this.data = this._multiplyMatrix(other);
+        }
+
+        return this;
+
+    }
+
+    inverse() {
+
+        if (this.data.length == 0)
+            throw `Matrix is empty.  Cannot take inverse.`;
+
+        let rowCount = this.data.length;
+        let colCount = this.data[0].length;
+
+        if (rowCount != colCount)
+            throw `Matrix is not a square.  Cannot take inverse.`;
+
+        let identity = [];
+        for (let r = 0; r < rowCount; r++) {
+            let row = [];
+            for (let c = 0; c < colCount; c++) 
+                row.push(r == c ? 1 : 0);
+            identity.push(row);
+        }
+
+        return this.solve(identity);
+
+    }
+
+    // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
+    // Though, to save some logic, I believe I do more steps in sorting than necessary.
+    solve(other) {
+
+        let leadingItem = (row) => {
+            for(let c in row) 
+                if (row[c] != 0)
+                    return { pos: c, val: row[c] };
+            return { pos: -1, val: null }
+        };
+
+        let rowMultiply = (row, multiplier) => {
+            for(let c in row) 
+                row[c] *= multiplier;
+            return row;
+        };
+
+        let rowAdd = (rowA, rowB) => {
+            for(let c in rowA) 
+                rowA[c] += rowB[c];
+            return rowA;
+        };
+
+        let clone = (row) => {
+            let result = [];
+            for(let cell of row)
+                result.push(cell);
+            return result;
+        };
+
+        let sort = (onOrAfterIndex) => { 
+
+            for(let r = this.data.length - 1; r >= onOrAfterIndex; r--) {
+
+                let prev = this.data[r + 1];
+                let cur = this.data[r];
+                let prevLeader = leadingItem(prev);
+                let curLeader = leadingItem(cur);
+                let otherPrev = other[r + 1];
+                let otherCur = other[r];
+
+                let needsPromote = 
+                    prevLeader.pos > curLeader.pos || 
+                    (prevLeader.pos == curLeader.pos && prevLeader.val > curLeader.val);
+
+                if (needsPromote) {
+                    this.data[r + 1] = cur;
+                    this.data[r] = prev;
+                    other[r + 1] = otherCur;
+                    other[r] = otherPrev;
+                }
+                
+                prevLeader = curLeader;
+
+            }
+
+        };
+
+        let subtractTopMultiple = (onOrAfterIndex) => {
+                
+            let topLead = leadingItem(this.data[onOrAfterIndex]);
+
+            rowMultiply(this.data[onOrAfterIndex], 1 / topLead.val);
+            rowMultiply(other[onOrAfterIndex], 1 / topLead.val);
+
+            for(let r = 0; r < this.data.length; r++) {
+                if (r == onOrAfterIndex)
+                    continue;
+                let row = this.data[r];
+                let counterpart = row[topLead.pos];
+                if (counterpart == 0)
+                    continue;
+                let multipliedRow = rowMultiply(
+                    clone(this.data[onOrAfterIndex]), 
+                    -counterpart
+                );
+                rowAdd(this.data[r], multipliedRow);
+                let multipliedOther = rowMultiply(
+                    clone(other[onOrAfterIndex]),
+                    -counterpart
+                );
+                rowAdd(other[r], multipliedOther);
+            }
+
+        };
+
+        let initializations = () => {
+                
+            if (other instanceof matrix)
+                other = other.data;
+            else if (!Array.isArray(other))
+                throw `'other' must be an array or matrix.`;
+
+            if (other.length > 0 && !Array.isArray(other[0])) 
+                for(let r in other)
+                    other[r] = [other[r]]; 
+
+            other = clone(other);
+
+            if (this.data.length == 0 || other.length == 0) 
+                throw 'cannot solve when either input is empty';
+
+            if (this.data.length != other.length)
+                throw 'cannot solve when input lengths do not match';
+
+        };
+
+        initializations();
+
+        for (let i = 0; i < this.data.length; i++) {
+            sort(i);
+            subtractTopMultiple(i);
+        }
+
+        this.data = other;
+
+        return this;
+
+    }
+
+    round(digits) {
+        for(let row of this.data) 
+            for(let c in row) {
+                row[c] = parseFloat(row[c].toFixed(digits));
+                if(row[c] == -0)
+                    row[c] = 0;
+            }
+        return this;
+    }
+
+    _multiplyVector(other) {
+
+        if (this.data[0].length != other.length)
+            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Vector has ${other.length + 1} elements.  ` + 
+                    `Cannot multiply matrix by vector unless these match.  `
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            let agg = 0;
+            for (let ix in this.data[r]) 
+                agg += this.data[r][ix] * other[ix];
+            result[r].push(agg);
+        }
+
+        return result;         
+
+    }
+
+    _multiplyMatrix(other) {
+
+        if (this.data[0].length != other.data.length) 
+            throw   `Left matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Right matrix has ${other.data.length + 1} rows.  ` + 
+                    `Matrix multiplication cannot be performed unless these match.  `;
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
+                let agg = 0;
+                for (let ix in this.data[r]) 
+                    agg += this.data[r][ix] * other.data[ix][oCol];
+                result[r].push(agg);
+            }
+        }
+
+        return result;
+
+    }
 
 }
 
@@ -786,6 +1397,13 @@ class dataset {
 
     }
 
+    matrix(        
+        selector, // csv of prop names or func returning array of numbers
+        skipChecks = false // if true, skips validity checks)
+    ) {
+        return new matrix(this.data, selector, skipChecks);
+    }
+
     with (func) {
         let arr = recurseToArray(x => x, this.data, this.groupLevel);
         func(arr);
@@ -873,6 +1491,8 @@ _.fromJson = function(json) {
 
 _.mergeMethod = mergeMethod;
 
+_.round = round;
+
 _.first = rowFunc =>
     data => {
         for (let row of data )
@@ -915,6 +1535,16 @@ _.avg = rowFunc =>
         let s = _.sum(rowFunc)(data);
         let n = _.count(rowFunc)(data);
         return s / n;
+    };
+
+_.std = (rowFunc, isSample = false) => 
+    data => {
+        let m = _.avg(rowFunc)(data);
+        let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
+        let n = _.count(rowFunc)(data);
+        if (isSample)
+            n--;
+        return Math.pow(ssd/n, 0.5);
     };
 
 _.mad = rowFunc => 
@@ -963,6 +1593,201 @@ _.cor = (rowFunc, options) =>
         
     };
 
-_.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
+_.regress = (ivSelector, dvSelector, options) => 
+    data => {
+
+        // Initializations
+
+            options = Object.assign(
+                { estimates: true }, 
+                options
+            );
+
+            // Output a selector of row properties that returns an array
+            // and a set of labels (keys) that pertain to the array
+            let processSelector = (selector) => {
+                
+                if (isString(selector)) {
+                    let keys = selector.split(',').map(key => key.trim());
+                    return [
+                        keys,
+                        (row) => keys.map(key => row[key])
+                    ];
+                }
+
+                let keys = Object.keys(selector({}));
+                return [
+                    keys, 
+                    (row) => keys.map(key => selector(row)[key])
+                ];
+
+            };
+
+            let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
+            let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
+
+            if (ivKeys.length == 0)
+                throw `ivSelector must return an object with explicit keys defined.`
+            if (dvKeys.length != 1)
+                throw `dvSelector must return an object with exactly one key defined.`
+
+            let ivs = 
+                new matrix(data, row => [1, ...outerIvSelector(row)] )
+                .setColNames(`intercept,${ivKeys.join(',')}`);
+                
+            let dvs = new matrix(data, row => outerDvSelector(row));
+
+            let n = data.length;
+            let transposedIvs = ivs.clone().transpose();
+
+            // I think this translates to variances.
+            let variances = transposedIvs.clone().multiply(ivs).inverse();
+            
+        // Calcaulate the coefficients
+                        
+            let coefficients = 
+                variances.clone()
+                .multiply(transposedIvs)
+                .multiply(dvs);
+
+            coefficients = coefficients.data.map((row,ix) => ({ 
+                name: coefficients.rowNames[ix], 
+                value: row[0]
+            }));
+        
+        // Calculate the row estimates and residuals
+
+            for(let row of data)  {
+
+                let actual = outerDvSelector(row);
+                actual = actual.length == 1 ? actual[0] : undefined;
+                
+                let estimate =  
+                    outerIvSelector(row)
+                    .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
+                    .reduce((a,b) => a + b, 0)
+                    + coefficients[0].value; // intercept
+                
+                row.estimate = estimate;
+                row.actual = actual;
+                row.residual = actual - estimate;
+
+            }
+
+        // Calculate the coefficient statistics
+
+            // kokminglee.125mb.com/math/linearreg3.html
+
+            let s = Math.pow(
+                (1 / (n - coefficients.length)) 
+                * _.sum(row => Math.pow(row.estimate - row.actual, 2))(data),
+                0.5
+            );
+
+            let stdErrs = 
+                variances
+                .multiply(Math.pow(s,2))
+                .apply(cell => Math.pow(cell,0.5))
+                .getDiagonalVector();
+            
+            for(let c in coefficients) {
+                coefficients[c].stdErr = stdErrs[c];
+                coefficients[c].t = coefficients[c].value / stdErrs[c];
+                coefficients[c].df = data.length - coefficients.length;
+                coefficients[c].pVal = studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
+                coefficients[c].ci = (quantile) => [
+                    coefficients[c].value + studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
+                    coefficients[c].value - studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
+                ]; 
+                if (options && options.ci) // If the user passed ci, process the ci function.
+                    coefficients[c].ci = coefficients[c].ci(options.ci);
+            }
+
+        // Calculate the model-level statistics
+
+            // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
+            let mean = _.avg(row => row.actual)(data);
+            let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(data);
+            let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(data);
+            let paramsComplex = coefficients.length;
+            let paramsSimple = 1;
+
+            let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
+                    (ssComplex/(n-paramsComplex));
+
+            let rSquared = 1 - ssComplex / ssSimple; 
+
+            // n - p - 1 = n - coefficients.length becasue p does not include the intercept
+            let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
+
+        // Regress the squared residuals
+
+            // youtube.com/watch?v=wzLADO24CDk
+
+            let breuchPagan;
+            let breuchPaganPval;
+
+            if (options.estimates) {
+
+                // We'll need to save these because rerunning regress will 
+                // overwrite the properties.  But we need the original values
+                // back in the final output.
+                let clonedProps = data.map(row => ({
+                    actual: row.actual, 
+                    estimate: row.estimate, 
+                    residual: row.residual
+                }));
+
+                let residRegress = _.regress(
+                    ivSelector, 
+                    row => [Math.pow(row.residual,2)], 
+                    { estimates: false } // block estimtes to avoid infinite recursion.
+                )(data);
+
+                let r2 = residRegress.model.rSquared;
+                let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
+                breuchPagan = r2 * n;
+                breuchPaganPval = chiCdf(breuchPagan, p);
+
+                // Restore the original values.
+                for(let rowIx in data)  {
+                    data[rowIx].actual = clonedProps[rowIx].actual;
+                    data[rowIx].estimate = clonedProps[rowIx].estimate;
+                    data[rowIx].residual = clonedProps[rowIx].residual;
+                }
+                    
+
+            }
+
+        // Terminations
+            
+            let results = {
+                data: new dataset(data),
+                coefficients,
+                model: {
+                    rSquared,
+                    rSquaredAdj,
+                    F,
+                    pVal: Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
+                }
+            }; 
+
+            if (breuchPagan != undefined) 
+                Object.assign(results.model, {breuchPagan, breuchPaganPval});
+
+            if (options.maxDigits) {
+                RoundObjectNumbers(results.coefficients, options.maxDigits);
+                RoundObjectNumbers(results.model, options.maxDigits);
+                for(let row of results.data) {
+                    row.actual = round(row.actual, options.maxDigits);
+                    row.estimate = round(row.estimate, options.maxDigits);
+                    row.residual = round(row.residual, options.maxDigits);
+                }
+            }
+
+            return results;
+
+    };
 
 export default _;

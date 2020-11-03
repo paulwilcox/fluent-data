@@ -14,13 +14,11 @@ async function test () {
     let results =
         $$(data)
         .reduce({
-            regress: $$.regress('cases, distance', 'time', {ci: 0.95}),
+            regress: $$.regress('cases, distance', 'time', {ci: 0.95, maxDigits: 8 }),
             std: $$.std(row => row.cases, true)
         })
         .get();
         
-    console.log(results.regress)
-
     let getCoef = (name) => results.regress.coefficients.find(c => c.name == name);
     let intercept = getCoef('intercept');
     let cases = getCoef('cases');
@@ -31,8 +29,6 @@ async function test () {
         if ($$.round(val, round) != expected)
             throw `${desc} was ${val}, ${expected} expected.`;
     }
-
-console.log({model})
 
     test(`F`, model.F, 4.668, 3);
     test(`rSquared`, model.rSquared, 0.7568, 4);
