@@ -302,7 +302,7 @@ _.regress = (ivSelector, dvSelector, options) =>
         // Terminations
             
             let results = {
-                data,
+                data: new dataset(data),
                 coefficients,
                 model: {
                     rSquared,
@@ -318,8 +318,11 @@ _.regress = (ivSelector, dvSelector, options) =>
             if (options.maxDigits) {
                 g.RoundObjectNumbers(results.coefficients, options.maxDigits);
                 g.RoundObjectNumbers(results.model, options.maxDigits);
-                for(let row of results.data)
+                for(let row of results.data) {
+                    row.actual = g.round(row.actual, options.maxDigits);
+                    row.estimate = g.round(row.estimate, options.maxDigits);
                     row.residual = g.round(row.residual, options.maxDigits);
+                }
             }
 
             return results;
