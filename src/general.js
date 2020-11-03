@@ -1,3 +1,4 @@
+export let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
 export let isSubsetOf = (sub, sup) =>  
     setEquals (
@@ -80,6 +81,16 @@ export let flattenArray = array => {
         else 
             result.push(element);
     return result;
+}
+
+export function RoundObjectNumbers (obj, precision) {
+    for(let key of Object.keys(obj)) {
+        let type = typeof(obj[key]);
+        if (type === 'number') 
+            obj[key] = round(obj[key], precision);
+        else if (type === 'object') 
+            RoundObjectNumbers(obj[key], precision);
+    }
 }
 
 // thanks shlang (8382469) at stackoverflow.com/questions/61164230

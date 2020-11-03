@@ -30,6 +30,8 @@ _.fromJson = function(json) {
 
 _.mergeMethod = mergeMethod;
 
+_.round = g.round;
+
 _.first = rowFunc =>
     data => {
         for (let row of data )
@@ -82,7 +84,7 @@ _.std = (rowFunc, isSample = false) =>
         if (isSample)
             n--;
         return Math.pow(ssd/n, 0.5);
-    }
+    };
 
 _.mad = rowFunc => 
     data => {
@@ -233,13 +235,10 @@ _.regress = (ivSelector, dvSelector, options) =>
                 coefficients[c].t = coefficients[c].value / stdErrs[c];
                 coefficients[c].df = data.length - coefficients.length;
                 coefficients[c].pVal = g.studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
-                coefficients[c].ci = (quantile) => {
-                    console.log(`quantile:${quantile}, lower:${(1-quantile)/2}, upper:${1 - (1-quantile)/2}`);
-                    return [
-                        coefficients[c].value + g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
-                        coefficients[c].value - g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
-                    ]
-                } 
+                coefficients[c].ci = (quantile) => [
+                    coefficients[c].value + g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
+                    coefficients[c].value - g.studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
+                ]; 
                 if (options && options.ci) // If the user passed ci, process the ci function.
                     coefficients[c].ci = coefficients[c].ci(options.ci);
             }
@@ -270,6 +269,15 @@ _.regress = (ivSelector, dvSelector, options) =>
 
             if (options.estimates) {
 
+                // We'll need to save these because rerunning regress will 
+                // overwrite the properties.  But we need the original values
+                // back in the final output.
+                let clonedProps = data.map(row => ({
+                    actual: row.actual, 
+                    estimate: row.estimate, 
+                    residual: row.residual
+                }));
+
                 let residRegress = _.regress(
                     ivSelector, 
                     row => [Math.pow(row.residual,2)], 
@@ -280,6 +288,14 @@ _.regress = (ivSelector, dvSelector, options) =>
                 let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
                 breuchPagan = r2 * n;
                 breuchPaganPval = g.chiCdf(breuchPagan, p);
+
+                // Restore the original values.
+                for(let rowIx in data)  {
+                    data[rowIx].actual = clonedProps[rowIx].actual;
+                    data[rowIx].estimate = clonedProps[rowIx].estimate;
+                    data[rowIx].residual = clonedProps[rowIx].residual;
+                }
+                    
 
             }
 
@@ -299,9 +315,15 @@ _.regress = (ivSelector, dvSelector, options) =>
             if (breuchPagan != undefined) 
                 Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
+            if (options.maxDigits) {
+                g.RoundObjectNumbers(results.coefficients, options.maxDigits);
+                g.RoundObjectNumbers(results.model, options.maxDigits);
+                for(let row of results.data)
+                    row.residual = g.round(row.residual, options.maxDigits);
+            }
+
             return results;
 
     }
 
-_.round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits
 
