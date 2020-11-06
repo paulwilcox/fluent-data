@@ -1,10 +1,7 @@
-import * as g from '../src/general.js';
-
-
 
 async function test () {
 
-    //let data = await sample('orders');
+    // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
     let data = [
         { cases: 7, distance: 560, time: 16.68 },
@@ -15,15 +12,31 @@ async function test () {
         { cases: 7, distance: 330, time: 18.11 }
     ];
 
-    let results = 
+    data = [
+        { math: 90, english: 60, art: 90 }, 
+        { math: 90, english: 90, art: 30 }, 
+        { math: 60, english: 60, art: 60 }, 
+        { math: 60, english: 60, art: 90 }, 
+        { math: 30, english: 30, art: 30 }
+    ]
+
+    let asMatrix = 
         $$(data)
-        .reduce({
-            model: $$.regress('cases, distance', 'time', {ci: 0.95}),
-            std: $$.std(row => row.cases, true)
-        })
+        .matrix('math, english, art')
         .get();
 
-    console.log(results.model)
+    let result = // result is averages
+        $$.matrix.ones(asMatrix.data.length)
+        .multiply(asMatrix)
+        .multiply(1/asMatrix.data.length); 
+
+    result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
+    result = result.clone().transpose().multiply(result); // result is squared deviations
+    let cov = result.multiply(1/asMatrix.data.length);
+
+    // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
+    let D = $$(cov.diagonal()).matrix(x => [x]).apply(x => Math.pow(x,0.5));
+    console.log(result);
 
     return true;
 

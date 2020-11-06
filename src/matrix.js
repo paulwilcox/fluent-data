@@ -75,7 +75,8 @@ export default class matrix {
         return mx;
     }
 
-    getDiagonalVector() {
+    // TODO: diagonal should return a matrix object, not an array
+    diagonal() {
         if (!this.isSquare())
             throw 'Matrix is not a square.  Cannot get diagonal vector.';
         let vector = [];
@@ -84,11 +85,19 @@ export default class matrix {
         return vector;
     }
 
-    apply(func) {
+    // (func) or (otherMatrix, func)
+    apply(...args) {
+
+        let func = typeof args[0] == 'function' 
+            ? (r,c) => args[0](this.data[r][c])
+            : (r,c) => args[1](this.data[r][c], args[0].data[r][c]); 
+
         for(let r in this.data)
             for (let c in this.data[r])
-                this.data[r][c] = func(this.data[r][c]);
+                this.data[r][c] = func(r,c);
+
         return this;
+
     }
 
     reduce(direction, func, seed = undefined) {
@@ -324,6 +333,10 @@ export default class matrix {
         return this;
     }
 
+    get() {
+        return this;
+    }
+
     _multiplyVector(other) {
 
         if (this.data[0].length != other.length)
@@ -369,3 +382,21 @@ export default class matrix {
     }
 
 }
+
+matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
+    if (numCols == null)
+        numCols = numRows;
+    let result = [];
+    for (let r = 0; r < numRows; r++) {
+        let row = [];
+        for (let c = 0; c < numCols; c++) {
+            row.push(diagOnly && r != c ? 0 : repeater);
+        }
+        result.push(row);
+    }
+    return new matrix(result, row => row, true);
+}
+
+matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); }
+matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); }
+matrix.identity = function(numRows) { return matrix.repeat(1, numRows, numRows, true); }

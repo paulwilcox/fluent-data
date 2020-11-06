@@ -29,6 +29,7 @@ _.fromJson = function(json) {
 }
 
 _.mergeMethod = mergeMethod;
+_.matrix = matrix;
 
 _.round = g.round;
 
@@ -228,7 +229,7 @@ _.regress = (ivSelector, dvSelector, options) =>
                 variances
                 .multiply(Math.pow(s,2))
                 .apply(cell => Math.pow(cell,0.5))
-                .getDiagonalVector();
+                .diagonal();
             
             for(let c in coefficients) {
                 coefficients[c].stdErr = stdErrs[c];
