@@ -229,7 +229,8 @@ _.regress = (ivSelector, dvSelector, options) =>
                 variances
                 .multiply(Math.pow(s,2))
                 .apply(cell => Math.pow(cell,0.5))
-                .diagonal();
+                .diagonal(true)
+                .data;
             
             for(let c in coefficients) {
                 coefficients[c].stdErr = stdErrs[c];

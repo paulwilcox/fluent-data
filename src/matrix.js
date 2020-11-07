@@ -75,16 +75,6 @@ export default class matrix {
         return mx;
     }
 
-    // TODO: diagonal should return a matrix object, not an array
-    diagonal() {
-        if (!this.isSquare())
-            throw 'Matrix is not a square.  Cannot get diagonal vector.';
-        let vector = [];
-        for (let i = 0; i < this.data.length; i++)
-            vector.push(this.data[i][i]);
-        return vector;
-    }
-
     // (func) or (otherMatrix, func)
     apply(...args) {
 
@@ -320,6 +310,29 @@ export default class matrix {
         this.data = other;
 
         return this;
+
+    }
+
+    diagonal(
+        // True to output a vector.  False to output a 
+        // matrix with non-diagonal cells zeroed out.
+        asVector = false
+    ) {
+        
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        
+        if (asVector) {
+            let vector = [];
+            for (let i = 0; i < this.data.length; i++)
+                vector.push(this.data[i][i]);
+            return new matrix(vector, x => x, true);
+        }
+
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[r].length; c++)
+            if (r != c) 
+                this.data[r][c] = 0;
 
     }
 
