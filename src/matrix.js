@@ -333,6 +333,7 @@ export default class matrix {
         for (let c = 0; c < this.data[r].length; c++)
             if (r != c) 
                 this.data[r][c] = 0;
+        return this;
 
     }
 
