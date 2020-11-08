@@ -225,14 +225,14 @@ export default class matrix {
 
         let sort = (onOrAfterIndex) => { 
 
-            for(let r = this.data.length - 1; r >= onOrAfterIndex; r--) {
+            for(let r = this.data.length - 2; r >= onOrAfterIndex; r--) {
 
-                let prev = this.data[r + 1];
-                let cur = this.data[r];
+                let prev = this.data[r];
+                let cur = this.data[r + 1];
                 let prevLeader = leadingItem(prev);
                 let curLeader = leadingItem(cur);
-                let otherPrev = other[r + 1];
-                let otherCur = other[r];
+                let otherPrev = other[r];
+                let otherCur = other[r + 1];
 
                 let needsPromote = 
                     prevLeader.pos > curLeader.pos || 
@@ -326,7 +326,7 @@ export default class matrix {
             let vector = [];
             for (let i = 0; i < this.data.length; i++)
                 vector.push(this.data[i][i]);
-            return new matrix(vector, x => x, true);
+            return new matrix(vector, x => [x], true);
         }
 
         for (let r = 0; r < this.data.length; r++)
@@ -375,8 +375,8 @@ export default class matrix {
     _multiplyMatrix(other) {
 
         if (this.data[0].length != other.data.length) 
-            throw   `Left matrix has ${this.data[0].length + 1} columns.  ` + 
-                    `Right matrix has ${other.data.length + 1} rows.  ` + 
+            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
+                    `Right matrix has ${other.data.length} rows.  ` + 
                     `Matrix multiplication cannot be performed unless these match.  `;
 
         let result = [];
