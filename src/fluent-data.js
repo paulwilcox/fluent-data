@@ -331,4 +331,31 @@ _.regress = (ivSelector, dvSelector, options) =>
 
     }
 
+_.covMatrix = (selector, isSample = true) =>
+    data => {
 
+        // stattrek.com/matrix-algebra/covariance-matrix.aspx
+
+        let asMatrix = _(data).matrix(selector).get();
+    
+        let result = // result is averages
+            matrix.ones(asMatrix.data.length)
+            .multiply(asMatrix)
+            .multiply(1/asMatrix.data.length); 
+    
+        result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
+        result = result.clone().transpose().multiply(result); // result is squared deviations    
+        return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
+        
+    }
+
+_.corMatrix = (selector, isSample = true) =>
+    data => {
+
+        let cov = _.covMatrix(selector, isSample)(data);
+
+        // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
+        let STDs = cov.clone().diagonal().apply(x => Math.pow(x,0.5));
+        return STDs.clone().inverse().multiply(cov).multiply(STDs.clone().inverse());
+
+    }

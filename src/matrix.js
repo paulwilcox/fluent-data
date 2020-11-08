@@ -34,8 +34,17 @@ export default class matrix {
         if (g.isString(colNames))
             colNames = colNames.split(',').map(name => name.trim());
         if (this.data.length > 0 && this.data[0].length != colNames.length)
-            throw `options.colNames is not of the same length as a row of data.`
+            throw `colNames is not of the same length as a row of data.`
         this.colNames = colNames;
+        return this;
+    }
+
+    setRowNames (rowNames) {
+        if (g.isString(rowNames))
+            rowNames = rowNames.split(',').map(name => name.trim());
+        if (this.data.length > 0 && this.data[0].length != rowNames.length)
+            throw `rowNames is not of the same length as the data.`
+        this.rowNames = rowNames;
         return this;
     }
 
@@ -345,6 +354,14 @@ export default class matrix {
                     row[c] = 0;
             }
         return this;
+    }
+
+    equals(other) {
+        for(let r in this.data)
+        for(let c in this.data[r]) 
+            if (this.data[r][c] != other.data[r][c])
+                return false;
+        return true;
     }
 
     get() {

@@ -565,8 +565,17 @@ class matrix {
         if (isString(colNames))
             colNames = colNames.split(',').map(name => name.trim());
         if (this.data.length > 0 && this.data[0].length != colNames.length)
-            throw `options.colNames is not of the same length as a row of data.`
+            throw `colNames is not of the same length as a row of data.`
         this.colNames = colNames;
+        return this;
+    }
+
+    setRowNames (rowNames) {
+        if (isString(rowNames))
+            rowNames = rowNames.split(',').map(name => name.trim());
+        if (this.data.length > 0 && this.data[0].length != rowNames.length)
+            throw `rowNames is not of the same length as the data.`
+        this.rowNames = rowNames;
         return this;
     }
 
@@ -606,20 +615,19 @@ class matrix {
         return mx;
     }
 
-    getDiagonalVector() {
-        if (!this.isSquare())
-            throw 'Matrix is not a square.  Cannot get diagonal vector.';
-        let vector = [];
-        for (let i = 0; i < this.data.length; i++)
-            vector.push(this.data[i][i]);
-        return vector;
-    }
+    // (func) or (otherMatrix, func)
+    apply(...args) {
 
-    apply(func) {
+        let func = typeof args[0] == 'function' 
+            ? (r,c) => args[0](this.data[r][c])
+            : (r,c) => args[1](this.data[r][c], args[0].data[r][c]); 
+
         for(let r in this.data)
             for (let c in this.data[r])
-                this.data[r][c] = func(this.data[r][c]);
+                this.data[r][c] = func(r,c);
+
         return this;
+
     }
 
     reduce(direction, func, seed = undefined) {
@@ -757,14 +765,14 @@ class matrix {
 
         let sort = (onOrAfterIndex) => { 
 
-            for(let r = this.data.length - 1; r >= onOrAfterIndex; r--) {
+            for(let r = this.data.length - 2; r >= onOrAfterIndex; r--) {
 
-                let prev = this.data[r + 1];
-                let cur = this.data[r];
+                let prev = this.data[r];
+                let cur = this.data[r + 1];
                 let prevLeader = leadingItem(prev);
                 let curLeader = leadingItem(cur);
-                let otherPrev = other[r + 1];
-                let otherCur = other[r];
+                let otherPrev = other[r];
+                let otherCur = other[r + 1];
 
                 let needsPromote = 
                     prevLeader.pos > curLeader.pos || 
@@ -845,6 +853,30 @@ class matrix {
 
     }
 
+    diagonal(
+        // True to output a vector.  False to output a 
+        // matrix with non-diagonal cells zeroed out.
+        asVector = false
+    ) {
+        
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        
+        if (asVector) {
+            let vector = [];
+            for (let i = 0; i < this.data.length; i++)
+                vector.push(this.data[i][i]);
+            return new matrix(vector, x => [x], true);
+        }
+
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[r].length; c++)
+            if (r != c) 
+                this.data[r][c] = 0;
+        return this;
+
+    }
+
     round(digits) {
         for(let row of this.data) 
             for(let c in row) {
@@ -852,6 +884,18 @@ class matrix {
                 if(row[c] == -0)
                     row[c] = 0;
             }
+        return this;
+    }
+
+    equals(other) {
+        for(let r in this.data)
+        for(let c in this.data[r]) 
+            if (this.data[r][c] != other.data[r][c])
+                return false;
+        return true;
+    }
+
+    get() {
         return this;
     }
 
@@ -879,8 +923,8 @@ class matrix {
     _multiplyMatrix(other) {
 
         if (this.data[0].length != other.data.length) 
-            throw   `Left matrix has ${this.data[0].length + 1} columns.  ` + 
-                    `Right matrix has ${other.data.length + 1} rows.  ` + 
+            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
+                    `Right matrix has ${other.data.length} rows.  ` + 
                     `Matrix multiplication cannot be performed unless these match.  `;
 
         let result = [];
@@ -900,6 +944,24 @@ class matrix {
     }
 
 }
+
+matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
+    if (numCols == null)
+        numCols = numRows;
+    let result = [];
+    for (let r = 0; r < numRows; r++) {
+        let row = [];
+        for (let c = 0; c < numCols; c++) {
+            row.push(diagOnly && r != c ? 0 : repeater);
+        }
+        result.push(row);
+    }
+    return new matrix(result, row => row, true);
+};
+
+matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); };
+matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); };
+matrix.identity = function(numRows) { return matrix.repeat(1, numRows, numRows, true); };
 
 class parser {
 
@@ -1490,6 +1552,7 @@ _.fromJson = function(json) {
 };
 
 _.mergeMethod = mergeMethod;
+_.matrix = matrix;
 
 _.round = round;
 
@@ -1689,7 +1752,8 @@ _.regress = (ivSelector, dvSelector, options) =>
                 variances
                 .multiply(Math.pow(s,2))
                 .apply(cell => Math.pow(cell,0.5))
-                .getDiagonalVector();
+                .diagonal(true)
+                .data;
             
             for(let c in coefficients) {
                 coefficients[c].stdErr = stdErrs[c];
@@ -1787,6 +1851,35 @@ _.regress = (ivSelector, dvSelector, options) =>
             }
 
             return results;
+
+    };
+
+_.covMatrix = (selector, isSample = true) =>
+    data => {
+
+        // stattrek.com/matrix-algebra/covariance-matrix.aspx
+
+        let asMatrix = _(data).matrix(selector).get();
+    
+        let result = // result is averages
+            matrix.ones(asMatrix.data.length)
+            .multiply(asMatrix)
+            .multiply(1/asMatrix.data.length); 
+    
+        result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
+        result = result.clone().transpose().multiply(result); // result is squared deviations    
+        return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
+        
+    };
+
+_.corMatrix = (selector, isSample = true) =>
+    data => {
+
+        let cov = _.covMatrix(selector, isSample)(data);
+
+        // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
+        let STDs = cov.clone().diagonal().apply(x => Math.pow(x,0.5));
+        return STDs.clone().inverse().multiply(cov).multiply(STDs.clone().inverse());
 
     };
 
