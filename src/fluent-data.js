@@ -349,14 +349,32 @@ _.covMatrix = (selector, isSample = true) =>
         
     }
 
-// TODO: isSample seems to make no difference.  Compare to other output and then add a test for it.
-_.corMatrix = (selector, isSample = true) =>
+// No need for 'isSample' as with covMatrix, because 
+// the results are the same for a sample vs a population.
+_.corMatrix = (selector) =>
     data => {
-
-        let cov = _.covMatrix(selector, isSample)(data);
-
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
+        let cov = _.covMatrix(selector)(data);
         let STDs = cov.clone().diagonal().apply(x => Math.pow(x,0.5));
         return STDs.clone().inverse().multiply(cov).multiply(STDs.clone().inverse());
-
     }
+
+// CorMatrix gave the same results whether sample or population.  I wasn't familiar
+// with that fact.  I had a very hard time googling this fact.  People said pop vs 
+// sample were different (r vs rho, using s vs sigma).  But nobody was saying that 
+// it would output the same whether you do n or n-1 (s vs sigma).  I saw that R didn't
+// offer a pop vs sample 'cor' option.  I saw that Python's np.corrcoef 'bias' parameter
+// was deprecated.  Their manual said this was because it didn't produce different
+// resuts in the current and even in previous versions.  So at least they were having
+// the same issue.  So, indications of equivalence everywhere, but nobody mentioned it 
+// explicitly.  So I built this function just to calculate it more explicity in a way
+// I could explicitly see following certain formulas I found for r vs rho, just to see
+// if I would get the same matricies back again.  I did.  In the future I'll consider
+// proving it (I imagine the size terms cancel out), but for now I'm moving on.     
+_.corMatrix2 = (selector, isSample = true) =>
+    data => {
+        let cov = _.covMatrix(selector, isSample)(data);
+        let STDs = cov.clone().diagonal(true).apply(x => Math.pow(x,0.5));
+        let SS = STDs.clone().multiply(STDs.clone().transpose());
+        return cov.clone().apply(SS, (x,y) => x / y);
+    }    
