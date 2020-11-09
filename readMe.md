@@ -2,6 +2,8 @@
 
 Version 2.2.0 allows multiple regression.  
 
+Version 2.3.0 allows covariance and correlation matricies
+
 Be on the lookout for release of a matrix object and of the capacity for factor analysis with rotation.  
 
 ## Summary 

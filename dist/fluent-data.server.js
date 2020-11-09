@@ -1874,6 +1874,7 @@ _.covMatrix = (selector, isSample = true) =>
         
     };
 
+// TODO: isSample seems to make no difference.  Compare to other output and then add a test for it.
 _.corMatrix = (selector, isSample = true) =>
     data => {
 
