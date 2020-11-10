@@ -179,6 +179,50 @@ export default class matrix {
 
     }
 
+    _multiplyVector(other) {
+
+        if (this.data[0].length != other.length)
+            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Vector has ${other.length + 1} elements.  ` + 
+                    `Cannot multiply matrix by vector unless these match.  `
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            let agg = 0;
+            for (let ix in this.data[r]) 
+                agg += this.data[r][ix] * other[ix];
+            result[r].push(agg);
+        }
+
+        return result;         
+
+    }
+
+    _multiplyMatrix(other) {
+
+        if (this.data[0].length != other.data.length) 
+            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
+                    `Right matrix has ${other.data.length} rows.  ` + 
+                    `Matrix multiplication cannot be performed unless these match.  `;
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
+                let agg = 0;
+                for (let ix in this.data[r]) 
+                    agg += this.data[r][ix] * other.data[ix][oCol];
+                result[r].push(agg);
+            }
+        }
+
+        return result;
+
+    }
+
     inverse() {
 
         if (this.data.length == 0)
@@ -200,6 +244,48 @@ export default class matrix {
 
         return this.solve(identity);
 
+    }
+
+    diagonal(
+        // True to output a vector.  False to output a 
+        // matrix with non-diagonal cells zeroed out.
+        asVector = false
+    ) {
+        
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        
+        if (asVector) {
+            let vector = [];
+            for (let i = 0; i < this.data.length; i++)
+                vector.push(this.data[i][i]);
+            return new matrix(vector, x => [x], true);
+        }
+
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[r].length; c++)
+            if (r != c) 
+                this.data[r][c] = 0;
+        return this;
+
+    }
+
+    round(digits) {
+        for(let row of this.data) 
+            for(let c in row) {
+                row[c] = parseFloat(row[c].toFixed(digits));
+                if(row[c] == -0)
+                    row[c] = 0;
+            }
+        return this;
+    }
+
+    equals(other) {
+        for(let r in this.data)
+        for(let c in this.data[r]) 
+            if (this.data[r][c] != other.data[r][c])
+                return false;
+        return true;
     }
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
@@ -322,94 +408,8 @@ export default class matrix {
 
     }
 
-    diagonal(
-        // True to output a vector.  False to output a 
-        // matrix with non-diagonal cells zeroed out.
-        asVector = false
-    ) {
-        
-        if (!this.isSquare())
-            throw 'Matrix is not a square.  Cannot get diagonal vector.';
-        
-        if (asVector) {
-            let vector = [];
-            for (let i = 0; i < this.data.length; i++)
-                vector.push(this.data[i][i]);
-            return new matrix(vector, x => [x], true);
-        }
-
-        for (let r = 0; r < this.data.length; r++)
-        for (let c = 0; c < this.data[r].length; c++)
-            if (r != c) 
-                this.data[r][c] = 0;
-        return this;
-
-    }
-
-    round(digits) {
-        for(let row of this.data) 
-            for(let c in row) {
-                row[c] = parseFloat(row[c].toFixed(digits));
-                if(row[c] == -0)
-                    row[c] = 0;
-            }
-        return this;
-    }
-
-    equals(other) {
-        for(let r in this.data)
-        for(let c in this.data[r]) 
-            if (this.data[r][c] != other.data[r][c])
-                return false;
-        return true;
-    }
-
     get() {
         return this;
-    }
-
-    _multiplyVector(other) {
-
-        if (this.data[0].length != other.length)
-            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
-                    `Vector has ${other.length + 1} elements.  ` + 
-                    `Cannot multiply matrix by vector unless these match.  `
-
-        let result = [];
-
-        for (let r in this.data) {
-            result.push([]);
-            let agg = 0;
-            for (let ix in this.data[r]) 
-                agg += this.data[r][ix] * other[ix];
-            result[r].push(agg);
-        }
-
-        return result;         
-
-    }
-
-    _multiplyMatrix(other) {
-
-        if (this.data[0].length != other.data.length) 
-            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
-                    `Right matrix has ${other.data.length} rows.  ` + 
-                    `Matrix multiplication cannot be performed unless these match.  `;
-
-        let result = [];
-
-        for (let r in this.data) {
-            result.push([]);
-            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
-                let agg = 0;
-                for (let ix in this.data[r]) 
-                    agg += this.data[r][ix] * other.data[ix][oCol];
-                result[r].push(agg);
-            }
-        }
-
-        return result;
-
     }
 
 }
