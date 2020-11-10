@@ -4,7 +4,7 @@ export default class matrix {
 
     constructor (
         data, 
-        selector, // csv of prop names or func returning array of numbers
+        selector = arrayRow => arrayRow, // csv of prop names or func returning array of numbers
         skipChecks = false // if true, skips validity checks
     ) {
 
@@ -286,6 +286,38 @@ export default class matrix {
             if (this.data[r][c] != other.data[r][c])
                 return false;
         return true;
+    }
+
+    // 'Data' is used for recursion.  At the top level omit it.
+    determinant (data) {
+
+        if (data == undefined) 
+            return this.determinant(this.data);
+
+        if (data.length == 2)
+            return data[0][0] * data[1][1] - data[0][1] * data[1][0];
+    
+        let sum = 0;
+        for (let cTop in data[0]) {
+            
+            let subset = [];
+            for(let r = 1; r < data.length; r++) {
+                let subrow = [];
+                for (let c in data[r]) {
+                    if (cTop == c) 
+                        continue;
+                    subrow.push(data[r][c]);
+                }
+                subset.push(subrow);
+            }
+            
+            let sign = (cTop % 2 == 0 ? 1 : -1);
+            let det = this.determinant(subset);
+            sum += sign * data[0][cTop] * det;
+        }
+    
+        return sum;
+    
     }
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
