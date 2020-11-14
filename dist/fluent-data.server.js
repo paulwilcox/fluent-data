@@ -537,7 +537,7 @@ class matrix {
 
     constructor (
         data, 
-        selector, // csv of prop names or func returning array of numbers
+        selector = arrayRow => arrayRow, // csv of prop names or func returning array of numbers
         skipChecks = false // if true, skips validity checks
     ) {
 
@@ -712,6 +712,50 @@ class matrix {
 
     }
 
+    _multiplyVector(other) {
+
+        if (this.data[0].length != other.length)
+            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
+                    `Vector has ${other.length + 1} elements.  ` + 
+                    `Cannot multiply matrix by vector unless these match.  `
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            let agg = 0;
+            for (let ix in this.data[r]) 
+                agg += this.data[r][ix] * other[ix];
+            result[r].push(agg);
+        }
+
+        return result;         
+
+    }
+
+    _multiplyMatrix(other) {
+
+        if (this.data[0].length != other.data.length) 
+            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
+                    `Right matrix has ${other.data.length} rows.  ` + 
+                    `Matrix multiplication cannot be performed unless these match.  `;
+
+        let result = [];
+
+        for (let r in this.data) {
+            result.push([]);
+            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
+                let agg = 0;
+                for (let ix in this.data[r]) 
+                    agg += this.data[r][ix] * other.data[ix][oCol];
+                result[r].push(agg);
+            }
+        }
+
+        return result;
+
+    }
+
     inverse() {
 
         if (this.data.length == 0)
@@ -732,6 +776,122 @@ class matrix {
         }
 
         return this.solve(identity);
+
+    }
+
+    diagonal(
+        // True to output a vector.  False to output a 
+        // matrix with non-diagonal cells zeroed out.
+        asVector = false
+    ) {
+        
+        if (!this.isSquare())
+            throw 'Matrix is not a square.  Cannot get diagonal vector.';
+        
+        if (asVector) {
+            let vector = [];
+            for (let i = 0; i < this.data.length; i++)
+                vector.push(this.data[i][i]);
+            return new matrix(vector, x => [x], true);
+        }
+
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[r].length; c++)
+            if (r != c) 
+                this.data[r][c] = 0;
+        return this;
+
+    }
+
+    round(digits) {
+        for(let row of this.data) 
+            for(let c in row) {
+                row[c] = parseFloat(row[c].toFixed(digits));
+                if(row[c] == -0)
+                    row[c] = 0;
+            }
+        return this;
+    }
+
+    equals(other) {
+        for(let r in this.data)
+        for(let c in this.data[r]) 
+            if (this.data[r][c] != other.data[r][c])
+                return false;
+        return true;
+    }
+
+    // 'Data' is used for recursion.  At the top level, omit it.
+    determinant (data) {
+
+        if (data == undefined) { 
+            if (this.data.length > 0 && this.data.length != this.data[0].length) 
+                throw `Matrix is not a square.  Cannot take the determinant`;
+            return this.determinant(this.data);
+        }
+
+        if (data.length == 2)
+            return data[0][0] * data[1][1] - data[0][1] * data[1][0];
+    
+        let sum = 0;
+        for (let cTop in data[0]) {
+            
+            let subset = [];
+            for(let r = 1; r < data.length; r++) {
+                let subrow = [];
+                for (let c in data[r]) {
+                    if (cTop == c) 
+                        continue;
+                    subrow.push(data[r][c]);
+                }
+                subset.push(subrow);
+            }
+            
+            let sign = (cTop % 2 == 0 ? 1 : -1);
+            let det = this.determinant(subset);
+            sum += sign * data[0][cTop] * det;
+        }
+    
+        return sum;
+    
+    }
+
+    norm(
+        type = 'frobenius' // euclidian|frobenius, 1, infinity 
+    ) {
+        
+        if (isString(type))
+            type = type.toLowerCase();
+
+        if (['euclidian', 'frobenius', 'e', 'f'].includes(type)) {
+            let ss = 0;
+            for (let row of this.data)
+            for (let cell of row) 
+                ss += Math.pow(cell,2);
+            return Math.pow(ss,0.5);
+        }
+
+        if(type == 1) {
+            let absColSums = [];
+            for (let c = 0; c < this.data[0].length; c++) {
+                let absColSum = 0;
+                for (let row of this.data)
+                    absColSum += Math.abs(row[c]);
+                absColSums.push(absColSum);
+            }
+            return Math.max(...absColSums);
+        }
+
+        if (type == 'infinity' || type == 'i') {
+            let absRowSums = [];
+            for (let row of this.data) {
+                let absRowSum = 0;
+                for (let cell of row)
+                    absRowSum += Math.abs(cell);
+                absRowSums.push(absRowSum);
+            }
+            return Math.max(...absRowSums);
+        } 
 
     }
 
@@ -852,96 +1012,6 @@ class matrix {
         this.data = other;
 
         return this;
-
-    }
-
-    diagonal(
-        // True to output a vector.  False to output a 
-        // matrix with non-diagonal cells zeroed out.
-        asVector = false
-    ) {
-        
-        if (!this.isSquare())
-            throw 'Matrix is not a square.  Cannot get diagonal vector.';
-        
-        if (asVector) {
-            let vector = [];
-            for (let i = 0; i < this.data.length; i++)
-                vector.push(this.data[i][i]);
-            return new matrix(vector, x => [x], true);
-        }
-
-        for (let r = 0; r < this.data.length; r++)
-        for (let c = 0; c < this.data[r].length; c++)
-            if (r != c) 
-                this.data[r][c] = 0;
-        return this;
-
-    }
-
-    round(digits) {
-        for(let row of this.data) 
-            for(let c in row) {
-                row[c] = parseFloat(row[c].toFixed(digits));
-                if(row[c] == -0)
-                    row[c] = 0;
-            }
-        return this;
-    }
-
-    equals(other) {
-        for(let r in this.data)
-        for(let c in this.data[r]) 
-            if (this.data[r][c] != other.data[r][c])
-                return false;
-        return true;
-    }
-
-    get() {
-        return this;
-    }
-
-    _multiplyVector(other) {
-
-        if (this.data[0].length != other.length)
-            throw   `Matrix has ${this.data[0].length + 1} columns.  ` + 
-                    `Vector has ${other.length + 1} elements.  ` + 
-                    `Cannot multiply matrix by vector unless these match.  `
-
-        let result = [];
-
-        for (let r in this.data) {
-            result.push([]);
-            let agg = 0;
-            for (let ix in this.data[r]) 
-                agg += this.data[r][ix] * other[ix];
-            result[r].push(agg);
-        }
-
-        return result;         
-
-    }
-
-    _multiplyMatrix(other) {
-
-        if (this.data[0].length != other.data.length) 
-            throw   `Left matrix has ${this.data[0].length} columns.  ` + 
-                    `Right matrix has ${other.data.length} rows.  ` + 
-                    `Matrix multiplication cannot be performed unless these match.  `;
-
-        let result = [];
-
-        for (let r in this.data) {
-            result.push([]);
-            for(let oCol = 0; oCol <= other.data[0].length - 1; oCol++) {
-                let agg = 0;
-                for (let ix in this.data[r]) 
-                    agg += this.data[r][ix] * other.data[ix][oCol];
-                result[r].push(agg);
-            }
-        }
-
-        return result;
 
     }
 
@@ -1861,17 +1931,17 @@ _.covMatrix = (selector, isSample = true) =>
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
-        let asMatrix = _(data).matrix(selector).get();
-    
+        let asMatrix = _(data).matrix(selector);
+
         let result = // result is averages
             matrix.ones(asMatrix.data.length)
             .multiply(asMatrix)
             .multiply(1/asMatrix.data.length); 
-    
+
         result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
-        result = result.clone().transpose().multiply(result); // result is squared deviations    
+        result = result.clone().transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
-        
+
     };
 
 // No need for 'isSample' as with covMatrix, because 

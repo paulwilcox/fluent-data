@@ -482,10 +482,6 @@ export default class matrix {
 
     }
 
-    get() {
-        return this;
-    }
-
 }
 
 matrix.repeat = function (repeater, numRows, numCols, diagOnly) {

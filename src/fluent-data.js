@@ -336,17 +336,17 @@ _.covMatrix = (selector, isSample = true) =>
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
-        let asMatrix = _(data).matrix(selector).get();
-    
+        let asMatrix = _(data).matrix(selector);
+
         let result = // result is averages
             matrix.ones(asMatrix.data.length)
             .multiply(asMatrix)
             .multiply(1/asMatrix.data.length); 
-    
+
         result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
-        result = result.clone().transpose().multiply(result); // result is squared deviations    
+        result = result.clone().transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
-        
+
     }
 
 // No need for 'isSample' as with covMatrix, because 
