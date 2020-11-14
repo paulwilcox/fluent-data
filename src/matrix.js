@@ -288,11 +288,14 @@ export default class matrix {
         return true;
     }
 
-    // 'Data' is used for recursion.  At the top level omit it.
+    // 'Data' is used for recursion.  At the top level, omit it.
     determinant (data) {
 
-        if (data == undefined) 
+        if (data == undefined) { 
+            if (this.data.length > 0 && this.data.length != this.data[0].length) 
+                throw `Matrix is not a square.  Cannot take the determinant`;
             return this.determinant(this.data);
+        }
 
         if (data.length == 2)
             return data[0][0] * data[1][1] - data[0][1] * data[1][0];
@@ -318,6 +321,46 @@ export default class matrix {
     
         return sum;
     
+    }
+
+    norm(
+        type = 'frobenius' // euclidian|frobenius, 1, infinity 
+    ) {
+        
+        if (g.isString(type))
+            type = type.toLowerCase();
+
+        if (['euclidian', 'frobenius', 'e', 'f'].includes(type)) {
+            let ss = 0;
+            for (let row of this.data)
+            for (let cell of row) 
+                ss += Math.pow(cell,2);
+            return Math.pow(ss,0.5);
+        }
+
+        if(type == 1) {
+            let absColSums = [];
+            for (let c = 0; c < this.data[0].length; c++) {
+                let absColSum = 0;
+                for (let row of this.data)
+                    absColSum += Math.abs(row[c]);
+                absColSums.push(absColSum);
+            }
+            console.log({absColSums})
+            return Math.max(...absColSums);
+        }
+
+        if (type == 'infinity' || type == 'i') {
+            let absRowSums = [];
+            for (let row of this.data) {
+                let absRowSum = 0;
+                for (let cell of row)
+                    absRowSum += Math.abs(cell);
+                absRowSums.push(absRowSum);
+            }
+            return Math.max(...absRowSums);
+        } 
+
     }
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination

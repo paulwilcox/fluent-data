@@ -9,9 +9,13 @@ async function test () {
         [1, 2, 4, 2]
     ]);
 
-    console.log(mx);
-
-    console.log(mx.determinant());
+    console.log({
+        mx,
+        determinant: mx.determinant(),
+        euclician: mx.norm(),
+        oneNorm: mx.norm(1),
+        infNorm: mx.norm('i')
+    });
 
     return true;
 
