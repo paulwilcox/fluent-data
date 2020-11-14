@@ -346,7 +346,6 @@ export default class matrix {
                     absColSum += Math.abs(row[c]);
                 absColSums.push(absColSum);
             }
-            console.log({absColSums})
             return Math.max(...absColSums);
         }
 
