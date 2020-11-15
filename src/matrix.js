@@ -595,8 +595,11 @@ export default class matrix {
             subset.push(row);
         }
 
-        this.rowNames = rows.map(rix => this.rowNames[rix]);
-        this.colNames = cols.map(cix => this.colNames[cix]);
+        if (this.rowNames)
+            this.rowNames = rows.map(rix => this.rowNames[rix]);
+        if(this.colNames)
+            this.colNames = cols.map(cix => this.colNames[cix]);
+            
         this.data = subset;
         return this;
 

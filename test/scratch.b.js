@@ -1,16 +1,16 @@
 async function test () {
 
-    let mx = 
+    let A = 
         new $$.matrix([
-            [3, 8, 7, 9],
-            [4, 6, 2, 1],
-            [9, 3, 5, 5],
-            [1, 2, 4, 2]
-        ])
-        .setRowNames('r0,r1,r2,r3')
-        .setColNames('c0,c1,c2,c3');
+            [1, -1,  4],
+            [1,  4, -2],
+            [1,  4,  2],
+            [1, -1,  0]
+        ]);
 
+    let A1 = A.get(null, 0);
 
+    console.log(A1)
 
     return true;
 
