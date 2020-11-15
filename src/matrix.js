@@ -42,7 +42,7 @@ export default class matrix {
     setRowNames (rowNames) {
         if (g.isString(rowNames))
             rowNames = rowNames.split(',').map(name => name.trim());
-        if (this.data.length > 0 && this.data[0].length != rowNames.length)
+        if (this.data.length > 0 && this.data.length != rowNames.length)
             throw `rowNames is not of the same length as the data.`
         this.rowNames = rowNames;
         return this;
@@ -280,12 +280,31 @@ export default class matrix {
         return this;
     }
 
-    equals(other) {
-        for(let r in this.data)
-        for(let c in this.data[r]) 
-            if (this.data[r][c] != other.data[r][c])
+    equals(other, dataOnly = true) {
+
+        let arrayEq = (a,b) => {
+            if (a.length != b.length)
                 return false;
-        return true;
+            for(let i in a)
+                if (a[i] != b[i])
+                    return false;
+            return true;
+        }
+
+        if (this.data.length != other.data.length)
+            return false;
+        if (this.data.length != 0 && this.data[0].length != other.data[0].length)
+            return false;
+
+        for (let r in this.data)
+            if (!arrayEq(this.data[r], other.data[r]))
+                return false;
+
+        return dataOnly ? true
+            : !arrayEq(this.rowNames, other.rowNames) ? false 
+            : !arrayEq(this.colNames, other.colNames) ? false
+            : true;
+
     }
 
     // 'Data' is used for recursion.  At the top level, omit it.

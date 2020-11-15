@@ -573,7 +573,7 @@ class matrix {
     setRowNames (rowNames) {
         if (isString(rowNames))
             rowNames = rowNames.split(',').map(name => name.trim());
-        if (this.data.length > 0 && this.data[0].length != rowNames.length)
+        if (this.data.length > 0 && this.data.length != rowNames.length)
             throw `rowNames is not of the same length as the data.`
         this.rowNames = rowNames;
         return this;
@@ -811,12 +811,31 @@ class matrix {
         return this;
     }
 
-    equals(other) {
-        for(let r in this.data)
-        for(let c in this.data[r]) 
-            if (this.data[r][c] != other.data[r][c])
+    equals(other, dataOnly = true) {
+
+        let arrayEq = (a,b) => {
+            if (a.length != b.length)
                 return false;
-        return true;
+            for(let i in a)
+                if (a[i] != b[i])
+                    return false;
+            return true;
+        };
+
+        if (this.data.length != other.data.length)
+            return false;
+        if (this.data.length != 0 && this.data[0].length != other.data[0].length)
+            return false;
+
+        for (let r in this.data)
+            if (!arrayEq(this.data[r], other.data[r]))
+                return false;
+
+        return dataOnly ? true
+            : !arrayEq(this.rowNames, other.rowNames) ? false 
+            : !arrayEq(this.colNames, other.colNames) ? false
+            : true;
+
     }
 
     // 'Data' is used for recursion.  At the top level, omit it.
@@ -1009,6 +1028,107 @@ class matrix {
 
         this.data = other;
 
+        return this;
+
+    }
+
+    get(rows, cols) {
+
+        let allRows = [...Array(this.data.length).keys()];
+        let allCols = [...Array(this.data[0].length).keys()];
+    
+        if (rows === undefined || rows === null)
+            rows = allRows;
+        if (cols === undefined || cols === null)
+            cols = allCols;
+
+        if (rows === allRows && cols === allCols)
+            return this;
+
+        // Turn rows or cols parameters into array form
+        // > 1 turns into [1],
+        // > [false,true,true,false] turns into [1,2]
+        // > [-2,-1] turns into [0,3] for 'row' direction and matrix having 4 rows
+        // > (row,ix) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
+        let arrayify = (param, direction) => {
+    
+            // convert int form to int array form
+            if (typeof param === 'number') 
+                param = [param];
+    
+            if (Array.isArray(param) && param.length >= 0) {
+                
+                // convert boolean form to int array form
+                if (typeof param[0] === 'boolean') {
+
+                    if (direction == 'rows' && param.length != this.data.length) 
+                        throw `Bool array passed to 'rows' is length ${param.length} (${this.data.length} expected)`;
+                    else if (direction == 'cols' && param.length != this.data[0].length)
+                        throw `Bool array passed to 'cols' is length ${param.length} (${this.data[0].length} expected)`;
+                    
+                    param = param
+                        .map((row,ix) => row === true ? ix : undefined)
+                        .filter(row => row != undefined);
+
+                }
+    
+                if (typeof param[0] === 'number') {
+    
+                    // make sure all numbers are integers
+                    param = param.map(row => Math.round(row));
+    
+                    for(let x of param) 
+                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1)
+                            throw `Index |${x}| passed to '${direction}' is outside the bounds of the matrix.`;
+
+                    // deal with negative numbers
+                    let positives = param.filter(x => x >= 0 && !Object.is(x, -0));
+                    if (positives.length == 0)  // if only negatives, then make the full range and exclude the negatives
+                        param = (direction == 'rows' ? allRows : allCols)
+                            .filter(num => !param.includes(-num));
+                    else if (positives.length < param.length) // if some positives, then just exclude the negatives
+                        param = positives;
+    
+                }
+    
+            }
+    
+            if (isFunction(param)) {
+                let _param = [];
+                if (direction == 'rows')
+                    for(let r = 0; r < this.data.length; r++)  {
+                        if (param(this.data[r], r))
+                            _param.push(r);
+                    }
+                else 
+                    for(let c = 0; c < this.data[0].length; c++) {
+                        let transposed = [];
+                        for(let r = 0; r < this.data.length; r++)
+                            transposed.push(this.data[r][c]);
+                        if(param(transposed, c))
+                            _param.push(c);
+                    }
+                param = _param;
+            }
+    
+            return param;
+    
+        };
+    
+        rows = arrayify(rows, 'rows');
+        cols = arrayify(cols, 'cols');
+    
+        let subset = [];
+        for(let r of rows) {
+            let row = [];
+            for (let c of cols)
+                row.push(this.data[r][c]);
+            subset.push(row);
+        }
+
+        this.rowNames = rows.map(rix => this.rowNames[rix]);
+        this.colNames = cols.map(cix => this.colNames[cix]);
+        this.data = subset;
         return this;
 
     }
