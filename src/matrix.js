@@ -482,6 +482,88 @@ export default class matrix {
 
     }
 
+    get(rows, cols) {
+
+        if (rows === undefined && cols === undefined)
+            return this;
+        
+        let allRows = [...Array(this.data.length).keys()];
+        let allCols = [...Array(this.data[0].length).keys()];
+    
+        // Turn rows or cols parameters into array form
+        // > 1 turns into [1],
+        // > [false,true,true,false] turns into [1,2]
+        // > [-2,-1] turns into [0,3] for 'row' direction and matrix having 4 rows
+        // > (row,ix) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
+        let arrayify = function (param, direction) {
+    
+            // convert int form to int array form
+            if (typeof param === 'number')
+                param = [param];
+    
+            if (Array.isArray(param) && param.length >= 0) {
+                
+                // convert boolean form to int array form
+                if (typeof param[0] === 'boolean')
+                    param = param
+                        .map((row,ix) => row === true ? ix : undefined)
+                        .filter(row => row != undefined);
+    
+                if (typeof param[0] === 'number') {
+    
+                    // make sure all numbers are integers
+                    param = param.map(row => Math.round(row));
+    
+                    // deal with negative numbers
+                    let positives = param.filter(row => row >= 0);
+                    if (positives.length == 0)  // if only negatives, then make the full range and exclude the negatives
+                        param = (direction == 'rows' ? allRows : allCols)
+                            .filter(num => !param.includes(-num));
+                    else if (positives.length < param.length) // if some positives, then just exclude the negatives
+                        param = positives;
+    
+                }
+    
+            }
+    
+            if (g.isFunction(param)) {
+                let _param = [];
+                if (direction == 'rows')
+                    for(let r = 0; r < this.data.length; r++)  {
+                        if (param(this.data[r], r))
+                            _param.push(r);
+                    }
+                else 
+                    for(let c = 0; c < this.data[0].length; c++) {
+                        let transposed = [];
+                        for(let r = 0; r < this.data.length; r++)
+                            transposed.push(this.data[r][c]);
+                        if(param(transposed, c))
+                            _param.push(c);
+                    }
+                param = _param;
+            }
+    
+            return param;
+    
+        }
+    
+        rows = arrayify(rows, 'rows');
+        cols = arrayify(cols, 'cols');
+    
+        let subset = [];
+        for(let r of rows) {
+            let row = [];
+            for (let c of cols)
+                row.push(this.data[r][c]);
+            subset.push(row);
+        }
+
+        this.data = subset;
+        return this;
+
+    }
+
 }
 
 matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
