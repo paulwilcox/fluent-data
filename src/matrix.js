@@ -484,18 +484,23 @@ export default class matrix {
 
     get(rows, cols) {
 
-        if (rows === undefined && cols === undefined)
-            return this;
-        
         let allRows = [...Array(this.data.length).keys()];
         let allCols = [...Array(this.data[0].length).keys()];
     
+        if (rows === undefined || rows === null)
+            rows = allRows;
+        if (cols === undefined || cols === null)
+            cols = allCols;
+
+        if (rows === allRows && cols === allCols)
+            return this;
+
         // Turn rows or cols parameters into array form
         // > 1 turns into [1],
         // > [false,true,true,false] turns into [1,2]
         // > [-2,-1] turns into [0,3] for 'row' direction and matrix having 4 rows
         // > (row,ix) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
-        let arrayify = function (param, direction) {
+        let arrayify = (param, direction) => {
     
             // convert int form to int array form
             if (typeof param === 'number')
@@ -515,7 +520,7 @@ export default class matrix {
                     param = param.map(row => Math.round(row));
     
                     // deal with negative numbers
-                    let positives = param.filter(row => row >= 0);
+                    let positives = param.filter(x => x >= 0 && !Object.is(x, -0));
                     if (positives.length == 0)  // if only negatives, then make the full range and exclude the negatives
                         param = (direction == 'rows' ? allRows : allCols)
                             .filter(num => !param.includes(-num));
@@ -559,6 +564,8 @@ export default class matrix {
             subset.push(row);
         }
 
+        this.rowNames = rows.map(rix => this.rowNames[rix]);
+        this.colNames = cols.map(cix => this.colNames[cix]);
         this.data = subset;
         return this;
 
