@@ -503,22 +503,34 @@ export default class matrix {
         let arrayify = (param, direction) => {
     
             // convert int form to int array form
-            if (typeof param === 'number')
+            if (typeof param === 'number') 
                 param = [param];
     
             if (Array.isArray(param) && param.length >= 0) {
                 
                 // convert boolean form to int array form
-                if (typeof param[0] === 'boolean')
+                if (typeof param[0] === 'boolean') {
+
+                    if (direction == 'rows' && param.length != this.data.length) 
+                        throw `Bool array passed to 'rows' is length ${param.length} (${this.data.length} expected)`;
+                    else if (direction == 'cols' && param.length != this.data[0].length)
+                        throw `Bool array passed to 'cols' is length ${param.length} (${this.data[0].length} expected)`;
+                    
                     param = param
                         .map((row,ix) => row === true ? ix : undefined)
                         .filter(row => row != undefined);
+
+                }
     
                 if (typeof param[0] === 'number') {
     
                     // make sure all numbers are integers
                     param = param.map(row => Math.round(row));
     
+                    for(let x of param) 
+                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1)
+                            throw `Index |${x}| passed to '${direction}' is outside the bounds of the matrix.`;
+
                     // deal with negative numbers
                     let positives = param.filter(x => x >= 0 && !Object.is(x, -0));
                     if (positives.length == 0)  // if only negatives, then make the full range and exclude the negatives
