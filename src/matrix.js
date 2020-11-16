@@ -98,6 +98,16 @@ export default class matrix {
         return this;
 
     }
+    //
+    add(other) {
+        this.apply(other, (a,b) => a+b);
+        return this;
+    }
+    //
+    subtract(other) {
+        this.apply(other, (a,b) => a-b);
+        return this;
+    }
 
     reduce(direction, func, seed = undefined) {
 
@@ -599,7 +609,7 @@ export default class matrix {
             this.rowNames = rows.map(rix => this.rowNames[rix]);
         if(this.colNames)
             this.colNames = cols.map(cix => this.colNames[cix]);
-            
+
         this.data = subset;
         return this;
 
