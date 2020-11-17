@@ -35,20 +35,40 @@ async function test () {
         Hs.push(H);
 
         // Same as H * Asub, but presumably more performant
-        let HA = vvt.clone();
+        /*let HA = vvt.clone();
         HA = HA.multiply(0.5).multiply(Asub);
         HA = Asub.clone().subtract(HA);
+        */
+       
+        let HA = H.clone().multiply(Asub);
+        let Apre = A.clone();
+
+        let Aempty = A.clone().apply(cell => 'untouched').data;
+
+        for (let r = level; r < A.data.length; r++)
+        for (let c = level; c < A.data[0].length; c++) {
+            A.data[r][c] = HA.data[r-level][c-level];
+            Aempty[r][c] = 'changed';
+        }
         
-        for (let r = level; r < HA.data.length; r++)
-        for (let c = level; c < HA.data[0].length; c++) 
-            A.data[r+level][c+level] = HA.data[r][c];
+        //if (A.isUpperTriangular()) // TODO: wrong result
+        //    return;
+        
 
         console.log({
             level,
-            A: A.clone().data
+            v: v.clone().data,
+            A: A.clone().data,
+            Asub: Asub.clone().data,
+            Apre: Apre.clone().data,
+            Aempty,
+            H: H.clone().data,
+            HA: HA.clone().data
         })
-        if (A.isUpperTriangular())
-            return;
+    
+
+if (level == 2)
+        return;
 
         cycle(++level);
 
@@ -56,12 +76,6 @@ async function test () {
 
     // TODO: Needs a stopper when HA is upper triangular.
     cycle();
-
-    console.log({
-        Aorig: Aorig.data,
-        A: A.data,
-        Hs: Hs.map(h => h.data)
-    })
 
     return true;
 
