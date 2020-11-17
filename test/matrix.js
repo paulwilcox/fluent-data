@@ -20,6 +20,14 @@ async function test () {
     if (mx.norm('infinity') != 27)
         throw `Matrix infinity-norm is ${mx.norm('infinity')}, 27 expected.`;
 
+    mx = new $$.matrix([[1, 0, 0], [4, 5, 0], [7, 8, 9]]);
+    if (!mx.isLowerTriangular())
+        throw `Lower trianguar matrix not identified as such`;
+
+    mx = new $$.matrix([[1, 2, 3], [0, 5, 6], [0, 0, 9]]);
+    if (!mx.isUpperTriangular())
+        throw `Upper trianguar matrix not identified as such`;
+    
     return true;
 
 }

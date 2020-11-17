@@ -69,6 +69,22 @@ export default class matrix {
         return rows == cols;
     }
 
+    isLowerTriangular() {
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = r; c < this.data[0].length; c++) 
+        if (r != c && this.data[r][c] != 0)
+            return false;
+        return true;
+    }
+
+    isUpperTriangular() {
+        for (let c = 0; c < this.data[0].length; c++) 
+        for (let r = c; r < this.data.length; r++)
+        if (r != c && this.data[r][c] != 0)
+            return false;
+        return true;
+    }
+
     clone() {
         let result = [];
         for(let row of this.data) {

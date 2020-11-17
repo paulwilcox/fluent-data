@@ -25,7 +25,7 @@ async function test () {
         let Asub = A.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
         let col0 = Asub.clone().get(null, 0);
         let e = $$.matrix.identity(Asub.data.length).get(null, 0);
-        let v = col0.subtract(e.multiply(Math.sign(col0.data[0]) * col0.norm())); 
+        let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
         let vvt = v.clone().multiply(v.clone().transpose());
 
         let H = v.clone().transpose().multiply(v).data[0];
@@ -34,19 +34,27 @@ async function test () {
         H = $$.matrix.identity(H.data[0].length).subtract(H);
         Hs.push(H);
 
-        // Same as H * A, but presumably more performant
-        let Anext = vvt.clone();
-        Anext = Anext.multiply(0.5).multiply(Asub);
-        Anext = Asub.clone().subtract(Anext);
+        // Same as H * Asub, but presumably more performant
+        let HA = vvt.clone();
+        HA = HA.multiply(0.5).multiply(Asub);
+        HA = Asub.clone().subtract(HA);
         
-        for (let r = level; r < Anext.data.length; r++)
-        for (let c = level; c < Anext.data[0].length; c++) 
-            A.data[r+level][c+level] = Anext.data[r][c];
+        for (let r = level; r < HA.data.length; r++)
+        for (let c = level; c < HA.data[0].length; c++) 
+            A.data[r+level][c+level] = HA.data[r][c];
+
+        console.log({
+            level,
+            A: A.clone().data
+        })
+        if (A.isUpperTriangular())
+            return;
 
         cycle(++level);
 
     };
 
+    // TODO: Needs a stopper when HA is upper triangular.
     cycle();
 
     console.log({
@@ -54,8 +62,6 @@ async function test () {
         A: A.data,
         Hs: Hs.map(h => h.data)
     })
-
-
 
     return true;
 
