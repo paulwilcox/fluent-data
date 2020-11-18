@@ -28,6 +28,10 @@ async function test () {
     if (!mx.isUpperTriangular())
         throw `Upper trianguar matrix not identified as such`;
 
+    mx = new $$.matrix([1, -1,  4], [1,  4, -2], [1,  4,  2], [1, -1,  0]);
+    if (!mx.decompose('qr').test())
+        throw `QR decomposition of 4x3 matrix does not result in A = Q*R`;    
+
     return true;
 
 }

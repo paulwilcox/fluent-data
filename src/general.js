@@ -1,5 +1,16 @@
 export let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
+// developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+export let random = (min, max, integers = false) => {
+    if (integers) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+    }
+    return integers 
+        ? Math.floor(Math.random() * (max - min + 1)) + min
+        : Math.random() * (max - min) + min;
+}
+
 export let isSubsetOf = (sub, sup) =>  
     setEquals (
         new Set(

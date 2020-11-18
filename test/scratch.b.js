@@ -1,5 +1,9 @@
 async function test () {
 
+    console.log(new $$.matrix.randomizer().setSize(4,3).setValues(-1, 9).get())
+
+    return;
+
     let A = new $$.matrix([
         [1, -1,  4],
         [1,  4, -2],

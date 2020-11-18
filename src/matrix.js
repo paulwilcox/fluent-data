@@ -570,12 +570,6 @@ export default class matrix {
                 I.data[r][c] = H.data[r-level][c-level];
             H = I;
     
-            // Same as H * R, but presumably more performant.  
-            // But I don't want to implement it yet.
-            //   let HR = vvt.clone();
-            //   HR = HR.multiply(0.5).multiply(R);
-            //   HR = R.clone().subtract(HA);
-            //   R = HR;       
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
@@ -583,9 +577,8 @@ export default class matrix {
             let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.data.some(row => row.some(cell => cell != 0));
     
-            if(upperSquare.isUpperTriangular() && lowerIsZeroes) {
+            if(upperSquare.isUpperTriangular() && lowerIsZeroes)
                 return;
-            }
                 
             cycle(++level);
     
@@ -724,4 +717,36 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); }
 matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); }
-matrix.identity = function(numRows) { return matrix.repeat(1, numRows, numRows, true); }
+matrix.identity = function (numRows) { return matrix.repeat(1, numRows, numRows, true); }
+
+matrix.randomizer = class {
+    setSize (numRows, numCols) {
+        this.numRows = numRows;
+        this.numCols = numCols;
+        return this;
+    }
+    setValues(lowVal, highVal, integers = false) {
+        this.lowVal = lowVal;
+        this.highVal = highVal;
+        this.integers = integers;
+        return this;
+    }
+    setStructure (structure) {
+        this.structure = structure;
+        return this;
+    }
+    get() {
+        let result = [];
+        if (this.numRows == 0 || this.numCols == 0)
+            return result;
+        for (let r = 0; r < this.numRows; r++) {
+            let row = [];
+            for (let c = 0; c < this.numCols; c++) {
+                let val = g.random(this.lowVal, this.highVal, this.integers);
+                row.push(val);
+            }
+            result.push(row);
+        }
+        return result;
+    }
+}
