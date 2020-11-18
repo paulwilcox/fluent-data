@@ -14,8 +14,8 @@ async function test () {
         throw   `Matrix has more columns (${A.data[0].length} than rows (${A.data.length}).  ` + 
                 `Cannot take the Household transform.`;
 
-    let Aorig = A.clone();
-    let Hs = [];
+    let R;
+    let Q;
 
     let cycle = (level = 0) => {
             
@@ -32,50 +32,40 @@ async function test () {
         H = 2 / H;
         H = vvt.clone().multiply(H);
         H = $$.matrix.identity(H.data[0].length).subtract(H);
-        Hs.push(H);
+        let I = $$.matrix.identity(H.data[0].length + level);
+        for (let r = level; r < I.data.length; r++)
+        for (let c = level; c < I.data[0].length; c++) 
+            I.data[r][c] = H.data[r-level][c-level];
+        H = I;
 
-        // Same as H * Asub, but presumably more performant
+        // Same as H * A, but presumably more performant
         /*let HA = vvt.clone();
         HA = HA.multiply(0.5).multiply(Asub);
         HA = Asub.clone().subtract(HA);
-        */
-       
-        let HA = H.clone().multiply(Asub);
-        let Apre = A.clone();
+        */       
+        A = H.clone().multiply(A);
+        Q = Q == null ? H : Q.multiply(H);
+   
+        let upperSquare = A.clone().get((row,ix) => ix < A.data[0].length, null);
+        let lowerRectangle = A.clone().get((row,ix) => ix >= A.data[0].length, null);
+        let lowerIsZeroes = !lowerRectangle.data.some(row => row.some(cell => cell != 0));
 
-        let Aempty = A.clone().apply(cell => 'untouched').data;
-
-        for (let r = level; r < A.data.length; r++)
-        for (let c = level; c < A.data[0].length; c++) {
-            A.data[r][c] = HA.data[r-level][c-level];
-            Aempty[r][c] = 'changed';
+        if(upperSquare.isUpperTriangular() && lowerIsZeroes) {
+            R = upperSquare;
+            return;
         }
-        
-        //if (A.isUpperTriangular()) // TODO: wrong result
-        //    return;
-        
-
-        console.log({
-            level,
-            v: v.clone().data,
-            A: A.clone().data,
-            Asub: Asub.clone().data,
-            Apre: Apre.clone().data,
-            Aempty,
-            H: H.clone().data,
-            HA: HA.clone().data
-        })
-    
-
-if (level == 2)
-        return;
-
+            
         cycle(++level);
 
     };
 
-    // TODO: Needs a stopper when HA is upper triangular.
     cycle();
+    
+    console.log({
+        R: R.data, 
+        Q: Q.data
+    })
+    
 
     return true;
 

@@ -27,7 +27,7 @@ async function test () {
     mx = new $$.matrix([[1, 2, 3], [0, 5, 6], [0, 0, 9]]);
     if (!mx.isUpperTriangular())
         throw `Upper trianguar matrix not identified as such`;
-    
+
     return true;
 
 }
