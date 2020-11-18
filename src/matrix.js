@@ -747,6 +747,6 @@ matrix.randomizer = class {
             }
             result.push(row);
         }
-        return result;
+        return new matrix(result);
     }
 }
