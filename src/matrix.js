@@ -527,6 +527,81 @@ export default class matrix {
 
     }
 
+    decompose(method) {
+
+        if (method.toLowerCase() == "qr")
+            return this._decomposeQR();
+
+        else 
+            throw `Decompose method '${method}' not recognized.  Presently only QR decomposition supported`;
+
+    }
+
+    _decomposeQR() {
+
+        // example: cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
+        // properties: en.wikipedia.org/wiki/QR_decomposition
+
+        let R = this.clone();
+        let Q;
+    
+        if (this.data.length <= this.data[0].length)
+            throw   `Matrix has more columns (${this.data[0].length} than rows (${this.data.length}).  ` + 
+                    `Cannot take the Household transform.`;
+    
+        let cycle = (level = 0) => {
+                
+            if (level >= this.data.length - 1)
+                return;
+    
+            let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
+            let col0 = Rsub.clone().get(null, 0);
+            let e = matrix.identity(Rsub.data.length).get(null, 0);
+            let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
+            let vvt = v.clone().multiply(v.clone().transpose());
+    
+            let H = v.clone().transpose().multiply(v).data[0];
+            H = 2 / H;
+            H = vvt.clone().multiply(H);
+            H = matrix.identity(H.data[0].length).subtract(H);
+            let I = matrix.identity(H.data[0].length + level);
+            for (let r = level; r < I.data.length; r++)
+            for (let c = level; c < I.data[0].length; c++) 
+                I.data[r][c] = H.data[r-level][c-level];
+            H = I;
+    
+            // Same as H * R, but presumably more performant.  
+            // But I don't want to implement it yet.
+            //   let HR = vvt.clone();
+            //   HR = HR.multiply(0.5).multiply(R);
+            //   HR = R.clone().subtract(HA);
+            //   R = HR;       
+            R = H.clone().multiply(R);
+            Q = Q == null ? H : Q.multiply(H);
+       
+            let upperSquare = R.clone().get((row,ix) => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
+            let lowerIsZeroes = !lowerRectangle.data.some(row => row.some(cell => cell != 0));
+    
+            if(upperSquare.isUpperTriangular() && lowerIsZeroes) {
+                return;
+            }
+                
+            cycle(++level);
+    
+        };
+    
+        cycle();
+        
+        return { 
+            A: this, 
+            R, 
+            Q, 
+            test: () => this.equals(Q.multiply(R))
+        };
+
+    }
+
     get(rows, cols) {
 
         let allRows = [...Array(this.data.length).keys()];
