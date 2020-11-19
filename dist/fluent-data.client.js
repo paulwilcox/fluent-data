@@ -9,6 +9,17 @@
 
 let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
+// developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+let random = (min, max, integers = false) => {
+    if (integers) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+    }
+    return integers 
+        ? Math.floor(Math.random() * (max - min + 1)) + min
+        : Math.random() * (max - min) + min;
+};
+
 let stringifyObject = obj => {
 
     if (obj === undefined) 
@@ -600,6 +611,24 @@ class matrix {
         return rows == cols;
     }
 
+    // zeroThreshold allows very small numbers to count as 0
+    isLowerTriangular(zeroThreshold = 0) {
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = r; c < this.data[0].length; c++) 
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
+        return true;
+    }
+
+    // zeroThreshold allows very small numbers to count as 0
+    isUpperTriangular(zeroThreshold = 0) {
+        for (let c = 0; c < this.data[0].length; c++) 
+        for (let r = c; r < this.data.length; r++)
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
+        return true;
+    }
+
     clone() {
         let result = [];
         for(let row of this.data) {
@@ -628,6 +657,16 @@ class matrix {
 
         return this;
 
+    }
+    //
+    add(other) {
+        this.apply(other, (a,b) => a+b);
+        return this;
+    }
+    //
+    subtract(other) {
+        this.apply(other, (a,b) => a-b);
+        return this;
     }
 
     reduce(direction, func, seed = undefined) {
@@ -1032,6 +1071,79 @@ class matrix {
 
     }
 
+    decompose(method) {
+
+        if (method.toLowerCase() == "qr")
+            return this._decomposeQR();
+
+        else 
+            throw `Decompose method '${method}' not recognized.  Presently only QR decomposition supported`;
+
+    }
+
+    _decomposeQR() {
+
+        // example: cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
+        // properties: en.wikipedia.org/wiki/QR_decomposition
+
+        let R = this.clone();
+        let Q;
+    
+        if (this.data.length < this.data[0].length)
+            throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
+                    `Cannot take the Household transform.`;
+    
+        let cycle = (level = 0) => {
+                
+            if (level >= this.data.length - 1)
+                return;
+    
+            let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
+            if (Rsub.data[0].length == 0) 
+                throw `QR decomposition did not converge in time to produce an upper triangular R.`;
+            let col0 = Rsub.clone().get(null, 0);
+            let e = matrix.identity(Rsub.data.length).get(null, 0);
+            let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
+            let vvt = v.clone().multiply(v.clone().transpose());
+    
+            let H = v.clone().transpose().multiply(v).data[0];
+            H = 2 / H;
+            H = vvt.clone().multiply(H);
+            H = matrix.identity(H.data[0].length).subtract(H);
+            let I = matrix.identity(H.data[0].length + level);
+            for (let r = level; r < I.data.length; r++)
+            for (let c = level; c < I.data[0].length; c++) 
+                I.data[r][c] = H.data[r-level][c-level];
+            H = I;
+    
+            R = H.clone().multiply(R);
+            Q = Q == null ? H : Q.multiply(H);
+       
+            let upperSquare = R.clone().get((row,ix) => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
+            let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
+    
+            if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
+                return;
+    
+            cycle(++level);
+    
+        };
+    
+        cycle();
+        
+        return { 
+            A: this, 
+            R, 
+            Q, 
+            test: (roundDigits = 16) => 
+                this.clone().round(roundDigits).equals(
+                    Q.clone().multiply(R).round(roundDigits)
+                )
+        };
+
+    }
+
     get(rows, cols) {
 
         let allRows = [...Array(this.data.length).keys()];
@@ -1078,7 +1190,7 @@ class matrix {
                     param = param.map(row => Math.round(row));
     
                     for(let x of param) 
-                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1)
+                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1) 
                             throw `Index |${x}| passed to '${direction}' is outside the bounds of the matrix.`;
 
                     // deal with negative numbers
@@ -1126,8 +1238,11 @@ class matrix {
             subset.push(row);
         }
 
-        this.rowNames = rows.map(rix => this.rowNames[rix]);
-        this.colNames = cols.map(cix => this.colNames[cix]);
+        if (this.rowNames)
+            this.rowNames = rows.map(rix => this.rowNames[rix]);
+        if(this.colNames)
+            this.colNames = cols.map(cix => this.colNames[cix]);
+
         this.data = subset;
         return this;
 
@@ -1151,7 +1266,39 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); };
 matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); };
-matrix.identity = function(numRows) { return matrix.repeat(1, numRows, numRows, true); };
+matrix.identity = function (numRows) { return matrix.repeat(1, numRows, numRows, true); };
+
+matrix.randomizer = class {
+    setSize (numRows, numCols) {
+        this.numRows = numRows;
+        this.numCols = numCols;
+        return this;
+    }
+    setValues(lowVal, highVal, integers = false) {
+        this.lowVal = lowVal;
+        this.highVal = highVal;
+        this.integers = integers;
+        return this;
+    }
+    setStructure (structure) {
+        this.structure = structure;
+        return this;
+    }
+    get() {
+        let result = [];
+        if (this.numRows == 0 || this.numCols == 0)
+            return result;
+        for (let r = 0; r < this.numRows; r++) {
+            let row = [];
+            for (let c = 0; c < this.numCols; c++) {
+                let val = random(this.lowVal, this.highVal, this.integers);
+                row.push(val);
+            }
+            result.push(row);
+        }
+        return new matrix(result);
+    }
+};
 
 class parser {
 
