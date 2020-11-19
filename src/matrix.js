@@ -69,19 +69,21 @@ export default class matrix {
         return rows == cols;
     }
 
-    isLowerTriangular() {
+    // zeroThreshold allows very small numbers to count as 0
+    isLowerTriangular(zeroThreshold = 0) {
         for (let r = 0; r < this.data.length; r++)
         for (let c = r; c < this.data[0].length; c++) 
-        if (r != c && this.data[r][c] != 0)
-            return false;
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
         return true;
     }
 
-    isUpperTriangular() {
+    // zeroThreshold allows very small numbers to count as 0
+    isUpperTriangular(zeroThreshold = 0) {
         for (let c = 0; c < this.data[0].length; c++) 
         for (let r = c; r < this.data.length; r++)
-        if (r != c && this.data[r][c] != 0)
-            return false;
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
         return true;
     }
 
@@ -545,8 +547,8 @@ export default class matrix {
         let R = this.clone();
         let Q;
     
-        if (this.data.length <= this.data[0].length)
-            throw   `Matrix has more columns (${this.data[0].length} than rows (${this.data.length}).  ` + 
+        if (this.data.length < this.data[0].length)
+            throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
                     `Cannot take the Household transform.`;
     
         let cycle = (level = 0) => {
@@ -555,6 +557,14 @@ export default class matrix {
                 return;
     
             let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
+            if (Rsub.data[0].length == 0) {
+                console.log({
+                    R: R.data,
+                    Q: Q.data,
+                    A: this.data
+                })
+                throw `QR decomposition did not converge in time to produce an upper triangular R.`;
+            }
             let col0 = Rsub.clone().get(null, 0);
             let e = matrix.identity(Rsub.data.length).get(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
@@ -577,9 +587,9 @@ export default class matrix {
             let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.data.some(row => row.some(cell => cell != 0));
     
-            if(upperSquare.isUpperTriangular() && lowerIsZeroes)
+            if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
                 return;
-                
+    
             cycle(++level);
     
         };
@@ -590,7 +600,10 @@ export default class matrix {
             A: this, 
             R, 
             Q, 
-            test: () => this.equals(Q.multiply(R))
+            test: (roundDigits = 16) => 
+                this.clone().round(roundDigits).equals(
+                    Q.clone().multiply(R).round(roundDigits)
+                )
         };
 
     }
@@ -641,7 +654,7 @@ export default class matrix {
                     param = param.map(row => Math.round(row));
     
                     for(let x of param) 
-                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1)
+                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1) 
                             throw `Index |${x}| passed to '${direction}' is outside the bounds of the matrix.`;
 
                     // deal with negative numbers

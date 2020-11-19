@@ -1,16 +1,20 @@
 async function test () {
 
-    let mx = new $$.matrix.randomizer().setSize(4,3).setValues(-1, 9).get().round(4);
-    let d = mx.decompose('qr');
-
-    // TODO: Add round capacity to matrix.decompose.test() so that minute errors don't fail.
-    console.log({
-        A: d.A.data,
-        Q: d.Q.data,
-        R: d.R.data,
-        QR: d.Q.clone().multiply(d.R).data,
-        test: d.test()
-    })
+    for (let r = 2; r < 10; r++)
+    for (let c = 2; c <= r; c++) {
+        let mx, d;
+        try {
+            mx = new $$.matrix.randomizer().setSize(r,c).setValues(-10,10).get();
+            d = mx.decompose('qr');    
+        }
+        catch(e) {
+            throw `Random ${r}x${c} matrix QR decomposition resulted in an error (text follows).  ${e}`;
+        }
+        if (!d.test(4)) {
+            logDecomposition(d);
+            throw `Random ${r}x${c} matrix QR decomposition resulted in Q*R <> A.`;
+        }
+    }
 
     return;
 
@@ -31,5 +35,17 @@ async function test () {
     })
     
     return true;
+
+}
+
+function logDecomposition (QRresult) {
+    console.log('Failed QR decomposition results follow');
+    console.log({
+        A: QRresult.A.data,
+        Q: QRresult.Q.data,
+        R: QRresult.R.data,
+        QR: QRresult.Q.clone().multiply(QRresult.R).data,
+        test: QRresult.test(4)
+    })
 
 }
