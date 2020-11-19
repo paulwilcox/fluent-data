@@ -557,14 +557,8 @@ export default class matrix {
                 return;
     
             let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
-            if (Rsub.data[0].length == 0) {
-                console.log({
-                    R: R.data,
-                    Q: Q.data,
-                    A: this.data
-                })
+            if (Rsub.data[0].length == 0) 
                 throw `QR decomposition did not converge in time to produce an upper triangular R.`;
-            }
             let col0 = Rsub.clone().get(null, 0);
             let e = matrix.identity(Rsub.data.length).get(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
@@ -585,7 +579,7 @@ export default class matrix {
        
             let upperSquare = R.clone().get((row,ix) => ix < R.data[0].length, null);
             let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
-            let lowerIsZeroes = !lowerRectangle.data.some(row => row.some(cell => cell != 0));
+            let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
                 return;
