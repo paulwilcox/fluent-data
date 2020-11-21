@@ -61,6 +61,19 @@ export default class matrix {
         return this;
     }
 
+    log() {
+        let clone = this.clone();
+        let printable = {};
+        for (let r in clone.data) {
+            let obj = {};
+            for (let c in clone.data[r]) 
+                obj[clone.colNames ? clone.colNames[c] : c] = clone.data[r][c];
+            printable[clone.rowNames ? clone.rowNames[r] : r] = obj;
+        }
+        console.table(printable);
+        return this;
+    }
+
     isSquare() {
         if (this.data.length == 0)
             return true;
@@ -597,16 +610,7 @@ export default class matrix {
             test: (roundDigits = 8) => 
                 this.clone().round(roundDigits).equals(
                     Q.clone().multiply(R).round(roundDigits)
-                ),
-            // Strip the names and stuff, esp for console purposes
-            get focusData() {
-                return {
-                    A: this.A.data,
-                    R: this.R.data,
-                    Q: this.Q.data,
-                    test: this.test()    
-                };
-            }
+                )
         };
 
     }
@@ -809,4 +813,42 @@ matrix.randomizer = class {
         }
         return new matrix(result);
     }
+}
+
+matrix.logMany = (obj, objectTitle = 'object') => {
+
+    console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+
+    let nonTables = {};
+    let tables = [];
+
+    for (let key of Object.keys(obj)) 
+        if(obj[key] instanceof matrix) {
+            tables.push({
+                titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
+                tableFunc: () => obj[key].log() 
+            })
+        }
+        else if (Array.isArray(obj[key]) || typeof obj[key] === 'object') {
+            tables.push({
+                titleFunc: () => console.log('%c Array For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
+                tableFunc: () => console.table(obj[key])
+            })
+        } 
+        else if (typeof obj[key] !== 'function') {
+            nonTables[key] = obj[key];
+        }
+    
+    if (Object.keys(nonTables).length > 0) {
+        console.log('%c Primitives:', 'color:green;font-weight:bold;margin-top:10px');
+        console.table(nonTables);
+    }
+
+    for(let table of tables) {
+        table.titleFunc();
+        table.tableFunc();
+    }
+
+    console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+
 }
