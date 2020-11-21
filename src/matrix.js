@@ -621,6 +621,8 @@ export default class matrix {
         let values = A.clone();
         let vectors = matrix.identity(A.data.length);
     
+        let prevValues;
+
         let iterations = 0;
         for (let i = 1; i <= maxIterations; i++) {
             iterations++;
@@ -629,6 +631,15 @@ export default class matrix {
             vectors = vectors.multiply(QR.Q);
             if (values.isUpperTriangular(errorThreshold))
                 break;
+// TODO: our stop logic is off.  It's letting things go way to long while test() would still pass.  
+// But I don't have the logic right yet.
+            if (prevValues) {
+                let errs = values.clone().diagonal(true).apply(prevValues, (a,b) => Math.abs(a-b));
+                let maxErr = Math.max(...errs.transpose().data[0]);
+                if (maxErr < errorThreshold)
+                    break;
+            }
+            prevValues = values.clone().diagonal(true);
             if (iterations > maxIterations)
                 throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
         }

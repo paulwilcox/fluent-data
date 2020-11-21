@@ -27,7 +27,7 @@ async function test () {
     let eigen = correlations.clone().eigen();
     $$.matrix.logMany(eigen, 'Cor eigens', 8);
 
-    eigen = A.clone().eigen();
+    eigen = A.clone().eigen(1e-10, 100);
     $$.matrix.logMany(eigen, 'A eigens', 8);
 
 
