@@ -15,7 +15,29 @@ async function test () {
     // Is the algorithm I used already doing this?
     // I suppose I can feed this into it and see if it results in fewer iterations and the same eigens.
 
-    let A = correlations.clone();
+    let A = upperHessenderize(correlations.clone()).round(10);
+    A.log();
+
+    /*
+    let result = correlations.clone().decompose('qr');
+    result.test = result.test();
+    $$.matrix.logMany(result, 'qr-decomposition');
+    */
+
+    let eigen = correlations.clone().eigen();
+    $$.matrix.logMany(eigen, 'Cor eigens', 8);
+
+    eigen = A.clone().eigen();
+    $$.matrix.logMany(eigen, 'A eigens', 8);
+
+
+    return true;
+
+}
+
+
+// Of course I'll find a different name
+function upperHessenderize (A) {
 
     for (let level = 0; level < A.data.length - 2; level++) {
 
@@ -46,19 +68,8 @@ async function test () {
 
         A = P.clone().multiply(A.multiply(P));
 
-        $$.matrix.logMany({level, P, A}, 'object', 8)
-
     }
 
-return;
-
-    let result = correlations.clone().decompose('qr');
-    result.test = result.test();
-    $$.matrix.logMany(result, 'qr-decomposition');
-
-    let eigen = correlations.clone().eigen();
-    $$.matrix.logMany(eigen, 'eigens');
-
-    return true;
+    return A;
 
 }
