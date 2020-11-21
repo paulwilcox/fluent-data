@@ -611,6 +611,50 @@ export default class matrix {
 
     }
 
+    eigen(errorThreshold = 1e-8, maxIterations = 1000) {
+
+        let A = this.clone();
+        let values = A.clone();
+        let vectors = matrix.identity(A.data.length);
+    
+        let iterations = 0;
+        for (let i = 1; i <= maxIterations; i++) {
+            iterations++;
+            let QR = values.clone().decompose('qr');
+            values = QR.R.multiply(QR.Q);
+            vectors = vectors.multiply(QR.Q);
+            if (values.isUpperTriangular(errorThreshold))
+                break;
+            if (iterations > maxIterations)
+                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
+        }
+    
+        let test = (roundDigits = 8) => {
+            for (let i = 0; i < vectors.data.length; i++) {
+                let AV = A.clone().multiply(vectors.clone().get(null, i));
+                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
+                if (!AV.round(roundDigits).equals(VV.round(roundDigits))) {
+                    console.log('Test about to fail:', { AV: AV.data, VV: VV.data })
+                    throw `A*vector[${i}] <> value[${i},${i}]*vector[${i}].  Eigen test fails.` + 
+                        `This can be a problem with the implementation.  It may also be a problem ` +
+                        `if a matrix does not have distinct eigenvalues, or some other assumption ` +
+                        `of the explicit QR algorithm is violated.  Or maybe just choose a smaller ` +
+                        `'roundDigits' value.`
+                }
+            }
+            return true;
+        }
+    
+        return {
+            iterations,
+            data: A,
+            values: values.diagonal(true),
+            vectors: vectors,
+            test: test(6)
+        };
+    
+    }
+
     get(rows, cols) {
 
         let allRows = [...Array(this.data.length).keys()];
