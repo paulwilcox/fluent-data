@@ -594,10 +594,19 @@ export default class matrix {
             A: this, 
             R, 
             Q, 
-            test: (roundDigits = 16) => 
+            test: (roundDigits = 8) => 
                 this.clone().round(roundDigits).equals(
                     Q.clone().multiply(R).round(roundDigits)
-                )
+                ),
+            // Strip the names and stuff, esp for console purposes
+            get focusData() {
+                return {
+                    A: this.A.data,
+                    R: this.R.data,
+                    Q: this.Q.data,
+                    test: this.test()    
+                };
+            }
         };
 
     }
