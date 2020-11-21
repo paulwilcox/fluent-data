@@ -61,8 +61,8 @@ export default class matrix {
         return this;
     }
 
-    log() {
-        let clone = this.clone();
+    log(roundDigits) {
+        let clone = roundDigits === undefined ? this.clone() : this.clone().round(roundDigits);
         let printable = {};
         for (let r in clone.data) {
             let obj = {};
@@ -815,7 +815,7 @@ matrix.randomizer = class {
     }
 }
 
-matrix.logMany = (obj, objectTitle = 'object') => {
+matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
 
     console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
 
@@ -826,12 +826,12 @@ matrix.logMany = (obj, objectTitle = 'object') => {
         if(obj[key] instanceof matrix) {
             tables.push({
                 titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
-                tableFunc: () => obj[key].log() 
+                tableFunc: () => obj[key].log(roundDigits) 
             })
         }
         else if (Array.isArray(obj[key]) || typeof obj[key] === 'object') {
             tables.push({
-                titleFunc: () => console.log('%c Array For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
+                titleFunc: () => console.log('%c Array/Object For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
                 tableFunc: () => console.table(obj[key])
             })
         } 
