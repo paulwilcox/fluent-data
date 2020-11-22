@@ -655,6 +655,59 @@ export default class matrix {
     
     }
 
+    eigen2(errorThreshold = 1e-8, maxIterations = 2) {
+
+        // wilkinson shift: pi.math.cornell.edu/~web6140/TopTenAlgorithms/QRalgorithm.html
+
+        let A = this.clone();
+        let values = A.clone();
+        let vectors = matrix.identity(A.data.length);
+        let valuesLastIx = values.data.length - 1;
+
+        let iterations = 0;
+        for (let i = 1; i <= maxIterations; i++) {
+
+            iterations++;
+                        
+            let wilk = (a,b,c) => {
+                let sigma = (a-c)/2;
+                return c - Math.sign(sigma) * Math.pow(b,2) / (Math.abs(sigma) + Math.pow(Math.pow(sigma,2)+Math.pow(b,2),0.5));
+            };
+            wilk = wilk(
+                values.clone().get(valuesLastIx,valuesLastIx).data[0][0], 
+                values.clone().get(valuesLastIx-1,valuesLastIx).data[0][0], 
+                values.clone().get(valuesLastIx-1,valuesLastIx-1).data[0][0]
+            );
+
+            let QR = values.clone().multiply(matrix.identity(values.data.length).multiply(wilk)).decompose('qr');
+            values = QR.R.multiply(QR.Q).add(matrix.identity(values.data.length).multiply(wilk));
+            vectors = vectors.multiply(QR.Q);
+/*
+            if (values.clone().get(valuesLastIx -1, valuesLastIx).data[0][0] < errorThreshold)
+                break;
+            if (iterations == maxIterations) {
+                matrix.logMany({values}, 'failing objects', 8)
+                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
+            }
+*/
+        }
+        
+        console.log({
+            iterations,
+            eigen: values.clone().get(valuesLastIx, valuesLastIx).data[0][0]
+        });
+
+        /*
+        return {
+            iterations,
+            data: A,
+            values: values.diagonal(true),
+            vectors: vectors
+        };
+        */
+    
+    }
+
     get(rows, cols) {
 
         let allRows = [...Array(this.data.length).keys()];

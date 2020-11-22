@@ -1,4 +1,23 @@
 async function test () {
+
+    let matrix = new $$.matrix([
+        [-5, -6, -3],
+        [ 3,  4, -3],
+        [ 0,  0, -2]
+    ]);
+
+
+    //let eigen = matrix.clone().eigen();
+    //$$.matrix.logMany(eigen, 'Regular eigens', 8);
+
+    let A = upperHessenderize(matrix.clone());
+    //A.log();
+    //let eigen = 
+        A.clone().eigen2();
+    //$$.matrix.logMany(eigen, 'A eigens', 8);
+
+return;
+
 /*
     runEigenDups([
         [-5, -6, -3],
@@ -35,7 +54,7 @@ async function test () {
         [ 8, -6, 12], 
         [-2,  1, -5]
     ]);    
-*/
+
     runEigenDups([
         [2,0,2,0,2],
         [0,3,0,3,0],
@@ -45,8 +64,9 @@ async function test () {
     ])
      
     console.log('done')
+*/
 
-return;
+/*
 
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
@@ -74,6 +94,7 @@ return;
 
 
     return true;
+*/
 
 }
 
@@ -124,5 +145,27 @@ function upperHessenderize (A) {
     }
 
     return A;
+
+}
+
+
+function givens (a,b) {
+
+    let cos,sin;
+
+    if (b == 0) 
+        cos = sin = 0; 
+    else if (Math.abs(b) >= Math.abs(a)) {
+        let x = a/b;
+        sin = 1/Math.pow(1+Math.pow(x,2),0.5);
+        cos = sin*x;
+    }
+    else {
+        let x = b/a;
+        cos = 1/Math.pow(1+Math.pow(x,2),0.5);
+        sin = cos*x;         
+    }
+
+    return { cos, sin };
 
 }
