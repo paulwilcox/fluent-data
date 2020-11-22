@@ -321,13 +321,13 @@ export default class matrix {
         return this;
     }
 
-    equals(other, dataOnly = true) {
+    equals(other, errorThreshold = 0, dataOnly = true) {
 
         let arrayEq = (a,b) => {
             if (a.length != b.length)
                 return false;
             for(let i in a)
-                if (a[i] != b[i])
+                if (Math.abs(a[i] - b[i]) > errorThreshold)
                     return false;
             return true;
         }
@@ -620,8 +620,16 @@ export default class matrix {
         let A = this.clone();
         let values = A.clone();
         let vectors = matrix.identity(A.data.length);
-    
-        let prevValues;
+
+        let test = () => {
+            for (let i = 0; i < vectors.data.length; i++) {
+                let AV = A.clone().multiply(vectors.clone().get(null, i));
+                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
+                 if (!AV.equals(VV, errorThreshold))
+                    return false;
+            }
+            return true;
+        }        
 
         let iterations = 0;
         for (let i = 1; i <= maxIterations; i++) {
@@ -629,37 +637,14 @@ export default class matrix {
             let QR = values.clone().decompose('qr');
             values = QR.R.multiply(QR.Q);
             vectors = vectors.multiply(QR.Q);
-            if (values.isUpperTriangular(errorThreshold))
+            if (test())
                 break;
-// TODO: our stop logic is off.  It's letting things go way to long while test() would still pass.  
-// But I don't have the logic right yet.
-            if (prevValues) {
-                let errs = values.clone().diagonal(true).apply(prevValues, (a,b) => Math.abs(a-b));
-                let maxErr = Math.max(...errs.transpose().data[0]);
-                if (maxErr < errorThreshold)
-                    break;
-            }
-            prevValues = values.clone().diagonal(true);
-            if (iterations > maxIterations)
+            if (iterations == maxIterations) {
+                matrix.logMany({values}, 'failing objects', 8)
                 throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
-        }
-    
-        let test = (roundDigits = 8) => {
-            for (let i = 0; i < vectors.data.length; i++) {
-                let AV = A.clone().multiply(vectors.clone().get(null, i));
-                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
-                if (!AV.round(roundDigits).equals(VV.round(roundDigits))) {
-                    console.log('Test about to fail:', { AV: AV.data, VV: VV.data })
-                    throw `A*vector[${i}] <> value[${i},${i}]*vector[${i}].  Eigen test fails.` + 
-                        `This can be a problem with the implementation.  It may also be a problem ` +
-                        `if a matrix does not have distinct eigenvalues, or some other assumption ` +
-                        `of the explicit QR algorithm is violated.  Or maybe just choose a smaller ` +
-                        `'roundDigits' value.`
-                }
             }
-            return true;
         }
-    
+        
         return {
             iterations,
             data: A,

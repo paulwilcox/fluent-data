@@ -1,4 +1,52 @@
 async function test () {
+/*
+    runEigenDups([
+        [-5, -6, -3],
+        [ 3,  4, -3],
+        [ 0,  0, -2]
+    ]);
+
+    runEigenDups([
+        [3, 1, 1],
+        [0, 3, 2],
+        [0, 0, 1]
+    ]);
+
+    runEigenDups([
+        [ 3, -1,  2],
+        [ 3, -1,  6],
+        [-2,  2, -2]
+    ]);
+
+    runEigenDups([
+        [ 3,  2, -1],
+        [ 3,  6, -1],
+        [-2, -2,  2]
+    ]);
+
+    runEigenDups([
+        [ 0,   5, -6], 
+        [-6, -11,  9], 
+        [-4,  -6,  4]
+    ]);
+     
+    runEigenDups([
+        [ 4, -3,  9], 
+        [ 8, -6, 12], 
+        [-2,  1, -5]
+    ]);    
+*/
+    runEigenDups([
+        [2,0,2,0,2],
+        [0,3,0,3,0],
+        [2,0,2,0,2],
+        [0,3,0,3,0],
+        [2,0,2,0,2]
+    ])
+     
+    console.log('done')
+
+return;
 
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
@@ -15,23 +63,28 @@ async function test () {
     // Is the algorithm I used already doing this?
     // I suppose I can feed this into it and see if it results in fewer iterations and the same eigens.
 
-    let A = upperHessenderize(correlations.clone()).round(10);
+    let A = upperHessenderize(correlations.clone());
     A.log();
 
-    /*
-    let result = correlations.clone().decompose('qr');
-    result.test = result.test();
-    $$.matrix.logMany(result, 'qr-decomposition');
-    */
-
-    let eigen = correlations.clone().eigen();
+    eigen = correlations.clone().eigen();
     $$.matrix.logMany(eigen, 'Cor eigens', 8);
 
-    eigen = A.clone().eigen(1e-10, 100);
+    eigen = A.clone().eigen();
     $$.matrix.logMany(eigen, 'A eigens', 8);
 
 
     return true;
+
+}
+
+function runEigenDups (data) {
+
+    let m = new $$.matrix(data);
+
+    try {
+        let eigen = m.clone().eigen(1e-6, 2000);
+        $$.matrix.logMany(eigen, 'Actually Passed')
+    } catch{}
 
 }
 
