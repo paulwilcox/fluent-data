@@ -657,55 +657,207 @@ export default class matrix {
 
     eigen2(errorThreshold = 1e-8, maxIterations = 2) {
 
-        // wilkinson shift: pi.math.cornell.edu/~web6140/TopTenAlgorithms/QRalgorithm.html
+        // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
+        // a0 b1  0  0  0
+        // b1 a1 b2  0  0
+        //  0 b2 a2 b3  0
+        //  0 0  b3 a3 b4
+        //  0 0   0 b4 a4
 
-        let A = this.clone();
-        let values = A.clone();
-        let vectors = matrix.identity(A.data.length);
-        let valuesLastIx = values.data.length - 1;
+matrix.logMany({A: this})
 
-        let iterations = 0;
-        for (let i = 1; i <= maxIterations; i++) {
-
-            iterations++;
-                        
-            let wilk = (a,b,c) => {
-                let sigma = (a-c)/2;
-                return c - Math.sign(sigma) * Math.pow(b,2) / (Math.abs(sigma) + Math.pow(Math.pow(sigma,2)+Math.pow(b,2),0.5));
-            };
-            wilk = wilk(
-                values.clone().get(valuesLastIx,valuesLastIx).data[0][0], 
-                values.clone().get(valuesLastIx-1,valuesLastIx).data[0][0], 
-                values.clone().get(valuesLastIx-1,valuesLastIx-1).data[0][0]
-            );
-
-            let QR = values.clone().multiply(matrix.identity(values.data.length).multiply(wilk)).decompose('qr');
-            values = QR.R.multiply(QR.Q).add(matrix.identity(values.data.length).multiply(wilk));
-            vectors = vectors.multiply(QR.Q);
-/*
-            if (values.clone().get(valuesLastIx -1, valuesLastIx).data[0][0] < errorThreshold)
-                break;
-            if (iterations == maxIterations) {
-                matrix.logMany({values}, 'failing objects', 8)
-                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
-            }
-*/
-        }
+        let n = this.data.length - 1;
+        let m = n;
+        let T = this._eigen2_Hessenderize(this.clone());
+        let Q = matrix.identity(n+1);
         
-        console.log({
-            iterations,
-            eigen: values.clone().get(valuesLastIx, valuesLastIx).data[0][0]
-        });
+        let a = (ix) => T.data[ix][ix];
+        let b = (ix) => T.data[ix][ix-1];
+        let set_a = (ix,val) => T.data[ix][ix] = val;
+        let set_b = (ix,val) => T.data[ix][ix-1] = val;
+        let Qsub = (a,b,c,d) => Q.clone().get(
+            (row,ix) => ix >= a && ix <= b,
+            (col,ix) => ix >= c && ix <= d 
+        );
+        let set_Qsub = (a,b,c,d,matrix) => {
+            for(let rix = a; rix <= b; rix++) 
+                for(let cix = c; cix <= d; cix++) 
+                    Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
+        }
 
-        /*
-        return {
-            iterations,
-            data: A,
-            values: values.diagonal(true),
-            vectors: vectors
-        };
-        */
+        while (m > 0) {
+
+            let d = (a(m-1) - a(m)) / 2;
+            
+            let s;
+            if (d == 0) 
+                s = a(m) - Math.abs(b(m));
+            else {
+                s = (d + Math.sign(d) * Math.pow(Math.pow(d,2)+Math.pow(b(m),2),0.5));
+                s = a(m) - Math.pow(b(m),2) / s;
+            }
+
+            let x = a(0) - s;
+            let y = b(1);
+
+            for (let i = 0; i < m; i++) {
+
+                let sin, cos;
+                if (m > 1) {
+                    let givens = this._eigen2_givens(x,y);
+                    sin = givens.sin;
+                    cos = givens.cos;
+                }
+                else {
+                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]));
+                    sin = sc.sin;
+                    cos = sc.cos;
+                }
+
+                let w = cos*x - sin*y;
+                let d = a(i) - a(i+1);
+                let z = (2*cos*b(i+1) + d*sin)*sin;
+                set_a(i, a(i)-z);
+                set_a(i+1, a(i+1)+z);
+                set_b(i+1, d*cos*sin + (Math.pow(cos,2)-Math.pow(sin,2))*b(i+1));
+                x = b(i+1);
+
+                if (i > 1)
+                    set_b(i,w);
+
+                if (i < m-1) { 
+                    y = -sin * b(i+2);
+                    set_b(i+2, cos*b(i+2));
+                }
+
+                let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
+                set_Qsub(0,n,i,i+1,qMult);
+
+            }
+
+            if(Math.abs(b(m)) < errorThreshold) {
+                matrix.logMany({
+                    T,
+                    Q
+                }, `m = ${m}`, 6)
+                m-=1;
+            }
+
+        }
     
+    }
+
+    _eigen2_givens (a,b) {
+
+        let cos,sin;
+    
+        if (b == 0) 
+            cos = sin = 0; 
+        else if (Math.abs(b) >= Math.abs(a)) {
+            let x = a/b;
+            sin = 1/Math.pow(1+Math.pow(x,2),0.5);
+            cos = sin*x;
+        }
+        else {
+            let x = b/a;
+            cos = 1/Math.pow(1+Math.pow(x,2),0.5);
+            sin = cos*x;         
+        }
+    
+        return { cos, sin };
+    
+    }
+
+    _eigen2_Hessenderize (A) {
+
+        for (let level = 0; level < A.data.length - 2; level++) {
+
+            let L1L0 = A.data[level+1][level];
+
+            let alpha = // sum of squares of A[level+i:n, level]
+                A.clone() 
+                .get((row,ix) => ix > level, level)
+                .apply(x => Math.pow(x,2))
+                .transpose()
+                .data[0]
+                .reduce((a,b) => a+b);
+            alpha = Math.pow(alpha,0.5);
+            alpha = -Math.sign(L1L0) * alpha; 
+
+            let r = Math.pow(alpha,2) - L1L0 * alpha;
+            r = Math.pow(r / 2, 0.5);
+
+            let v = new matrix([...Array(A.data.length).keys()].map(ix => [
+                ix <= level ? 0
+                : ix == (level + 1) ? (L1L0 - alpha) / (2*r) 
+                : A.data[ix][level] / (2*r)
+            ]));
+            let vv = v.clone().multiply(v.clone().transpose());
+
+            let P = matrix.identity(v.data.length)
+                .subtract(vv.multiply(2));
+
+            A = P.clone().multiply(A.multiply(P));
+
+        }
+
+        return A;
+
+    }
+
+    _eigen2_eigenDirect_sc (symetric2x2) {
+
+        // yutsumura.com/diagonalize-a-2-by-2-matrix-if-diagonalizable/
+        // study.com/academy/lesson/how-to-use-the-quadratic-formula-to-find-roots-of-equations.html
+        // lpsa.swarthmore.edu/MtrxVibe/EigMat/MatrixEigen.html
+        // And of course: Misty Drake.
+        // example: let symetric2x2 = new $$.matrix([[1, 4], [4, 3] ]);*/
+
+        // charateristic fucntion (ax^2 + bx + c)
+        let a = 1; 
+        let b = -(symetric2x2.data[0][0] + symetric2x2.data[1][1]);
+        let c = symetric2x2.data[0][0] * symetric2x2.data[1][1] - symetric2x2.data[0][1] * symetric2x2.data[1][0];
+        
+        let eigenvalues = [
+            (-b - Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a),
+            (-b + Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a)
+        ];
+
+        let getEigenvector = (eigval) => {
+            // SubtractRoot is of the form [ [a, b], [c, d] ]
+            // We're looking for some [v1,v2] such that subtractRoot * [v1,v2] = [0,0]
+            // But [a, b] and [c, d] are linearly dependent
+            // So really we just need some [v1,v2] usch that [a,b] * [v1,v2] = [0]
+            // There are lots of possibilites.  Lets assume v1 = 1;
+            // We then need [a,b] * [1,v2] = 0
+            // a * 1 + b*v2 = a + b*v2 = 0
+            // b*v2 = -a | v2 = -a/b
+            let subtractRoot = symetric2x2.clone().subtract(
+                matrix.identity(symetric2x2.data.length).multiply(eigval)
+            );
+            subtractRoot = subtractRoot.data[0]; 
+            let v2 = -subtractRoot[0] / subtractRoot[1];
+            return [1,v2];
+        };
+
+        let eigenvectors = new matrix([
+            getEigenvector(eigenvalues[0]), 
+            getEigenvector(eigenvalues[1])
+        ]).transpose();
+
+        // Eigenvectors output as form [1,a][1,b].
+        // What we need is form [c,-s],[s,c].
+        // Because the original matrix is symetric diagonal, this 
+        // is accomplished simlpy by rescaling one of the vectors
+        let divisor = eigenvectors.data[1][1];
+        for(let row of eigenvectors.data) 
+            row[1] = row[1] / divisor;
+
+        return { 
+            sin: eigenvectors[0,1], 
+            cos: eigenvectors[0,0]
+        }
+
     }
 
     get(rows, cols) {
