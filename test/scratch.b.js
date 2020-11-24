@@ -11,6 +11,9 @@ async function test () {
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
 
+    let e = correlations.eigen();
+    $$.matrix.logMany({values: e.values, vectors: e.vectors})
+
     correlations.eigen2();
 
 

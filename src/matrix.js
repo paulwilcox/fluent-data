@@ -658,13 +658,14 @@ export default class matrix {
     eigen2(errorThreshold = 1e-8, maxIterations = 2) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
+        // if this doesn't work, another direction: 
+        //   addi.ehu.es/bitstream/handle/10810/26427/TFG_Erana_Robles_Gorka.pdf?sequence=1&isAllowed=y
+
         // a0 b1  0  0  0
         // b1 a1 b2  0  0
         //  0 b2 a2 b3  0
         //  0 0  b3 a3 b4
         //  0 0   0 b4 a4
-
-matrix.logMany({A: this})
 
         let n = this.data.length - 1;
         let m = n;
@@ -674,7 +675,10 @@ matrix.logMany({A: this})
         let a = (ix) => T.data[ix][ix];
         let b = (ix) => T.data[ix][ix-1];
         let set_a = (ix,val) => T.data[ix][ix] = val;
-        let set_b = (ix,val) => T.data[ix][ix-1] = val;
+        let set_b = (ix,val) => {
+            T.data[ix][ix-1] = val;
+            T.data[ix-1][ix] = val;
+        }
         let Qsub = (a,b,c,d) => Q.clone().get(
             (row,ix) => ix >= a && ix <= b,
             (col,ix) => ix >= c && ix <= d 
@@ -685,6 +689,7 @@ matrix.logMany({A: this})
                     Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
         }
 
+        let artificialStop = 0;
         while (m > 0) {
 
             let d = (a(m-1) - a(m)) / 2;
@@ -705,7 +710,7 @@ matrix.logMany({A: this})
                 let sin, cos;
                 if (m > 1) {
                     let givens = this._eigen2_givens(x,y);
-                    sin = givens.sin;
+                    sin = -givens.sin;
                     cos = givens.cos;
                 }
                 else {
@@ -735,7 +740,8 @@ matrix.logMany({A: this})
 
             }
 
-            if(Math.abs(b(m)) < errorThreshold) {
+            if(artificialStop++ > 1000) {
+                artificialStop = 0;
                 matrix.logMany({
                     T,
                     Q
@@ -749,23 +755,33 @@ matrix.logMany({A: this})
 
     _eigen2_givens (a,b) {
 
-        let cos,sin;
-    
-        if (b == 0) 
-            cos = sin = 0; 
-        else if (Math.abs(b) >= Math.abs(a)) {
-            let x = a/b;
-            sin = 1/Math.pow(1+Math.pow(x,2),0.5);
-            cos = sin*x;
+        // en.wikipedia.org/wiki/Givens_rotation
+
+        let sin, cos;
+
+        if (b == 0) {
+            cos = Math.sign(a) || 1;
+            sin = 0;
+        }
+        else if (a == 0) {
+            cos = 0;
+            sin = Math.sign(b);
+        }
+        else if (Math.abs(a) > Math.abs(b)) {
+            let t = b / a;
+            let u = Math.sign(a) * Math.pow(1 + t*t, 0.5);
+            cos = 1 / u;
+            sin = cos * t;
         }
         else {
-            let x = b/a;
-            cos = 1/Math.pow(1+Math.pow(x,2),0.5);
-            sin = cos*x;         
+            let t = a / b;
+            let u = Math.sign(b) * Math.pow(1 + t*t, 0.5);
+            sin = 1 / u;
+            cos = sin * t;
         }
-    
-        return { cos, sin };
-    
+
+        return { sin, cos };
+
     }
 
     _eigen2_Hessenderize (A) {
