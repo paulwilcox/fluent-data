@@ -694,15 +694,15 @@ export default class matrix {
 
             let d = (a(m-1) - a(m)) / 2;
             
-            let s;
+            let shift;
             if (d == 0) 
-                s = a(m) - Math.abs(b(m));
+                shift = a(m) - Math.abs(b(m));
             else {
-                s = (d + Math.sign(d) * Math.pow(Math.pow(d,2)+Math.pow(b(m),2),0.5));
-                s = a(m) - Math.pow(b(m),2) / s;
+                shift = (d + Math.sign(d) * Math.pow(Math.pow(d,2)+Math.pow(b(m),2),0.5));
+                shift = a(m) - Math.pow(b(m),2) / shift;
             }
 
-            let x = a(0) - s;
+            let x = a(0) - shift;
             let y = b(1);
 
             for (let i = 0; i < m; i++) {
@@ -720,14 +720,14 @@ export default class matrix {
                 }
 
                 let w = cos*x - sin*y;
-                let d = a(i) - a(i+1);
+                d = a(i) - a(i+1);
                 let z = (2*cos*b(i+1) + d*sin)*sin;
                 set_a(i, a(i)-z);
                 set_a(i+1, a(i+1)+z);
                 set_b(i+1, d*cos*sin + (Math.pow(cos,2)-Math.pow(sin,2))*b(i+1));
                 x = b(i+1);
 
-                if (i > 1)
+                if (i > 0)
                     set_b(i,w);
 
                 if (i < m-1) { 
@@ -740,12 +740,13 @@ export default class matrix {
 
             }
 
-            if(artificialStop++ > 1000) {
+            if(artificialStop++ > 100) {
                 artificialStop = 0;
                 matrix.logMany({
-                    T,
-                    Q
+                    T: T.clone(),
+                    Q: Q.clone()
                 }, `m = ${m}`, 6)
+if (m == 1) return;
                 m-=1;
             }
 
