@@ -670,7 +670,7 @@ export default class matrix {
         let n = this.data.length - 1;
         let m = n;
         let T = this._eigen2_Hessenderize(this.clone());
-        let Q = matrix.identity(n+1);
+        //let Q = matrix.identity(n+1);
         
         let a = (ix) => T.data[ix][ix];
         let b = (ix) => T.data[ix][ix-1];
@@ -679,7 +679,7 @@ export default class matrix {
             T.data[ix][ix-1] = val;
             T.data[ix-1][ix] = val;
         }
-        let Qsub = (a,b,c,d) => Q.clone().get(
+        /*let Qsub = (a,b,c,d) => Q.clone().get(
             (row,ix) => ix >= a && ix <= b,
             (col,ix) => ix >= c && ix <= d 
         );
@@ -687,7 +687,7 @@ export default class matrix {
             for(let rix = a; rix <= b; rix++) 
                 for(let cix = c; cix <= d; cix++) 
                     Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
-        }
+        }*/
 
         let artificialStop = 0;
         while (m > 0) {
@@ -709,12 +709,12 @@ export default class matrix {
 
                 let sin, cos;
                 if (m > 1) {
-                    let givens = this._eigen2_givens(x,y);
+                    let givens = this._eigen2_givens(x, y, 0);
                     sin = -givens.sin;
                     cos = givens.cos;
                 }
                 else {
-                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]));
+                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-32);
                     sin = sc.sin;
                     cos = sc.cos;
                 }
@@ -735,8 +735,8 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
-                set_Qsub(0,n,i,i+1,qMult);
+                //let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
+                //set_Qsub(0,n,i,i+1,qMult);
 
             }
 
@@ -744,7 +744,7 @@ export default class matrix {
                 artificialStop = 0;
                 matrix.logMany({
                     T: T.clone(),
-                    Q: Q.clone()
+                    //Q: Q.clone()
                 }, `m = ${m}`, 6)
 if (m == 1) return;
                 m-=1;
@@ -752,37 +752,6 @@ if (m == 1) return;
 
         }
     
-    }
-
-    _eigen2_givens (a,b) {
-
-        // en.wikipedia.org/wiki/Givens_rotation
-
-        let sin, cos;
-
-        if (b == 0) {
-            cos = Math.sign(a) || 1;
-            sin = 0;
-        }
-        else if (a == 0) {
-            cos = 0;
-            sin = Math.sign(b);
-        }
-        else if (Math.abs(a) > Math.abs(b)) {
-            let t = b / a;
-            let u = Math.sign(a) * Math.pow(1 + t*t, 0.5);
-            cos = 1 / u;
-            sin = cos * t;
-        }
-        else {
-            let t = a / b;
-            let u = Math.sign(b) * Math.pow(1 + t*t, 0.5);
-            sin = 1 / u;
-            cos = sin * t;
-        }
-
-        return { sin, cos };
-
     }
 
     _eigen2_Hessenderize (A) {
@@ -822,7 +791,38 @@ if (m == 1) return;
 
     }
 
-    _eigen2_eigenDirect_sc (symetric2x2) {
+    _eigen2_givens (a,b, zeroThreshold) {
+
+        // en.wikipedia.org/wiki/Givens_rotation
+
+        let sin, cos;
+
+        if (b == 0 || Math.abs(b) < zeroThreshold) {
+            cos = Math.sign(a) || 1;
+            sin = 0;
+        }
+        else if (a == 0 || Math.abs(a) < zeroThreshold) {
+            cos = 0;
+            sin = Math.sign(b);
+        }
+        else if (Math.abs(a) > Math.abs(b)) {
+            let t = b / a;
+            let u = Math.sign(a) * Math.pow(1 + t*t, 0.5);
+            cos = 1 / u;
+            sin = cos * t;
+        }
+        else {
+            let t = a / b;
+            let u = Math.sign(b) * Math.pow(1 + t*t, 0.5);
+            sin = 1 / u;
+            cos = sin * t;
+        }
+
+        return { sin, cos };
+
+    }
+
+    _eigen2_eigenDirect_sc (symetric2x2, zeroThreshold) {
 
         // yutsumura.com/diagonalize-a-2-by-2-matrix-if-diagonalizable/
         // study.com/academy/lesson/how-to-use-the-quadratic-formula-to-find-roots-of-equations.html
@@ -830,11 +830,21 @@ if (m == 1) return;
         // And of course: Misty Drake.
         // example: let symetric2x2 = new $$.matrix([[1, 4], [4, 3] ]);*/
 
+        // bringing in given's zero catch logic
+        if (symetric2x2.data[0][1] < zeroThreshold) return {
+            sin: 0,
+            cos: Math.sign(symetric2x2.data[0][0]) || 1
+        }
+        else if (symetric2x2.data[0][0] < zeroThreshold) return {
+            sin: Math.sign(symetric2x2.data[0][1]),
+            cos: 0
+        }        
+
         // charateristic fucntion (ax^2 + bx + c)
         let a = 1; 
         let b = -(symetric2x2.data[0][0] + symetric2x2.data[1][1]);
         let c = symetric2x2.data[0][0] * symetric2x2.data[1][1] - symetric2x2.data[0][1] * symetric2x2.data[1][0];
-        
+
         let eigenvalues = [
             (-b - Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a),
             (-b + Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a)
