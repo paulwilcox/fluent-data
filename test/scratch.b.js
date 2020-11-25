@@ -13,7 +13,8 @@ async function test () {
     let e = correlations.eigen();
     $$.matrix.logMany({values: e.values, vectors: e.vectors})
 
-    correlations.eigen2();
+    let e2 = correlations.eigen2();
+    $$.matrix.logMany(e2);
 
 
 return;

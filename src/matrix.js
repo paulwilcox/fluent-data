@@ -670,7 +670,7 @@ export default class matrix {
         let n = this.data.length - 1;
         let m = n;
         let T = this._eigen2_Hessenderize(this.clone());
-        //let Q = matrix.identity(n+1);
+        let Q = matrix.identity(n+1);
         
         let a = (ix) => T.data[ix][ix];
         let b = (ix) => T.data[ix][ix-1];
@@ -679,7 +679,7 @@ export default class matrix {
             T.data[ix][ix-1] = val;
             T.data[ix-1][ix] = val;
         }
-        /*let Qsub = (a,b,c,d) => Q.clone().get(
+        let Qsub = (a,b,c,d) => Q.clone().get(
             (row,ix) => ix >= a && ix <= b,
             (col,ix) => ix >= c && ix <= d 
         );
@@ -687,9 +687,9 @@ export default class matrix {
             for(let rix = a; rix <= b; rix++) 
                 for(let cix = c; cix <= d; cix++) 
                     Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
-        }*/
+        }
 
-        let iterations = 0;
+        let iterations = {};
         while (m > 0) {
 
             let d = (a(m-1) - a(m)) / 2;
@@ -735,24 +735,36 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                //let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
-                //set_Qsub(0,n,i,i+1,qMult);
+                let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
+                set_Qsub(0,n,i,i+1,qMult);
 
-                iterations++;
+                iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
 
             }
 
             if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1) + Math.abs(a(m)))))) {
-                matrix.logMany({
-                    iterations,
-                    T: T.clone(),
-                    //Q: Q.clone()
-                }, `m = ${m}`, 8)
                 m-=1;
             }
 
         }
     
+        let test = () => {
+            for (let i = 0; i < Q.data.length; i++) {
+                let AV = this.clone().multiply(Q.clone().get(null, i));
+                let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
+                 if (!AV.equals(VV, 1e-8)) 
+                    return false;
+            }
+            return true;
+        }                
+
+        return {
+            iterations,
+            values: T.clone(),
+            vectors: Q.clone(),
+            test: test()
+        };
+
     }
 
     _eigen2_Hessenderize (A) {
