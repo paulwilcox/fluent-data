@@ -689,7 +689,7 @@ export default class matrix {
                     Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
         }*/
 
-        let artificialStop = 0;
+        let iterations = 0;
         while (m > 0) {
 
             let d = (a(m-1) - a(m)) / 2;
@@ -738,15 +738,16 @@ export default class matrix {
                 //let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
                 //set_Qsub(0,n,i,i+1,qMult);
 
+                iterations++;
+
             }
 
-            if(artificialStop++ > 100) {
-                artificialStop = 0;
+            if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1) + Math.abs(a(m)))))) {
                 matrix.logMany({
+                    iterations,
                     T: T.clone(),
                     //Q: Q.clone()
-                }, `m = ${m}`, 6)
-if (m == 1) return;
+                }, `m = ${m}`, 8)
                 m-=1;
             }
 
