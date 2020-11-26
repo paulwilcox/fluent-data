@@ -1,5 +1,17 @@
 async function test () {
 
+    let m = new $$.matrix([
+        [-3, -3, 3],
+        [ 3, -9, 3],
+        [ 6, -6, 0]
+    ]);
+
+    let result = m.solve(new $$.matrix([[0],[0],[0]]), false, true);
+
+    $$.matrix.logMany(result, 'result')
+
+return;
+
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
         [0.02, 1.00, 0.13, 0.71, 0.85],
@@ -10,32 +22,11 @@ async function test () {
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
 
-    let e = correlations.eigen().vectors;
-    let e2 = correlations.eigen2().vectors;
-    let e3 = e2.clone();
+    let e = correlations.eigen();
+    let e2 = correlations.eigen2();
 
-    // e3 reworks e2 so that it can be compared with e1
-    for (let r in e3.data) {
-        let ec0 = e.data[r][0];
-        let e3c0 = e3.data[r][0];
-        let mult = ec0 / e3c0;
-        for (let c in e3.data[r]) 
-            e3.data[r][c] *= mult;
-    }
-    for (let r of e3.data) {
-        let r3 = r[3];
-        let r4 = r[4];
-        r[3] = r4;
-        r[4] = r3;
-    }
-
-    $$.matrix.logMany({
-        e,
-        //e2,
-        e3  
-    },
-    'object', 8);
-
+    $$.matrix.logMany(e, 'e', 8);
+    $$.matrix.logMany(e2, 'e2', 8);
     
 
 

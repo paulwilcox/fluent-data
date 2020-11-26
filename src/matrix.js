@@ -424,7 +424,11 @@ export default class matrix {
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
     // Though, to save some logic, I believe I do more steps in sorting than necessary.
-    solve(other) {
+    solve(
+        other,
+        fullyReduce = true,
+        returnAllObjects = false
+    ) {
 
         let leadingItem = (row) => {
             for(let c in row) 
@@ -534,11 +538,19 @@ export default class matrix {
         for (let i = 0; i < this.data.length; i++) {
             sort(i);
             subtractTopMultiple(i);
+            if (!fullyReduce && this.isUpperTriangular()) 
+                break;
         }
 
-        this.data = other;
+        if (!returnAllObjects) {
+            this.data = other;
+            return this;
+        }
 
-        return this;
+        return {
+            A: this,
+            other: new matrix(other)
+        }
 
     }
 
@@ -670,7 +682,6 @@ export default class matrix {
         let n = this.data.length - 1;
         let m = n;
         let T = this._eigen2_Hessenderize(this.clone());
-        let Q = matrix.identity(n+1);
         
         let a = (ix) => T.data[ix][ix];
         let b = (ix) => T.data[ix][ix-1];
@@ -678,15 +689,6 @@ export default class matrix {
         let set_b = (ix,val) => {
             T.data[ix][ix-1] = val;
             T.data[ix-1][ix] = val;
-        }
-        let Qsub = (a,b,c,d) => Q.clone().get(
-            (row,ix) => ix >= a && ix <= b,
-            (col,ix) => ix >= c && ix <= d 
-        );
-        let set_Qsub = (a,b,c,d,matrix) => {
-            for(let rix = a; rix <= b; rix++) 
-                for(let cix = c; cix <= d; cix++) 
-                    Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
         }
 
         let iterations = {};
@@ -735,9 +737,6 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                let qMult = Qsub(0,n,i,i+1).multiply(new matrix([[cos,sin],[-sin,cos]]));
-                set_Qsub(0,n,i,i+1,qMult);
-
                 iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
 
             }
@@ -747,22 +746,10 @@ export default class matrix {
             }
 
         }
-    
-        let test = () => {
-            for (let i = 0; i < Q.data.length; i++) {
-                let AV = this.clone().multiply(Q.clone().get(null, i));
-                let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
-                 if (!AV.equals(VV, 1e-8)) 
-                    return false;
-            }
-            return true;
-        }                
 
         return {
             iterations,
             values: T.clone(),
-            vectors: Q.clone(),
-            test: test()
         };
 
     }
@@ -1064,7 +1051,10 @@ matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
     let tables = [];
 
     for (let key of Object.keys(obj)) 
-        if(obj[key] instanceof matrix) {
+        if(obj[key] == null || obj[key] == undefined) {
+            // do nothing
+        }
+        else if(obj[key] instanceof matrix) {
             tables.push({
                 titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
                 tableFunc: () => obj[key].log(roundDigits) 
