@@ -556,8 +556,11 @@ export default class matrix {
 
     decompose(method) {
 
-        if (method.toLowerCase() == "qr")
+        if (method.toLowerCase() == 'qr')
             return this._decomposeQR();
+
+        else if (method.toLowerCase() == 'lu')
+            return this._decomposeLU();
 
         else 
             throw `Decompose method '${method}' not recognized.  Presently only QR decomposition supported`;
@@ -627,6 +630,35 @@ export default class matrix {
 
     }
 
+    _decomposeLU() {
+
+        let m = this.data.length - 1;
+        let U = this.clone();
+        let L = matrix.identity(m + 1);
+    
+        for (let k = 0; k < m; k++)
+        for (let j = k + 1; j <= m; j++) {
+            L.data[j][k] = U.data[j][k]/U.data[k][k];
+            let term = U.clone().get(j,(col,ix) => ix >= k && ix <= m).subtract(
+                U.clone().get(k,(col,ix) => ix >= k && ix <= m).multiply(L.data[j][k])
+            ).data[0];
+            console.log(JSON.stringify(term))
+            for (let i = k; i <= m; i++)
+                U.data[j][i] = term[i];
+        }
+        
+        return { 
+            A: this, 
+            L, 
+            U, 
+            test: (roundDigits = 8) => 
+                this.clone().round(roundDigits).equals(
+                    L.clone().multiply(U).round(roundDigits)
+                )
+        };
+        
+    }
+
     eigen(errorThreshold = 1e-8, maxIterations = 1000) {
 
         let A = this.clone();
@@ -691,6 +723,17 @@ export default class matrix {
             T.data[ix-1][ix] = val;
         }
 
+        let Q = matrix.identity(n+1);
+        let Qsub = (a,b,c,d) => Q.clone().get(
+            (row,ix) => ix >= a && ix <= b,
+            (col,ix) => ix >= c && ix <= d 
+        );
+        let set_Qsub = (a,b,c,d,matrix) => {
+            for(let rix = a; rix <= b; rix++) 
+                for(let cix = c; cix <= d; cix++) 
+                    Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
+        }
+
         let iterations = {};
         while (m > 0) {
 
@@ -737,19 +780,22 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
+                let qMult = Qsub(0,n,i,i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
+                set_Qsub(0,n,i,i+1,qMult);
+
                 iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
 
             }
 
-            if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1) + Math.abs(a(m)))))) {
+            if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1))))) 
                 m-=1;
-            }
 
         }
 
         return {
             iterations,
             values: T.clone(),
+            vectors: Q.clone()
         };
 
     }

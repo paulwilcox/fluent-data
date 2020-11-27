@@ -6,11 +6,29 @@ async function test () {
         [ 6, -6, 0]
     ]);
 
-    let result = m.solve(new $$.matrix([[0],[0],[0]]), false, true);
+    let result = m.decompose('lu');
 
+    $$.matrix.logMany(result, 'ul')
+
+/*
+
+
+    let zeroes = new $$.matrix([[0],[0],[0]]);
+
+    let result = m.clone().solve(zeroes, false, true);
+    result.mDeterminat = m.determinant();
     $$.matrix.logMany(result, 'result')
 
-return;
+    let result2 = m.clone().decompose('qr');
+    result2.qSolved = result2.Q.clone().solve(zeroes);
+    result2.qSolvedTest = result2.Q.clone().multiply(result2.qSolved);
+
+    result2.xSolved = result2.R.clone().solve(result2.qSolved)
+    $$.matrix.logMany(result2, 'result2', 8);
+
+*/
+
+/*
 
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
@@ -28,7 +46,7 @@ return;
     $$.matrix.logMany(e, 'e', 8);
     $$.matrix.logMany(e2, 'e2', 8);
     
-
+*/
 
 return;
 
