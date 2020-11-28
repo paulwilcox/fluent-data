@@ -1063,7 +1063,12 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); }
 matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); }
-matrix.identity = function (numRows) { return matrix.repeat(1, numRows, numRows, true); }
+matrix.identity = function (
+    numRows, 
+    numCols = null // null for numCols = numRows
+) { 
+    return matrix.repeat(1, numRows, numCols || numRows, true); 
+}
 
 matrix.randomizer = class {
     setSize (numRows, numCols) {

@@ -29,6 +29,50 @@ async function test () {
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
 
+
+    let example = new $$.matrix([
+        [  8.0, 7.3, -5,   2],
+        [  4.0, 8.4,  4, -36],
+        [-43.5, 2.9, -3, -22],
+        [ 84.2, 8.8, -7,  15],
+        [-12.3, 6.5,  6,  14],
+        [ 23.3, 4.5,  6,  -8],
+        [ 32.8, 7.4, -1,  10]
+    ])
+
+    // TODO: check to make sure these lengths are what is needed
+    let X = correlations.clone();
+    let L = $$.matrix.identity(X.data.length); 
+    let D = $$.matrix.identity(X.data[0].length);
+    let R = $$.matrix.identity(X.data[0].length, X.data[0].length);
+
+
+    for (let i = 0; i <= 10; i++) {
+
+        L = X.clone().multiply(R.clone().transpose()).decompose('qr').Q;
+
+        //let working = X.clone().transpose().multiply(L);
+        //working.log();
+
+        let qr = X.clone().transpose().multiply(L).decompose('qr');
+        R = qr.Q.clone().transpose();
+        D = qr.R.clone().transpose();
+
+    }
+
+    let result = { 
+        L, 
+        D, 
+        R, 
+        //rebuilt: L.clone().multiply(D).multiply(R.clone()),
+        //LL: L.clone().transpose().multiply(L),
+        //RR: R.clone().transpose().multiply(R) 
+    }
+
+    $$.matrix.logMany(result, 'object', 12)
+
+/*
+
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
 
     let lambda = correlations.clone().transpose();
@@ -49,6 +93,8 @@ async function test () {
     let result = { lambda, U, V, rebuilt: U.clone().multiply(lambda.clone()).multiply(V.clone().transpose()) };
 
     $$.matrix.logMany(result, 'result', 8)
+
+*/
 
 /*
 
