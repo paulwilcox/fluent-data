@@ -1,16 +1,12 @@
 async function test () {
 
+/*
+
     let m = new $$.matrix([
         [-3, -3, 3],
         [ 3, -9, 3],
         [ 6, -6, 0]
     ]);
-
-    let result = m.decompose('lu');
-
-    $$.matrix.logMany(result, 'ul')
-
-/*
 
 
     let zeroes = new $$.matrix([[0],[0],[0]]);
@@ -19,16 +15,9 @@ async function test () {
     result.mDeterminat = m.determinant();
     $$.matrix.logMany(result, 'result')
 
-    let result2 = m.clone().decompose('qr');
-    result2.qSolved = result2.Q.clone().solve(zeroes);
-    result2.qSolvedTest = result2.Q.clone().multiply(result2.qSolved);
-
-    result2.xSolved = result2.R.clone().solve(result2.qSolved)
-    $$.matrix.logMany(result2, 'result2', 8);
-
 */
 
-/*
+
 
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
@@ -39,6 +28,29 @@ async function test () {
     ])
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
+
+    // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
+
+    let lambda = correlations.clone().transpose();
+    let U = $$.matrix.identity(correlations.data.length);
+    let V = $$.matrix.identity(correlations.data[0].length);
+
+    for (let i = 0; i < 1000; i++) {
+
+        let QR = lambda.clone().transpose().decompose('qr');
+        U.multiply(QR.Q);
+        
+        QR = QR.R.transpose().decompose('qr');
+        lambda = QR.R;
+        V.multiply(QR.Q);
+
+    }
+
+    let result = { lambda, U, V, rebuilt: U.clone().multiply(lambda.clone()).multiply(V.clone().transpose()) };
+
+    $$.matrix.logMany(result, 'result', 8)
+
+/*
 
     let e = correlations.eigen();
     let e2 = correlations.eigen2();

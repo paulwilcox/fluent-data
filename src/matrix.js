@@ -702,8 +702,8 @@ export default class matrix {
     eigen2(errorThreshold = 1e-8, maxIterations = 2) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
-        // if this doesn't work, another direction: 
-        //   addi.ehu.es/bitstream/handle/10810/26427/TFG_Erana_Robles_Gorka.pdf?sequence=1&isAllowed=y
+        // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
+        // Another possible resource: addi.ehu.es/bitstream/handle/10810/26427/TFG_Erana_Robles_Gorka.pdf?sequence=1&isAllowed=y
 
         // a0 b1  0  0  0
         // b1 a1 b2  0  0
@@ -759,7 +759,7 @@ export default class matrix {
                     cos = givens.cos;
                 }
                 else {
-                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-32);
+                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-16);
                     sin = sc.sin;
                     cos = sc.cos;
                 }
@@ -780,8 +780,8 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                let qMult = Qsub(0,n,i,i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
-                set_Qsub(0,n,i,i+1,qMult);
+                let qMult = Qsub(0, n, i, i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
+                set_Qsub(0, n, i, i+1, qMult);
 
                 iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
 
@@ -792,10 +792,18 @@ export default class matrix {
 
         }
 
+        let tests = [] 
+        for (let i = 0; i < Q.data.length; i++) {
+            let AV = this.clone().multiply(Q.clone().get(null, i));
+            let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
+            tests.push(AV.equals(VV, 1e-8));
+        }
+
         return {
             iterations,
             values: T.clone(),
-            vectors: Q.clone()
+            vectors: Q.clone(),
+            tests
         };
 
     }
