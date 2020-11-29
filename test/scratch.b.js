@@ -40,36 +40,39 @@ async function test () {
         [ 32.8, 7.4, -1,  10]
     ])
 
-    // TODO: check to make sure these lengths are what is needed
-    let X = correlations.clone();
+    let X = example.clone();
     let L = $$.matrix.identity(X.data.length); 
     let D = $$.matrix.identity(X.data[0].length);
     let R = $$.matrix.identity(X.data[0].length, X.data[0].length);
 
 
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i <= 50; i++) {
 
-        L = X.clone().multiply(R.clone().transpose()).decompose('qr').Q;
-
-        //let working = X.clone().transpose().multiply(L);
-        //working.log();
+        L = X.clone()
+            .multiply(R.clone().transpose())
+            .decompose('qr').Q
+            .get(null,(col,ix) => ix >= 0 && ix <= X.data[0].length - 1);
 
         let qr = X.clone().transpose().multiply(L).decompose('qr');
-        R = qr.Q.clone().transpose();
+        R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= X.data[0].length - 1).transpose();
         D = qr.R.clone().transpose();
 
     }
 
-    let result = { 
-        L, 
-        D, 
-        R, 
-        //rebuilt: L.clone().multiply(D).multiply(R.clone()),
-        //LL: L.clone().transpose().multiply(L),
-        //RR: R.clone().transpose().multiply(R) 
-    }
+    R = R.transpose();
 
-    $$.matrix.logMany(result, 'object', 12)
+    let I = new $$.matrix.identity(X.data[0].length);
+    I.data[2][2] = -1;
+    let Dv2 = D.clone().multiply(I);
+
+    // TODO: Dv2 corrects D, but I think a similar correction should be needed in L or R or both.
+    let result = { L, D, R, Dv2 }
+    result.test = 
+           result.L.clone().multiply(result.D).multiply(result.R.clone().transpose()).equals(X, 1e-8) 
+        && L.clone().transpose().multiply(L).equals($$.matrix.identity(X.data[0].length), 1e-8)
+        && R.clone().transpose().multiply(R).equals($$.matrix.identity(X.data[0].length), 1e-8);
+
+    $$.matrix.logMany(result, 'result', 12)
 
 /*
 
