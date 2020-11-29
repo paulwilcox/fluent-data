@@ -40,64 +40,7 @@ async function test () {
         [ 32.8, 7.4, -1,  10]
     ])
 
-    let X = example.clone();
-    let L = $$.matrix.identity(X.data.length); 
-    let D = $$.matrix.identity(X.data[0].length);
-    let R = $$.matrix.identity(X.data[0].length, X.data[0].length);
-
-
-    for (let i = 0; i <= 50; i++) {
-
-        L = X.clone()
-            .multiply(R.clone().transpose())
-            .decompose('qr').Q
-            .get(null,(col,ix) => ix >= 0 && ix <= X.data[0].length - 1);
-
-        let qr = X.clone().transpose().multiply(L).decompose('qr');
-        R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= X.data[0].length - 1).transpose();
-        D = qr.R.clone().transpose();
-
-    }
-
-    R = R.transpose();
-
-    let I = new $$.matrix.identity(X.data[0].length);
-    I.data[2][2] = -1;
-    let Dv2 = D.clone().multiply(I);
-
-    // TODO: Dv2 corrects D, but I think a similar correction should be needed in L or R or both.
-    let result = { L, D, R, Dv2 }
-    result.test = 
-           result.L.clone().multiply(result.D).multiply(result.R.clone().transpose()).equals(X, 1e-8) 
-        && L.clone().transpose().multiply(L).equals($$.matrix.identity(X.data[0].length), 1e-8)
-        && R.clone().transpose().multiply(R).equals($$.matrix.identity(X.data[0].length), 1e-8);
-
-    $$.matrix.logMany(result, 'result', 12)
-
-/*
-
-    // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
-
-    let lambda = correlations.clone().transpose();
-    let U = $$.matrix.identity(correlations.data.length);
-    let V = $$.matrix.identity(correlations.data[0].length);
-
-    for (let i = 0; i < 1000; i++) {
-
-        let QR = lambda.clone().transpose().decompose('qr');
-        U.multiply(QR.Q);
-        
-        QR = QR.R.transpose().decompose('qr');
-        lambda = QR.R;
-        V.multiply(QR.Q);
-
-    }
-
-    let result = { lambda, U, V, rebuilt: U.clone().multiply(lambda.clone()).multiply(V.clone().transpose()) };
-
-    $$.matrix.logMany(result, 'result', 8)
-
-*/
+    $$.matrix.logMany(example.decompose('svd'), 'SVD', 12)
 
 /*
 

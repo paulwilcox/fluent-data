@@ -100,6 +100,14 @@ export default class matrix {
         return true;
     }
 
+    isDiagonal(zeroThreshold = 0) {
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[0].length; c++)
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
+        return true;
+    }
+
     clone() {
         let result = [];
         for(let row of this.data) {
@@ -554,16 +562,25 @@ export default class matrix {
 
     }
 
-    decompose(method) {
+    // TODO: incorporate errorThreshold and maxIterations into QR and LU decompositions
+    decompose(method, errorThreshold, maxIterations) {
 
-        if (method.toLowerCase() == 'qr')
+        method = method.toLowerCase();
+
+        if (method == 'qr')
             return this._decomposeQR();
 
-        else if (method.toLowerCase() == 'lu')
+        else if (method == 'lu')
             return this._decomposeLU();
 
+        else if (method == 'svd')
+            return this._decomposeSVD(
+                errorThreshold || 1e-8, 
+                maxIterations || 1000
+            );
+
         else 
-            throw `Decompose method '${method}' not recognized.  Presently only QR decomposition supported`;
+            throw `Decompose method '${method}' not recognized.`;
 
     }
 
@@ -657,6 +674,57 @@ export default class matrix {
                 )
         };
         
+    }
+
+    // TODO: needs testing
+    // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
+    _decomposeSVD(errorThreshold, maxIterations) {
+
+        let L = matrix.identity(this.data.length); 
+        let D = matrix.identity(this.data[0].length);
+        let R = matrix.identity(this.data[0].length, this.data[0].length);
+    
+        // Sometimes singulars come out negative.  But compared to R
+        // output, only the sign is off.  So this just corrects that.
+        let signCorrect = () => {
+            let I = new matrix.identity(D.data[0].length);
+            for(let i in D.data)
+                if (D.data[i][i] < 0)
+                    I.data[i][i] = -1;
+            D.multiply(I);
+            R.multiply(I);
+        }
+    
+        let test = () => 
+                L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
+            && L.clone().transpose().multiply(L).equals(matrix.identity(this.data[0].length), errorThreshold)
+            && R.clone().transpose().multiply(R).equals(matrix.identity(this.data[0].length), errorThreshold)
+            && D.isDiagonal(errorThreshold);
+    
+        let iterations = 0;
+        while (++iterations <= maxIterations) {
+    
+            L = this.clone()
+                .multiply(R.clone().transpose())
+                .decompose('qr').Q
+                .get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1);
+    
+            let qr = this.clone().transpose().multiply(L).decompose('qr');
+            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1).transpose();
+            D = qr.R.clone().transpose();
+    
+            if (iterations % 10 == 0) {
+                R.transpose();
+                signCorrect();
+                if (test()) 
+                    return { iterations, A: this, L, D, R };
+                R.transpose();
+            }
+    
+        }
+    
+        throw `SVD decomposition did not converge after ${maxIterations}.`;
+
     }
 
     eigen(errorThreshold = 1e-8, maxIterations = 1000) {
