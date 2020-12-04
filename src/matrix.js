@@ -586,16 +586,16 @@ export default class matrix {
 
     _decomposeQR() {
 
-        // example: cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
+        // example: www.cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
         // properties: en.wikipedia.org/wiki/QR_decomposition
 
         let R = this.clone();
         let Q;
-    
+    /*
         if (this.data.length < this.data[0].length)
             throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
                     `Cannot take the Household transform.`;
-    
+    */
         let cycle = (level = 0) => {
                 
             if (level >= this.data.length - 1)
@@ -723,7 +723,11 @@ export default class matrix {
     
         }
     
-        throw `SVD decomposition did not converge after ${maxIterations}.`;
+        console.log('SVD failed to converge.  Unconverged data follows.');
+        throw { 
+            message: 'SVD failed to converge.  Unconverged data follows.', 
+            showObjects: (round) => matrix.logMany({ iterations, A: this, L, D, R }, 'unconverged', round)
+        };
 
     }
 
