@@ -1,5 +1,9 @@
 ## Announcement(s)
 
+Version 2.3.2 has many under-the-hood changes preparing for a new set of features.  But the reason
+It's been verioned-up and published to npm right now is that I'm testing some package.json settings
+so that certain folders are included in github but not npmjs.
+
 Version 2.2.0 allows multiple regression.  
 
 Version 2.3.0 allows covariance and correlation matricies
