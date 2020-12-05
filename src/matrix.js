@@ -693,7 +693,7 @@ export default class matrix {
                     I.data[i][i] = -1;
             D.multiply(I);
             R.multiply(I);
-        }
+        } 
     
         let test = () => 
                 L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 

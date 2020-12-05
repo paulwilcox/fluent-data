@@ -63,7 +63,7 @@ async function test () {
                 throw `${mxType} ${r}x${c} matrix QR decomposition resulted in Q*R <> A.`;
             }
 
-        }
+        }v
 
     // svd decomposition
 
