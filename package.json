@@ -3,9 +3,9 @@
   "version": "2.3.1",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, mergings, reducings (aggregations), and similar operations on datast style objects.  A 'Dataset' is an array of objects with named properties.  Inspired by c# linq method syntax.",
   "main": "./dist/fluent-data.server.js",
-  "directories": {
-    "example": "example"
-  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "gitPublishWiki": "node_scripts\\gitPublishWiki.cmd",
     "gitCommitWiki": "node_scripts\\gitCommitWiki.cmd",

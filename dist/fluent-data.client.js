@@ -603,6 +603,19 @@ class matrix {
         return this;
     }
 
+    log(roundDigits) {
+        let clone = roundDigits === undefined ? this.clone() : this.clone().round(roundDigits);
+        let printable = {};
+        for (let r in clone.data) {
+            let obj = {};
+            for (let c in clone.data[r]) 
+                obj[clone.colNames ? clone.colNames[c] : c] = clone.data[r][c];
+            printable[clone.rowNames ? clone.rowNames[r] : r] = obj;
+        }
+        console.table(printable);
+        return this;
+    }
+
     isSquare() {
         if (this.data.length == 0)
             return true;
@@ -624,6 +637,14 @@ class matrix {
     isUpperTriangular(zeroThreshold = 0) {
         for (let c = 0; c < this.data[0].length; c++) 
         for (let r = c; r < this.data.length; r++)
+            if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
+                return false;
+        return true;
+    }
+
+    isDiagonal(zeroThreshold = 0) {
+        for (let r = 0; r < this.data.length; r++)
+        for (let c = 0; c < this.data[0].length; c++)
             if (r != c && Math.abs(this.data[r][c]) > zeroThreshold)
                 return false;
         return true;
@@ -850,13 +871,13 @@ class matrix {
         return this;
     }
 
-    equals(other, dataOnly = true) {
+    equals(other, errorThreshold = 0, dataOnly = true) {
 
         let arrayEq = (a,b) => {
             if (a.length != b.length)
                 return false;
             for(let i in a)
-                if (a[i] != b[i])
+                if (Math.abs(a[i] - b[i]) > errorThreshold)
                     return false;
             return true;
         };
@@ -953,7 +974,11 @@ class matrix {
 
     // online.stat.psu.edu/statprogram/reviews/matrix-algebra/gauss-jordan-elimination
     // Though, to save some logic, I believe I do more steps in sorting than necessary.
-    solve(other) {
+    solve(
+        other,
+        fullyReduce = true,
+        returnAllObjects = false
+    ) {
 
         let leadingItem = (row) => {
             for(let c in row) 
@@ -1063,36 +1088,56 @@ class matrix {
         for (let i = 0; i < this.data.length; i++) {
             sort(i);
             subtractTopMultiple(i);
+            if (!fullyReduce && this.isUpperTriangular()) 
+                break;
         }
 
-        this.data = other;
+        if (!returnAllObjects) {
+            this.data = other;
+            return this;
+        }
 
-        return this;
+        return {
+            A: this,
+            other: new matrix(other)
+        }
 
     }
 
-    decompose(method) {
+    // TODO: incorporate errorThreshold and maxIterations into QR and LU decompositions
+    decompose(method, errorThreshold, maxIterations) {
 
-        if (method.toLowerCase() == "qr")
+        method = method.toLowerCase();
+
+        if (method == 'qr')
             return this._decomposeQR();
 
+        else if (method == 'lu')
+            return this._decomposeLU();
+
+        else if (method == 'svd')
+            return this._decomposeSVD(
+                errorThreshold || 1e-8, 
+                maxIterations || 1000
+            );
+
         else 
-            throw `Decompose method '${method}' not recognized.  Presently only QR decomposition supported`;
+            throw `Decompose method '${method}' not recognized.`;
 
     }
 
     _decomposeQR() {
 
-        // example: cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
+        // example: www.cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
         // properties: en.wikipedia.org/wiki/QR_decomposition
 
         let R = this.clone();
         let Q;
-    
+    /*
         if (this.data.length < this.data[0].length)
             throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
                     `Cannot take the Household transform.`;
-    
+    */
         let cycle = (level = 0) => {
                 
             if (level >= this.data.length - 1)
@@ -1136,11 +1181,377 @@ class matrix {
             A: this, 
             R, 
             Q, 
-            test: (roundDigits = 16) => 
+            test: (roundDigits = 8) => 
                 this.clone().round(roundDigits).equals(
                     Q.clone().multiply(R).round(roundDigits)
                 )
         };
+
+    }
+
+    _decomposeLU() {
+
+        let m = this.data.length - 1;
+        let U = this.clone();
+        let L = matrix.identity(m + 1);
+    
+        for (let k = 0; k < m; k++)
+        for (let j = k + 1; j <= m; j++) {
+            L.data[j][k] = U.data[j][k]/U.data[k][k];
+            let term = U.clone().get(j,(col,ix) => ix >= k && ix <= m).subtract(
+                U.clone().get(k,(col,ix) => ix >= k && ix <= m).multiply(L.data[j][k])
+            ).data[0];
+            console.log(JSON.stringify(term));
+            for (let i = k; i <= m; i++)
+                U.data[j][i] = term[i];
+        }
+        
+        return { 
+            A: this, 
+            L, 
+            U, 
+            test: (roundDigits = 8) => 
+                this.clone().round(roundDigits).equals(
+                    L.clone().multiply(U).round(roundDigits)
+                )
+        };
+        
+    }
+
+    // TODO: needs testing
+    // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
+    _decomposeSVD(errorThreshold, maxIterations) {
+
+        let L = matrix.identity(this.data.length); 
+        let D = matrix.identity(this.data[0].length);
+        let R = matrix.identity(this.data[0].length, this.data[0].length);
+    
+        // Sometimes singulars come out negative.  But compared to R
+        // output, only the sign is off.  So this just corrects that.
+        let signCorrect = () => {
+            let I = new matrix.identity(D.data[0].length);
+            for(let i in D.data)
+                if (D.data[i][i] < 0)
+                    I.data[i][i] = -1;
+            D.multiply(I);
+            R.multiply(I);
+        };
+    
+        let test = () => 
+                L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
+            && L.clone().transpose().multiply(L).equals(matrix.identity(this.data[0].length), errorThreshold)
+            && R.clone().transpose().multiply(R).equals(matrix.identity(this.data[0].length), errorThreshold)
+            && D.isDiagonal(errorThreshold);
+    
+        let iterations = 0;
+        while (++iterations <= maxIterations) {
+    
+            L = this.clone()
+                .multiply(R.clone().transpose())
+                .decompose('qr').Q
+                .get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1);
+    
+            let qr = this.clone().transpose().multiply(L).decompose('qr');
+            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1).transpose();
+            D = qr.R.clone().transpose();
+    
+            if (iterations % 10 == 0) {
+                R.transpose();
+                signCorrect();
+                if (test()) 
+                    return { iterations, A: this, L, D, R };
+                R.transpose();
+            }
+    
+        }
+    
+        console.log('SVD failed to converge.  Unconverged data follows.');
+        throw { 
+            message: 'SVD failed to converge.  Unconverged data follows.', 
+            showObjects: (round) => matrix.logMany({ iterations, A: this, L, D, R }, 'unconverged', round)
+        };
+
+    }
+
+    eigen(errorThreshold = 1e-8, maxIterations = 1000) {
+
+        let A = this.clone();
+        let values = A.clone();
+        let vectors = matrix.identity(A.data.length);
+
+        let test = () => {
+            for (let i = 0; i < vectors.data.length; i++) {
+                let AV = A.clone().multiply(vectors.clone().get(null, i));
+                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
+                 if (!AV.equals(VV, errorThreshold))
+                    return false;
+            }
+            return true;
+        };        
+
+        let iterations = 0;
+        for (let i = 1; i <= maxIterations; i++) {
+            iterations++;
+            let QR = values.clone().decompose('qr');
+            values = QR.R.multiply(QR.Q);
+            vectors = vectors.multiply(QR.Q);
+            if (test())
+                break;
+            if (iterations == maxIterations) {
+                matrix.logMany({values}, 'failing objects', 8);
+                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
+            }
+        }
+        
+        return {
+            iterations,
+            data: A,
+            values: values.diagonal(true),
+            vectors: vectors,
+            test: test()
+        };
+    
+    }
+
+    eigen2(errorThreshold = 1e-8, maxIterations = 2) {
+
+        // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
+        // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
+        // Another possible resource: addi.ehu.es/bitstream/handle/10810/26427/TFG_Erana_Robles_Gorka.pdf?sequence=1&isAllowed=y
+
+        // a0 b1  0  0  0
+        // b1 a1 b2  0  0
+        //  0 b2 a2 b3  0
+        //  0 0  b3 a3 b4
+        //  0 0   0 b4 a4
+
+        let n = this.data.length - 1;
+        let m = n;
+        let T = this._eigen2_Hessenderize(this.clone());
+        
+        let a = (ix) => T.data[ix][ix];
+        let b = (ix) => T.data[ix][ix-1];
+        let set_a = (ix,val) => T.data[ix][ix] = val;
+        let set_b = (ix,val) => {
+            T.data[ix][ix-1] = val;
+            T.data[ix-1][ix] = val;
+        };
+
+        let Q = matrix.identity(n+1);
+        let Qsub = (a,b,c,d) => Q.clone().get(
+            (row,ix) => ix >= a && ix <= b,
+            (col,ix) => ix >= c && ix <= d 
+        );
+        let set_Qsub = (a,b,c,d,matrix) => {
+            for(let rix = a; rix <= b; rix++) 
+                for(let cix = c; cix <= d; cix++) 
+                    Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
+        };
+
+        let iterations = {};
+        while (m > 0) {
+
+            let d = (a(m-1) - a(m)) / 2;
+            
+            let shift;
+            if (d == 0) 
+                shift = a(m) - Math.abs(b(m));
+            else {
+                shift = (d + Math.sign(d) * Math.pow(Math.pow(d,2)+Math.pow(b(m),2),0.5));
+                shift = a(m) - Math.pow(b(m),2) / shift;
+            }
+
+            let x = a(0) - shift;
+            let y = b(1);
+
+            for (let i = 0; i < m; i++) {
+
+                let sin, cos;
+                if (m > 1) {
+                    let givens = this._eigen2_givens(x, y, 0);
+                    sin = -givens.sin;
+                    cos = givens.cos;
+                }
+                else {
+                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-16);
+                    sin = sc.sin;
+                    cos = sc.cos;
+                }
+
+                let w = cos*x - sin*y;
+                d = a(i) - a(i+1);
+                let z = (2*cos*b(i+1) + d*sin)*sin;
+                set_a(i, a(i)-z);
+                set_a(i+1, a(i+1)+z);
+                set_b(i+1, d*cos*sin + (Math.pow(cos,2)-Math.pow(sin,2))*b(i+1));
+                x = b(i+1);
+
+                if (i > 0)
+                    set_b(i,w);
+
+                if (i < m-1) { 
+                    y = -sin * b(i+2);
+                    set_b(i+2, cos*b(i+2));
+                }
+
+                let qMult = Qsub(0, n, i, i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
+                set_Qsub(0, n, i, i+1, qMult);
+
+                iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
+
+            }
+
+            if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1))))) 
+                m-=1;
+
+        }
+
+        let tests = []; 
+        for (let i = 0; i < Q.data.length; i++) {
+            let AV = this.clone().multiply(Q.clone().get(null, i));
+            let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
+            tests.push(AV.equals(VV, 1e-8));
+        }
+
+        return {
+            iterations,
+            values: T.clone(),
+            vectors: Q.clone(),
+            tests
+        };
+
+    }
+
+    _eigen2_Hessenderize (A) {
+
+        for (let level = 0; level < A.data.length - 2; level++) {
+
+            let L1L0 = A.data[level+1][level];
+
+            let alpha = // sum of squares of A[level+i:n, level]
+                A.clone() 
+                .get((row,ix) => ix > level, level)
+                .apply(x => Math.pow(x,2))
+                .transpose()
+                .data[0]
+                .reduce((a,b) => a+b);
+            alpha = Math.pow(alpha,0.5);
+            alpha = -Math.sign(L1L0) * alpha; 
+
+            let r = Math.pow(alpha,2) - L1L0 * alpha;
+            r = Math.pow(r / 2, 0.5);
+
+            let v = new matrix([...Array(A.data.length).keys()].map(ix => [
+                ix <= level ? 0
+                : ix == (level + 1) ? (L1L0 - alpha) / (2*r) 
+                : A.data[ix][level] / (2*r)
+            ]));
+            let vv = v.clone().multiply(v.clone().transpose());
+
+            let P = matrix.identity(v.data.length)
+                .subtract(vv.multiply(2));
+
+            A = P.clone().multiply(A.multiply(P));
+
+        }
+
+        return A;
+
+    }
+
+    _eigen2_givens (a,b, zeroThreshold) {
+
+        // en.wikipedia.org/wiki/Givens_rotation
+
+        let sin, cos;
+
+        if (b == 0 || Math.abs(b) < zeroThreshold) {
+            cos = Math.sign(a) || 1;
+            sin = 0;
+        }
+        else if (a == 0 || Math.abs(a) < zeroThreshold) {
+            cos = 0;
+            sin = Math.sign(b);
+        }
+        else if (Math.abs(a) > Math.abs(b)) {
+            let t = b / a;
+            let u = Math.sign(a) * Math.pow(1 + t*t, 0.5);
+            cos = 1 / u;
+            sin = cos * t;
+        }
+        else {
+            let t = a / b;
+            let u = Math.sign(b) * Math.pow(1 + t*t, 0.5);
+            sin = 1 / u;
+            cos = sin * t;
+        }
+
+        return { sin, cos };
+
+    }
+
+    _eigen2_eigenDirect_sc (symetric2x2, zeroThreshold) {
+
+        // yutsumura.com/diagonalize-a-2-by-2-matrix-if-diagonalizable/
+        // study.com/academy/lesson/how-to-use-the-quadratic-formula-to-find-roots-of-equations.html
+        // lpsa.swarthmore.edu/MtrxVibe/EigMat/MatrixEigen.html
+        // And of course: Misty Drake.
+        // example: let symetric2x2 = new $$.matrix([[1, 4], [4, 3] ]);*/
+
+        // bringing in given's zero catch logic
+        if (symetric2x2.data[0][1] < zeroThreshold) return {
+            sin: 0,
+            cos: Math.sign(symetric2x2.data[0][0]) || 1
+        }
+        else if (symetric2x2.data[0][0] < zeroThreshold) return {
+            sin: Math.sign(symetric2x2.data[0][1]),
+            cos: 0
+        }        
+
+        // charateristic fucntion (ax^2 + bx + c)
+        let a = 1; 
+        let b = -(symetric2x2.data[0][0] + symetric2x2.data[1][1]);
+        let c = symetric2x2.data[0][0] * symetric2x2.data[1][1] - symetric2x2.data[0][1] * symetric2x2.data[1][0];
+
+        let eigenvalues = [
+            (-b - Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a),
+            (-b + Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a)
+        ];
+
+        let getEigenvector = (eigval) => {
+            // SubtractRoot is of the form [ [a, b], [c, d] ]
+            // We're looking for some [v1,v2] such that subtractRoot * [v1,v2] = [0,0]
+            // But [a, b] and [c, d] are linearly dependent
+            // So really we just need some [v1,v2] usch that [a,b] * [v1,v2] = [0]
+            // There are lots of possibilites.  Lets assume v1 = 1;
+            // We then need [a,b] * [1,v2] = 0
+            // a * 1 + b*v2 = a + b*v2 = 0
+            // b*v2 = -a | v2 = -a/b
+            let subtractRoot = symetric2x2.clone().subtract(
+                matrix.identity(symetric2x2.data.length).multiply(eigval)
+            );
+            subtractRoot = subtractRoot.data[0]; 
+            let v2 = -subtractRoot[0] / subtractRoot[1];
+            return [1,v2];
+        };
+
+        let eigenvectors = new matrix([
+            getEigenvector(eigenvalues[0]), 
+            getEigenvector(eigenvalues[1])
+        ]).transpose();
+
+        // Eigenvectors output as form [1,a][1,b].
+        // What we need is form [c,-s],[s,c].
+        // Because the original matrix is symetric diagonal, this 
+        // is accomplished simlpy by rescaling one of the vectors
+        let divisor = eigenvectors.data[1][1];
+        for(let row of eigenvectors.data) 
+            row[1] = row[1] / divisor;
+
+        return { 
+            sin: eigenvectors[1], 
+            cos: eigenvectors[0]
+        }
 
     }
 
@@ -1266,7 +1677,12 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); };
 matrix.ones = function (numRows, numCols) { return matrix.repeat(1, numRows, numCols, false); };
-matrix.identity = function (numRows) { return matrix.repeat(1, numRows, numRows, true); };
+matrix.identity = function (
+    numRows, 
+    numCols = null // null for numCols = numRows
+) { 
+    return matrix.repeat(1, numRows, numCols || numRows, true); 
+};
 
 matrix.randomizer = class {
     setSize (numRows, numCols) {
@@ -1298,6 +1714,45 @@ matrix.randomizer = class {
         }
         return new matrix(result);
     }
+};
+
+matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
+
+    console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+
+    let nonTables = {};
+    let tables = [];
+
+    for (let key of Object.keys(obj)) 
+        if(obj[key] == null || obj[key] == undefined) ;
+        else if(obj[key] instanceof matrix) {
+            tables.push({
+                titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
+                tableFunc: () => obj[key].log(roundDigits) 
+            });
+        }
+        else if (Array.isArray(obj[key]) || typeof obj[key] === 'object') {
+            tables.push({
+                titleFunc: () => console.log('%c Array/Object For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
+                tableFunc: () => console.table(obj[key])
+            });
+        } 
+        else if (typeof obj[key] !== 'function') {
+            nonTables[key] = obj[key];
+        }
+    
+    if (Object.keys(nonTables).length > 0) {
+        console.log('%c Primitives:', 'color:green;font-weight:bold;margin-top:10px');
+        console.table(nonTables);
+    }
+
+    for(let table of tables) {
+        table.titleFunc();
+        table.tableFunc();
+    }
+
+    console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+
 };
 
 class parser {
