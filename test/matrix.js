@@ -63,24 +63,41 @@ async function test () {
                 throw `${mxType} ${r}x${c} matrix QR decomposition resulted in Q*R <> A.`;
             }
 
-        }v
+        }
 
     // svd decomposition
 
-        for (let r = 2; r < 10; r++)
-        for (let c = 2; c < 10; c++) {
+        for (let r = 1; r < 10; r += 3)
+        for (let c = 1; c < 10; c += 3) {
 
-            let mxType = r == 9 && c == 9 ? 'hard-coded' : 'random';
-            mx = mxType == 'hard-coded'
-                ? new $$.matrix([
-                    [  8.0, 7.3, -5,   2],
-                    [  4.0, 8.4,  4, -36],
-                    [-43.5, 2.9, -3, -22],
-                    [ 84.2, 8.8, -7,  15],
-                    [-12.3, 6.5,  6,  14],
-                    [ 23.3, 4.5,  6,  -8],
-                    [ 32.8, 7.4, -1,  10]
-                ])
+            let mxType = 
+                  r == 1 && c == 1 ? 'hard-coded: 1' 
+                : r == 1 && c == 2 ? 'hard-coded: 2'
+                : r == 2 && c == 1 ? 'random: 1'
+                : r < 2 || c < 2 ? null 
+                : 'random';
+            
+            if (mxType == null)
+                continue;
+
+            mx = 
+                mxType == 'hard-coded: 1'
+                    ? new $$.matrix([
+                        [  8.0, 7.3, -5,   2],
+                        [  4.0, 8.4,  4, -36],
+                        [-43.5, 2.9, -3, -22],
+                        [ 84.2, 8.8, -7,  15],
+                        [-12.3, 6.5,  6,  14],
+                        [ 23.3, 4.5,  6,  -8],
+                        [ 32.8, 7.4, -1,  10]
+                    ])
+                : mxType == 'hard-coded: 2'
+                    ? new $$.matrix([
+                        [ 9.42343159, -3.19147822, -0.76492822],
+                        [-3.89411346, -3.37494987, -9.72613311]                     
+                    ])
+                : mxType == 'random: 1' 
+                    ? new $$.matrix.randomizer().setSize(50,50).setValues(-10,10).get()
                 : new $$.matrix.randomizer().setSize(r,c).setValues(-10,10).get();
 
             let d;
@@ -91,12 +108,42 @@ async function test () {
                     throw `${mxType} ${r}x${c} matrix SVD decomposition resulted in L*D*R.transpose() <> A.`;
             }
             catch(e) {
-                e.showObjects(8);
-                throw e.message.replace('follows', 'precedes');              
+                if (e.showObjects) e.showObjects(8);
+                if (e.message) e.message = e.message.replace('follows', 'precedes');
+                throw e;              
             }    
 
         }
     
+        /*
+
+            R Input:
+
+                m = matrix(nrow=2,ncol=3,byrow=T,data=c(
+                    9.42343159, -3.19147822, -0.76492822,
+                    -3.89411346, -3.37494987, -9.72613311
+                ))
+
+            svd(m)
+
+            R output:
+
+                > svd(m)
+                $d
+                [1] 11.478926  9.431757
+
+                $u
+                        [,1]      [,2]
+                [1,] -0.4979340 0.8672149
+                [2,]  0.8672149 0.4979340
+
+                $v
+                        [,1]       [,2]
+                [1,] -0.7029648  0.6608661
+                [2,] -0.1165319 -0.4716194
+                [3,] -0.7016130 -0.5838074
+
+        */
 
     // terminations
 

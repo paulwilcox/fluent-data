@@ -678,39 +678,51 @@ export default class matrix {
 
     // TODO: needs testing
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
+    // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
+    //   - p129 describes the full vs compact SVD (this and R does the compact)
+    //   - p130 describes how to use the compact for the pseudoinverse
     _decomposeSVD(errorThreshold, maxIterations) {
 
-        let L = matrix.identity(this.data.length); 
-        let D = matrix.identity(this.data[0].length);
-        let R = matrix.identity(this.data[0].length, this.data[0].length);
+        let m = this.data.length;
+        let n = this.data[0].length;
+        let r = m < n ? m : n;
+
+        let L = matrix.identity(m,r); 
+        let D = matrix.identity(r);
+        let R = matrix.identity(r,n);
     
         // Sometimes singulars come out negative.  But compared to R
         // output, only the sign is off.  So this just corrects that.
         let signCorrect = () => {
-            let I = new matrix.identity(D.data[0].length);
+            let Id = new matrix.identity(D.data[0].length);
+            let Ir = new matrix.identity(R.data[0].length);
             for(let i in D.data)
-                if (D.data[i][i] < 0)
-                    I.data[i][i] = -1;
-            D.multiply(I);
-            R.multiply(I);
+                if (D.data[i][i] < 0) {
+                    Id.data[i][i] = -1;
+                    Ir.data[i][i] = -1;
+                }
+            D.multiply(Id);
+            R.multiply(Ir);
         } 
     
-        let test = () => 
-                L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
-            && L.clone().transpose().multiply(L).equals(matrix.identity(this.data[0].length), errorThreshold)
-            && R.clone().transpose().multiply(R).equals(matrix.identity(this.data[0].length), errorThreshold)
+        let test = () => {
+            D = D.get((row,id) => id < r, (col,id) => id < r);
+                return L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
+            && L.clone().transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
+            && R.clone().transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
             && D.isDiagonal(errorThreshold);
+        }
     
         let iterations = 0;
         while (++iterations <= maxIterations) {
-    
+
             L = this.clone()
                 .multiply(R.clone().transpose())
                 .decompose('qr').Q
-                .get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1);
+                .get(null,(col,ix) => ix >= 0 && ix <= r - 1);
     
             let qr = this.clone().transpose().multiply(L).decompose('qr');
-            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= this.data[0].length - 1).transpose();
+            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.clone().transpose();
     
             if (iterations % 10 == 0) {
@@ -723,10 +735,17 @@ export default class matrix {
     
         }
     
+        R.transpose();
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
-            showObjects: (round) => matrix.logMany({ iterations, A: this, L, D, R }, 'unconverged', round)
+            showObjects: (round) => matrix.logMany({ 
+                iterations, 
+                A: this, 
+                L, 
+                D, 
+                R
+            }, 'unconverged', round)
         };
 
     }
