@@ -573,8 +573,8 @@ export default class matrix {
         else if (method == 'lu')
             return this._decomposeLU();
 
-        else if (method == 'svd')
-            return this._decomposeSVD(
+        else if (method == 'svd.compact')
+            return this._decomposeSVDcompact(
                 errorThreshold || 1e-8, 
                 maxIterations || 1000
             );
@@ -681,7 +681,7 @@ export default class matrix {
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p129 describes the full vs compact SVD (this and R does the compact)
     //   - p130 describes how to use the compact for the pseudoinverse
-    _decomposeSVD(errorThreshold, maxIterations) {
+    _decomposeSVDcompact(errorThreshold, maxIterations) {
 
         let m = this.data.length;
         let n = this.data[0].length;

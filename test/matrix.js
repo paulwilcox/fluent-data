@@ -102,7 +102,7 @@ async function test () {
 
             let d;
             try {
-                d = mx.decompose('svd');
+                d = mx.decompose('svd.compact');
                 d.rebuilt = d.L.clone().multiply(d.D).multiply(d.R.clone().transpose());
                 if (!d.rebuilt.equals(mx, 1e-8)) 
                     throw `${mxType} ${r}x${c} matrix SVD decomposition resulted in L*D*R.transpose() <> A.`;

@@ -40,7 +40,13 @@ async function test () {
         [ 32.8, 7.4, -1,  10]
     ])
 
-    $$.matrix.logMany(example.decompose('svd'), 'SVD', 12)
+    let svd = example.decompose('svd.compact');
+    svd.pseudoInverse = svd.D.clone().apply(x => 1/x).diagonal();
+    svd.pseudoInverse = svd.R.clone().multiply(svd.pseudoInverse).multiply(svd.L.clone().transpose());
+
+    $$.matrix.logMany(svd, 'SVD', 8)
+
+
 
 /*
 
