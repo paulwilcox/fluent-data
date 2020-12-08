@@ -297,6 +297,8 @@ export default class matrix {
 
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p130 describes how to use the compact for the pseudoinverse
+    //   - Just remember that the inverse of 'D' also requires you to
+    //   - zero out the non-diagonals, not have them be infinite or und.
     pseudoInverse(
         ...args // passed to decompose('svd.compact')
     ) {
