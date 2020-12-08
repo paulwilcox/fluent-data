@@ -295,6 +295,16 @@ export default class matrix {
 
     }
 
+    // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
+    //   - p130 describes how to use the compact for the pseudoinverse
+    pseudoInverse(
+        ...args // passed to decompose('svd.compact')
+    ) {
+        let svd = this.decompose('svd.compact', ...args);
+        let inv = svd.D.clone().apply(x => 1/x).diagonal();
+        return svd.R.multiply(inv).multiply(svd.L.transpose());
+    }
+
     diagonal(
         // True to output a vector.  False to output a 
         // matrix with non-diagonal cells zeroed out.
@@ -676,11 +686,9 @@ export default class matrix {
         
     }
 
-    // TODO: needs testing
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p129 describes the full vs compact SVD (this and R does the compact)
-    //   - p130 describes how to use the compact for the pseudoinverse
     _decomposeSVDcompact(errorThreshold, maxIterations) {
 
         let m = this.data.length;

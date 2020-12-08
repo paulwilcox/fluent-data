@@ -30,24 +30,6 @@ async function test () {
     .setColNames('c1,c2,c3,c4,c5');      
 
 
-    let example = new $$.matrix([
-        [  8.0, 7.3, -5,   2],
-        [  4.0, 8.4,  4, -36],
-        [-43.5, 2.9, -3, -22],
-        [ 84.2, 8.8, -7,  15],
-        [-12.3, 6.5,  6,  14],
-        [ 23.3, 4.5,  6,  -8],
-        [ 32.8, 7.4, -1,  10]
-    ])
-
-    let svd = example.decompose('svd.compact');
-    svd.pseudoInverse = svd.D.clone().apply(x => 1/x).diagonal();
-    svd.pseudoInverse = svd.R.clone().multiply(svd.pseudoInverse).multiply(svd.L.clone().transpose());
-
-    $$.matrix.logMany(svd, 'SVD', 8)
-
-
-
 /*
 
     let e = correlations.eigen();
