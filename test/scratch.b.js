@@ -1,22 +1,21 @@
 async function test () {
 
-/*
 
+/*
     let m = new $$.matrix([
-        [-3, -3, 3],
-        [ 3, -9, 3],
-        [ 6, -6, 0]
+        [1, -3, 3],
+        [3, -5, 3],
+        [6, -6, 4]
     ]);
 
+    let eigenvalues = [4,2,2];
 
-    let zeroes = new $$.matrix([[0],[0],[0]]);
-
-    let result = m.clone().solve(zeroes, false, true);
-    result.mDeterminat = m.determinant();
-    $$.matrix.logMany(result, 'result')
-
+    try {
+        $$.matrix.logMany(m.eigen(), 'eigen', 8)
+    } catch {}
+    
+    $$.matrix.logMany(m.eigen2(), 'eigen2', 8)
 */
-
 
 
     let correlations = new $$.matrix([
@@ -29,18 +28,9 @@ async function test () {
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
 
-
-/*
-
-    let e = correlations.eigen();
-    let e2 = correlations.eigen2();
-
-    $$.matrix.logMany(e, 'e', 8);
-    $$.matrix.logMany(e2, 'e2', 8);
-    
-*/
-
-return;
+    let results = eigenPower(correlations.clone());
+    results.rCompare = results.vector.map(v => v * (0.3314539 / results.vector[0]))
+    console.log(results);
 
 /*
     runEigenDups([
@@ -134,3 +124,44 @@ function runEigenDups (data) {
 }
 
 
+function eigenPower (
+    A,
+    threshold = 1e-12,
+    maxIterations = 1000
+) {
+
+    let value;
+    let vector = A.data.map(row => 1);
+    let prev = A.data.map(row => 1);
+
+    let iterations = 0;
+    while(iterations++ <= maxIterations) {
+        
+        let y = A.data.map(row => 
+            row
+            .map((cell,ix) => cell * prev[ix])
+            .reduce((a,b) => a + b)
+        );
+
+        value = Math.min(...y); 
+        vector = y.map(_ => _ / value);
+
+        let maxDiff = Math.max(
+            ...prev.map((p,ix) => Math.abs(p - vector[ix]))
+        );
+
+        if (maxDiff < threshold) 
+            return {
+                iterations,
+                value,
+                vector
+            };        
+            
+        if (iterations > maxIterations)
+            throw `eigenPower could not converge even after ${iterations} iterations.`;
+
+        prev = vector.map(x => x);
+
+    }
+
+}

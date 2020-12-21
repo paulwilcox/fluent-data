@@ -785,7 +785,7 @@ export default class matrix {
             if (test())
                 break;
             if (iterations == maxIterations) {
-                matrix.logMany({values}, 'failing objects', 8)
+                matrix.logMany({iterations, values, vectors}, 'failing objects', 8)
                 throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
             }
         }
@@ -800,7 +800,7 @@ export default class matrix {
     
     }
 
-    eigen2(errorThreshold = 1e-8, maxIterations = 2) {
+    eigen2(errorThreshold = 1e-8, maxIterations = 2000) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
         // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
@@ -824,7 +824,8 @@ export default class matrix {
             T.data[ix-1][ix] = val;
         }
 
-        let Q = matrix.identity(n+1);
+        /*
+        let Q = matrix.identity(n+1);  
         let Qsub = (a,b,c,d) => Q.clone().get(
             (row,ix) => ix >= a && ix <= b,
             (col,ix) => ix >= c && ix <= d 
@@ -834,8 +835,10 @@ export default class matrix {
                 for(let cix = c; cix <= d; cix++) 
                     Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
         }
+        */
 
         let iterations = {};
+        let sumIterations = () => Object.values(iterations).reduce((a,b) => a + b, 0);
         while (m > 0) {
 
             let d = (a(m-1) - a(m)) / 2;
@@ -881,30 +884,34 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                let qMult = Qsub(0, n, i, i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
-                set_Qsub(0, n, i, i+1, qMult);
+                // let qMult = Qsub(0, n, i, i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
+                // set_Qsub(0, n, i, i+1, qMult);
 
                 iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
+                if (sumIterations() >= maxIterations)
+                    break;
 
             }
 
             if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1))))) 
                 m-=1;
+            if (sumIterations() >= maxIterations)
+                break;
 
         }
 
         let tests = [] 
-        for (let i = 0; i < Q.data.length; i++) {
+/*        for (let i = 0; i < Q.data.length; i++) {
             let AV = this.clone().multiply(Q.clone().get(null, i));
             let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
             tests.push(AV.equals(VV, 1e-8));
         }
-
+*/
         return {
             iterations,
             values: T.clone(),
-            vectors: Q.clone(),
-            tests
+            //vectors: Q.clone(),
+            //tests
         };
 
     }
