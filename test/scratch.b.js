@@ -123,7 +123,7 @@ function runEigenDups (data) {
 
 }
 
-
+// citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
 function eigenPower (
     A,
     threshold = 1e-12,
@@ -143,7 +143,15 @@ function eigenPower (
             .reduce((a,b) => a + b)
         );
 
-        value = Math.min(...y); 
+        // I originally tried this with 'value = Math.min(...y)',
+        // which is a p-1 norm.  And it works.  And I think any
+        // norm will.  But I see most sources using p-2 norm.  
+        // For real numbers, this is euclidean distance.  And 
+        // it seems to shave off a few iterations.
+        value = y.map(_ => Math.pow(_,2));
+        value = value.reduce((a,b) => a + b);
+        value = Math.pow(value,0.5);
+
         vector = y.map(_ => _ / value);
 
         let maxDiff = Math.max(
