@@ -1,6 +1,33 @@
 async function test () {
 
 
+
+    // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89).
+    // Inverse gets lowest vector, but misses value (i think as expected).
+    // But I cant get the shift to work to get the second eigenvector.
+
+    let correlations = new $$.matrix([
+        [1.00, 0.02, 0.96, 0.42, 0.01],
+        [0.02, 1.00, 0.13, 0.71, 0.85],
+        [0.96, 0.13, 1.00, 0.50, 0.11],
+        [0.42, 0.71, 0.50, 1.00, 0.79],
+        [0.01, 0.85, 0.11, 0.79, 1.00]
+    ])
+    .setRowNames('r1,r2,r3,r4,r5')
+    .setColNames('c1,c2,c3,c4,c5');      
+
+    let A = correlations.clone();
+
+    let results = eigenPower(A.clone());
+    results.rCompare = results.vector.map(v => v * (0.3314539 / results.vector[0]))
+    console.log(results);
+
+    // let results2 = A.clone().inverse(); 
+    let results2 = $$.matrix.identity(results.vector.length).multiply(1.80633245);
+    results2 = A.clone().subtract(results2).inverse();
+    results2 = eigenPower(results2);
+    console.log(results2);
+
 /*
     let m = new $$.matrix([
         [1, -3, 3],
@@ -16,21 +43,6 @@ async function test () {
     
     $$.matrix.logMany(m.eigen2(), 'eigen2', 8)
 */
-
-
-    let correlations = new $$.matrix([
-        [1.00, 0.02, 0.96, 0.42, 0.01],
-        [0.02, 1.00, 0.13, 0.71, 0.85],
-        [0.96, 0.13, 1.00, 0.50, 0.11],
-        [0.42, 0.71, 0.50, 1.00, 0.79],
-        [0.01, 0.85, 0.11, 0.79, 1.00]
-    ])
-    .setRowNames('r1,r2,r3,r4,r5')
-    .setColNames('c1,c2,c3,c4,c5');      
-
-    let results = eigenPower(correlations.clone());
-    results.rCompare = results.vector.map(v => v * (0.3314539 / results.vector[0]))
-    console.log(results);
 
 /*
     runEigenDups([
