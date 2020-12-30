@@ -4,7 +4,8 @@ async function test () {
 
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89).
     // Inverse gets lowest vector, but misses value (i think as expected).
-    // But I cant get the shift to work to get the second eigenvector.
+    // The shift need to essentially be a middle eigenvector, but it cannot
+    // be too close to it, and must be below it (if positive, unknown if negative).
 
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
@@ -23,10 +24,25 @@ async function test () {
     console.log(results);
 
     // let results2 = A.clone().inverse(); 
-    let results2 = $$.matrix.identity(results.vector.length).multiply(1.80633245);
+    let results2 = $$.matrix.identity(results.vector.length).multiply(1.80633);
     results2 = A.clone().subtract(results2).inverse();
     results2 = eigenPower(results2);
     console.log(results2);
+
+    /*
+
+        $values
+        [1] 2.85309042 1.80633245 0.20449022 0.10240947 0.03367744
+
+        $vectors
+                [,1]        [,2]        [,3]       [,4]         [,5]
+        [1,] 0.3314539 -0.60721643  0.09848524  0.1386643  0.701783012
+        [2,] 0.4601593  0.39003172  0.74256408 -0.2821170  0.071674637
+        [3,] 0.3820572 -0.55650828  0.16840896  0.1170037 -0.708716714
+        [4,] 0.5559769  0.07806457 -0.60158211 -0.5682357  0.001656352
+        [5,] 0.4725608  0.40418799 -0.22053713  0.7513990  0.009012569
+
+    */
 
 /*
     let m = new $$.matrix([
