@@ -18,14 +18,15 @@ async function test () {
     .setColNames('c1,c2,c3,c4,c5');      
 
     let A = correlations.clone();
-
+/*
     let results = eigenPower(A.clone());
     results.rCompare = results.vector.map(v => v * (0.3314539 / results.vector[0]))
     console.log(results);
-
+*/
     // let results2 = A.clone().inverse(); 
-    let results2 = $$.matrix.identity(results.vector.length).multiply(1.80633);
-    results2 = A.clone().subtract(results2).inverse();
+    let results2 = $$.matrix.identity(A.data.length).multiply(1.80633245);
+    results2 = A.clone().subtract(results2);
+    results2 = results2.pseudoInverse();
     results2 = eigenPower(results2);
     console.log(results2);
 
@@ -186,6 +187,8 @@ function eigenPower (
             ...prev.map((p,ix) => Math.abs(p - vector[ix]))
         );
 
+console.log({iterations, value, vector, A: A.data})
+
         if (maxDiff < threshold) 
             return {
                 iterations,
@@ -201,3 +204,4 @@ function eigenPower (
     }
 
 }
+
