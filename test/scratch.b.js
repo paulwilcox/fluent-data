@@ -1,6 +1,6 @@
 async function test () {
 
-
+/*
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
         [0.02, 1.00, 0.13, 0.71, 0.85],
@@ -16,19 +16,18 @@ async function test () {
     $$.matrix.logMany(result, 'x', 6);
 
 
-/*
+*/
+
     let m = new $$.matrix([
         [1, -3, 3],
         [3, -5, 3],
         [6, -6, 4]
     ]);
 
-    let eigenvalues = [4,2,2];
+    // eigenvalues = 4, 2, 2;
 
-    //$$.matrix.logMany(m._eigen_qr(), 'eigen_qr', 8)
-    
-    $$.matrix.logMany(m.eigen(), 'eigen', 8)
-*/
+    $$.matrix.logMany(m.eigen(), 'eigen', 8);
+
 
 /*
     runEigenDups([
