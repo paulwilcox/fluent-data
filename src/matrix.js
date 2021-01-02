@@ -768,7 +768,8 @@ export default class matrix {
     ) {
 
         let A = this.clone();
-        let eigenValsObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
+        //let eigenValsObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
+        let eigenValsObj = A._eigen_qr(threshold, maxIterationsPerVector);
         let n = A.data.length;
         let vectors = [];
         let iterations = {
@@ -804,6 +805,50 @@ export default class matrix {
 
         return result;
 
+    }
+
+    _eigen_qr(errorThreshold = 1e-8, maxIterations = 1000) {
+
+        let A = this.clone();
+        let values = A.clone();
+        //let vectors = matrix.identity(A.data.length);
+        let prev;
+
+        let iterations = 0;
+        while (iterations++ <= maxIterations) {
+
+            let QR = values.clone().decompose('qr');
+            values = QR.R.multiply(QR.Q);
+            //vectors = vectors.multiply(QR.Q);
+
+            if (prev) {
+                let test = true;
+                for(let i = 0; i < values.data.length; i++) {
+                    if (Math.abs(values.data[i][i] - prev.data[i][i]) > errorThreshold) {
+                        test = false;
+                        break; 
+                    }
+                }
+
+                if (test)
+                    break; 
+            }
+            
+            if (iterations == maxIterations) {
+                matrix.logMany({iterations, values, prev}, 'failing objects', 8);
+                throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
+            }
+
+            prev = values.clone();
+
+        }
+        
+        return {
+            iterations,
+            A,
+            values: values.diagonal(true).data,
+        };
+    
     }
 
     // citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
@@ -842,15 +887,16 @@ export default class matrix {
                 ...prev.map((p,ix) => Math.abs(Math.abs(p) - Math.abs(vector[ix])))
             );
 
+            let result = {iterations, value, vector};
+
             if (maxDiff < threshold) 
-                return {
-                    iterations,
-                    value,
-                    vector
-                };        
+                return result;        
                 
-            if (iterations > maxIterations) 
+            if (iterations > maxIterations) {
+                console.log('failing objects:');
+                console.log(result);
                 throw `eigenPower could not converge even after ${iterations} iterations.`;
+            }
 
             prev = vector.map(x => x);
 
@@ -858,6 +904,8 @@ export default class matrix {
 
     }
 
+    // Presently using _eigen_gr().  This alternate version is said to be more 
+    // efficient than direct QR, but I"m not seeing that in my test.
     _eigen_getVals(A, errorThreshold = 1e-8, maxIterations = 2000) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
@@ -1080,44 +1128,6 @@ export default class matrix {
             cos: eigenvectors[0,0]
         }
 
-    }
-
-    // Not used.  But keeping just in case.  It computes eigenvalues 
-    // using the QR method directly.  It workds fine and is faster in
-    // my test.  However, most people do an indirect method.  I've 
-    // implemented one.  Although slower, I'm using it in case it's
-    // much superior in certain caeses.  However I imagine it needs
-    // work.    
-    //
-    // Note: 'test()' has been modified without testing.
-    _eigen_qr(errorThreshold = 1e-8, maxIterations = 1000) {
-
-        let A = this.clone();
-        let values = A.clone();
-        let vectors = matrix.identity(A.data.length);
-
-        let iterations = 0;
-        for (let i = 1; i <= maxIterations; i++) {
-            iterations++;
-            let QR = values.clone().decompose('qr');
-            values = QR.R.multiply(QR.Q);
-            vectors = vectors.multiply(QR.Q);
-            if (_eigen_test(A, values, vectors, errorThreshold))
-                break;
-            if (iterations == maxIterations) {
-                matrix.logMany({iterations, values, vectors}, 'failing objects', 8)
-                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
-            }
-        }
-        
-        return {
-            iterations,
-            data: A,
-            values: values.diagonal(true),
-            vectors: vectors,
-            test: () => _eigen_test(A, values, vectors, 1e-6)
-        };
-    
     }
 
     _eigen_test(origMatrix, values, vectors, errorThreshold) {
