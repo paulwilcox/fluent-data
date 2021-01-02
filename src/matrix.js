@@ -768,16 +768,22 @@ export default class matrix {
     ) {
 
         let A = this.clone();
-        let eigenValObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
+        let eigenValsObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
         let n = A.data.length;
         let vectors = [];
         let iterations = {
-            forValues: eigenValObj.iterations,
+            forValues: eigenValsObj.iterations,
             forVectors: []
         }
 
-        for(let v = 0; v < eigenValObj.values.length; v++) {
-            let val = eigenValObj.values[v];
+        eigenValsObj.values.sort((a,b) => 
+              Math.abs(a) < Math.abs(b) ? 1
+            : Math.abs(a) > Math.abs(b) ? -1
+            : 0
+        );
+
+        for(let v = 0; v < eigenValsObj.values.length; v++) {
+            let val = eigenValsObj.values[v];
             let m = matrix.identity(n).multiply(val);
             m = A.clone().subtract(m).pseudoInverse();
             let eigenVectObj = this._eigen_getVects(m, threshold, maxIterationsPerVector);
@@ -785,11 +791,18 @@ export default class matrix {
             iterations.forVectors.push(eigenVectObj.iterations);
         }
 
-        return {
-            values: eigenValObj.values,
+        let result = {
+            values: eigenValsObj.values,
             vectors: new matrix(vectors).transpose(),
             iterations
         };
+
+        if (!this._eigen_test(A, eigenValsObj.values, vectors, threshold)) {
+            console.log({FailingObjects: result});
+            throw `Produced eigen values and vectors did not pass test.  Failing objects precede`;
+        }
+
+        return result;
 
     }
 
@@ -1075,21 +1088,13 @@ export default class matrix {
     // implemented one.  Although slower, I'm using it in case it's
     // much superior in certain caeses.  However I imagine it needs
     // work.    
+    //
+    // Note: 'test()' has been modified without testing.
     _eigen_qr(errorThreshold = 1e-8, maxIterations = 1000) {
 
         let A = this.clone();
         let values = A.clone();
         let vectors = matrix.identity(A.data.length);
-
-        let test = () => {
-            for (let i = 0; i < vectors.data.length; i++) {
-                let AV = A.clone().multiply(vectors.clone().get(null, i));
-                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
-                 if (!AV.equals(VV, errorThreshold))
-                    return false;
-            }
-            return true;
-        }        
 
         let iterations = 0;
         for (let i = 1; i <= maxIterations; i++) {
@@ -1097,7 +1102,7 @@ export default class matrix {
             let QR = values.clone().decompose('qr');
             values = QR.R.multiply(QR.Q);
             vectors = vectors.multiply(QR.Q);
-            if (test())
+            if (_eigen_test(A, values, vectors, errorThreshold))
                 break;
             if (iterations == maxIterations) {
                 matrix.logMany({iterations, values, vectors}, 'failing objects', 8)
@@ -1110,17 +1115,24 @@ export default class matrix {
             data: A,
             values: values.diagonal(true),
             vectors: vectors,
-            test: test(6)
+            test: () => _eigen_test(A, values, vectors, 1e-6)
         };
     
     }
 
-    _eigen_test(values, vectors, errorThreshold) {
+    _eigen_test(origMatrix, values, vectors, errorThreshold) {
+
+        if(values instanceof matrix) 
+            values = values.diagonal(true).data;
+
+        if(Array.isArray(vectors))
+            vectors = new matrix(vectors);
 
         for (let i = 0; i < vectors.data.length; i++) {
-            let AV = A.clone().multiply(vectors.clone().get(null, i));
-            let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
-                if (!AV.equals(VV, errorThreshold))
+            let getVect = () => vectors.clone().transpose().get(null, i);
+            let AV = origMatrix.clone().multiply(getVect());
+            let VV = getVect().multiply(values[i]);
+            if (!AV.equals(VV, errorThreshold, true))
                 return false;
         }
 
