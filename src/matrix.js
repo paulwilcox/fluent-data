@@ -787,7 +787,7 @@ export default class matrix {
             let val = eigenValsObj.values[v];
             let m = matrix.identity(n).multiply(val);
             m = A.clone().subtract(m).pseudoInverse();
-            let eigenVectObj = this._eigen_getVects(m, threshold, maxIterationsPerVector);
+            let eigenVectObj = this._eigen_getVect(m, threshold, maxIterationsPerVector);
             vectors.push(eigenVectObj.vector);
             iterations.forVectors.push(eigenVectObj.iterations);
         }
@@ -852,7 +852,7 @@ export default class matrix {
     }
 
     // citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
-    _eigen_getVects (
+    _eigen_getVect (
         A,
         threshold = 1e-12,
         maxIterations = 1000
