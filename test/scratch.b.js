@@ -1,12 +1,5 @@
 async function test () {
 
-
-
-    // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89).
-    // Inverse gets lowest vector, but misses value (i think as expected).
-    // The shift need to essentially be a middle eigenvector, but it cannot
-    // be too close to it, and must be below it (if positive, unknown if negative).
-
     let correlations = new $$.matrix([
         [1.00, 0.02, 0.96, 0.42, 0.01],
         [0.02, 1.00, 0.13, 0.71, 0.85],
@@ -17,18 +10,9 @@ async function test () {
     .setRowNames('r1,r2,r3,r4,r5')
     .setColNames('c1,c2,c3,c4,c5');      
 
-    let A = correlations.clone();
-/*
-    let results = eigenPower(A.clone());
-    results.rCompare = results.vector.map(v => v * (0.3314539 / results.vector[0]))
-    console.log(results);
-*/
-    // let results2 = A.clone().inverse(); 
-    let results2 = $$.matrix.identity(A.data.length).multiply(1.80633245);
-    results2 = A.clone().subtract(results2);
-    results2 = results2.pseudoInverse();
-    results2 = eigenPower(results2);
-    console.log(results2);
+    let result = correlations.eigen();
+
+    $$.matrix.logMany(result, 'x', 6);
 
     /*
 
@@ -149,59 +133,6 @@ function runEigenDups (data) {
         let eigen = m.clone().eigen(1e-6, 2000);
         $$.matrix.logMany(eigen, 'Actually Passed')
     } catch{}
-
-}
-
-// citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
-function eigenPower (
-    A,
-    threshold = 1e-12,
-    maxIterations = 1000
-) {
-
-    let value;
-    let vector = A.data.map(row => 1);
-    let prev = A.data.map(row => 1);
-
-    let iterations = 0;
-    while(iterations++ <= maxIterations) {
-        
-        let y = A.data.map(row => 
-            row
-            .map((cell,ix) => cell * prev[ix])
-            .reduce((a,b) => a + b)
-        );
-
-        // I originally tried this with 'value = Math.min(...y)',
-        // which is a p-1 norm.  And it works.  And I think any
-        // norm will.  But I see most sources using p-2 norm.  
-        // For real numbers, this is euclidean distance.  And 
-        // it seems to shave off a few iterations.
-        value = y.map(_ => Math.pow(_,2));
-        value = value.reduce((a,b) => a + b);
-        value = Math.pow(value,0.5);
-
-        vector = y.map(_ => _ / value);
-
-        let maxDiff = Math.max(
-            ...prev.map((p,ix) => Math.abs(p - vector[ix]))
-        );
-
-console.log({iterations, value, vector, A: A.data})
-
-        if (maxDiff < threshold) 
-            return {
-                iterations,
-                value,
-                vector
-            };        
-            
-        if (iterations > maxIterations)
-            throw `eigenPower could not converge even after ${iterations} iterations.`;
-
-        prev = vector.map(x => x);
-
-    }
 
 }
 

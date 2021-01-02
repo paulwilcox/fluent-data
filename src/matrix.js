@@ -272,6 +272,7 @@ export default class matrix {
 
     }
 
+    // TODO: consider replacing this with pseudoInverse
     inverse() {
 
         if (this.data.length == 0)
@@ -760,47 +761,91 @@ export default class matrix {
 
     }
 
-    eigen(errorThreshold = 1e-8, maxIterations = 1000) {
+    // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
+    eigen (
+        threshold = 1e-12,
+        maxIterationsPerVector = 1000
+    ) {
 
         let A = this.clone();
-        let values = A.clone();
-        let vectors = matrix.identity(A.data.length);
-
-        let test = () => {
-            for (let i = 0; i < vectors.data.length; i++) {
-                let AV = A.clone().multiply(vectors.clone().get(null, i));
-                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
-                 if (!AV.equals(VV, errorThreshold))
-                    return false;
-            }
-            return true;
-        }        
-
-        let iterations = 0;
-        for (let i = 1; i <= maxIterations; i++) {
-            iterations++;
-            let QR = values.clone().decompose('qr');
-            values = QR.R.multiply(QR.Q);
-            vectors = vectors.multiply(QR.Q);
-            if (test())
-                break;
-            if (iterations == maxIterations) {
-                matrix.logMany({iterations, values, vectors}, 'failing objects', 8)
-                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
-            }
+        let eigenValObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
+        let n = A.data.length;
+        let vectors = [];
+        let iterations = {
+            forValues: eigenValObj.iterations,
+            forVectors: []
         }
-        
+
+        for(let v = 0; v < eigenValObj.values.length; v++) {
+            let val = eigenValObj.values[v];
+            let m = matrix.identity(n).multiply(val);
+            m = A.clone().subtract(m).pseudoInverse();
+            let eigenVectObj = this._eigen_getVects(m, threshold, maxIterationsPerVector);
+            vectors.push(eigenVectObj.vector);
+            iterations.forVectors.push(eigenVectObj.iterations);
+        }
+
         return {
-            iterations,
-            data: A,
-            values: values.diagonal(true),
-            vectors: vectors,
-            test: test(6)
+            values: eigenValObj.values,
+            vectors: new matrix(vectors).transpose(),
+            iterations
         };
-    
+
     }
 
-    eigen2(errorThreshold = 1e-8, maxIterations = 2000) {
+    // citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
+    _eigen_getVects (
+        A,
+        threshold = 1e-12,
+        maxIterations = 1000
+    ) {
+
+        A = A.clone();
+        let value;
+        let vector = A.data.map(row => 1);
+        let prev = A.data.map(row => 1);
+
+        let iterations = 0;
+        while(iterations++ <= maxIterations) {
+            
+            let y = A.data.map(row => 
+                row
+                .map((cell,ix) => cell * prev[ix])
+                .reduce((a,b) => a + b)
+            );
+
+            // I originally tried this with 'value = Math.min(...y)',
+            // which is a p-1 norm.  And it works.  And I think any
+            // norm will.  But I see most sources using p-2 norm.  
+            // For real numbers, this is euclidean distance.  And 
+            // it seems to shave off a few iterations.
+            value = y.map(_ => Math.pow(_,2));
+            value = value.reduce((a,b) => a + b);
+            value = Math.pow(value,0.5);
+
+            vector = y.map(_ => _ / value);
+
+            let maxDiff = Math.max(
+                ...prev.map((p,ix) => Math.abs(Math.abs(p) - Math.abs(vector[ix])))
+            );
+
+            if (maxDiff < threshold) 
+                return {
+                    iterations,
+                    value,
+                    vector
+                };        
+                
+            if (iterations > maxIterations) 
+                throw `eigenPower could not converge even after ${iterations} iterations.`;
+
+            prev = vector.map(x => x);
+
+        }
+
+    }
+
+    _eigen_getVals(A, errorThreshold = 1e-8, maxIterations = 2000) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
         // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
@@ -814,7 +859,7 @@ export default class matrix {
 
         let n = this.data.length - 1;
         let m = n;
-        let T = this._eigen2_Hessenderize(this.clone());
+        let T = this._eigen_Hessenderize(A.clone());
         
         let a = (ix) => T.data[ix][ix];
         let b = (ix) => T.data[ix][ix-1];
@@ -823,19 +868,6 @@ export default class matrix {
             T.data[ix][ix-1] = val;
             T.data[ix-1][ix] = val;
         }
-
-        /*
-        let Q = matrix.identity(n+1);  
-        let Qsub = (a,b,c,d) => Q.clone().get(
-            (row,ix) => ix >= a && ix <= b,
-            (col,ix) => ix >= c && ix <= d 
-        );
-        let set_Qsub = (a,b,c,d,matrix) => {
-            for(let rix = a; rix <= b; rix++) 
-                for(let cix = c; cix <= d; cix++) 
-                    Q.data[rix][cix] = matrix.data[rix-a][cix-c]; 
-        }
-        */
 
         let iterations = {};
         let sumIterations = () => Object.values(iterations).reduce((a,b) => a + b, 0);
@@ -858,12 +890,12 @@ export default class matrix {
 
                 let sin, cos;
                 if (m > 1) {
-                    let givens = this._eigen2_givens(x, y, 0);
+                    let givens = this._eigen_givens(x, y, 0);
                     sin = -givens.sin;
                     cos = givens.cos;
                 }
                 else {
-                    let sc = this._eigen2_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-16);
+                    let sc = this._eigen_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-16);
                     sin = sc.sin;
                     cos = sc.cos;
                 }
@@ -884,9 +916,6 @@ export default class matrix {
                     set_b(i+2, cos*b(i+2));
                 }
 
-                // let qMult = Qsub(0, n, i, i+1).clone().multiply(new matrix([[cos,sin],[-sin,cos]]));
-                // set_Qsub(0, n, i, i+1, qMult);
-
                 iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
                 if (sumIterations() >= maxIterations)
                     break;
@@ -900,23 +929,14 @@ export default class matrix {
 
         }
 
-        let tests = [] 
-/*        for (let i = 0; i < Q.data.length; i++) {
-            let AV = this.clone().multiply(Q.clone().get(null, i));
-            let VV = Q.clone().get(null, i).multiply(T.data[i][i]);
-            tests.push(AV.equals(VV, 1e-8));
-        }
-*/
         return {
             iterations,
-            values: T.clone(),
-            //vectors: Q.clone(),
-            //tests
+            values: T.clone().diagonal(true).transpose().data[0]
         };
 
     }
 
-    _eigen2_Hessenderize (A) {
+    _eigen_Hessenderize (A) {
 
         for (let level = 0; level < A.data.length - 2; level++) {
 
@@ -953,7 +973,7 @@ export default class matrix {
 
     }
 
-    _eigen2_givens (a,b, zeroThreshold) {
+    _eigen_givens (a,b, zeroThreshold) {
 
         // en.wikipedia.org/wiki/Givens_rotation
 
@@ -984,13 +1004,13 @@ export default class matrix {
 
     }
 
-    _eigen2_eigenDirect_sc (symetric2x2, zeroThreshold) {
+    _eigen_eigenDirect_sc (symetric2x2, zeroThreshold) {
 
         // yutsumura.com/diagonalize-a-2-by-2-matrix-if-diagonalizable/
         // study.com/academy/lesson/how-to-use-the-quadratic-formula-to-find-roots-of-equations.html
         // lpsa.swarthmore.edu/MtrxVibe/EigMat/MatrixEigen.html
         // And of course: Misty Drake.
-        // example: let symetric2x2 = new $$.matrix([[1, 4], [4, 3] ]);*/
+        // example: let symetric2x2 = new matrix([[1, 4], [4, 3] ]);*/
 
         // bringing in given's zero catch logic
         if (symetric2x2.data[0][1] < zeroThreshold) return {
@@ -1046,6 +1066,65 @@ export default class matrix {
             sin: eigenvectors[0,1], 
             cos: eigenvectors[0,0]
         }
+
+    }
+
+    // Not used.  But keeping just in case.  It computes eigenvalues 
+    // using the QR method directly.  It workds fine and is faster in
+    // my test.  However, most people do an indirect method.  I've 
+    // implemented one.  Although slower, I'm using it in case it's
+    // much superior in certain caeses.  However I imagine it needs
+    // work.    
+    _eigen_qr(errorThreshold = 1e-8, maxIterations = 1000) {
+
+        let A = this.clone();
+        let values = A.clone();
+        let vectors = matrix.identity(A.data.length);
+
+        let test = () => {
+            for (let i = 0; i < vectors.data.length; i++) {
+                let AV = A.clone().multiply(vectors.clone().get(null, i));
+                let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
+                 if (!AV.equals(VV, errorThreshold))
+                    return false;
+            }
+            return true;
+        }        
+
+        let iterations = 0;
+        for (let i = 1; i <= maxIterations; i++) {
+            iterations++;
+            let QR = values.clone().decompose('qr');
+            values = QR.R.multiply(QR.Q);
+            vectors = vectors.multiply(QR.Q);
+            if (test())
+                break;
+            if (iterations == maxIterations) {
+                matrix.logMany({iterations, values, vectors}, 'failing objects', 8)
+                throw `Eigenvalues did not converge to a diagonal matrix within ${maxIterations} iterations.`;
+            }
+        }
+        
+        return {
+            iterations,
+            data: A,
+            values: values.diagonal(true),
+            vectors: vectors,
+            test: test(6)
+        };
+    
+    }
+
+    _eigen_test(values, vectors, errorThreshold) {
+
+        for (let i = 0; i < vectors.data.length; i++) {
+            let AV = A.clone().multiply(vectors.clone().get(null, i));
+            let VV = vectors.clone().get(null, i).multiply(values.data[i][i]);
+                if (!AV.equals(VV, errorThreshold))
+                return false;
+        }
+
+        return true;
 
     }
 
