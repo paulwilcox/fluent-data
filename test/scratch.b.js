@@ -29,6 +29,23 @@ async function test () {
         10
     );
 
+    // The R eigenvectors don't pass my test.  Combined with the 
+    // website output, and the fact that the website calcuates 
+    // the resuts algebraically, I'm getting more and more 
+    // confidence that R is wrong, and my code is right.
+    let test = m._eigen_test(
+        m, 
+        [3, 0, 0], 
+        [
+            [ 0.7071068, -0.8944272,   8.944272e-01],
+            [-0.7071068,  0.4472136,  -4.472136e-01],
+            [ 0.0000000,  0.0000000,   2.240728e-293]
+        ],
+        1e-2
+    );
+
+    console.log({test})
+
 /*
     runEigenDups([
         [1, -3, 3],
