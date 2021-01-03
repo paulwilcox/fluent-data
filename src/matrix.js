@@ -304,7 +304,7 @@ export default class matrix {
         ...args // passed to decompose('svd.compact')
     ) {
         let svd = this.decompose('svd.compact', ...args);
-        let inv = svd.D.clone().apply(x => 1/x).diagonal();
+        let inv = svd.D.clone().apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
         return svd.R.multiply(inv).multiply(svd.L.transpose());
     }
 
