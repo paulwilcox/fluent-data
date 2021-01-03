@@ -17,31 +17,18 @@ async function test () {
     // as polynomials, it comes out with MY output, not R's output!
     // The website is www.emathhelp.net/calculators/linear-algebra/eigenvalue-and-eigenvector-calculator
 
+    // Nevermind.  I plugged it in wrong in R.  It now matches.
+
     let m = new $$.matrix([
-        [-3, 6, -3],
-        [ 3, 6, -3],
-        [ 0, 0,  0]
+        [-5, -6, -3],
+        [ 3,  4, -3],
+        [ 0,  0, -2]
     ]);
 
     $$.matrix.logMany(
         m.eigen(1e-6, 1000, 6),
         'eigen',
         10
-    );
-
-    // The R eigenvectors don't pass my test.  Combined with the 
-    // website output, and the fact that the website calcuates 
-    // the resuts algebraically, I'm getting more and more 
-    // confidence that R is wrong, and my code is right.
-    let test = m._eigen_test(
-        m, 
-        [3, 0, 0], 
-        [
-            [ 0.7071068, -0.8944272,   8.944272e-01],
-            [-0.7071068,  0.4472136,  -4.472136e-01],
-            [ 0.0000000,  0.0000000,   2.240728e-293]
-        ],
-        1e-2
     );
 
     console.log({test})
