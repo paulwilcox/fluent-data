@@ -9,70 +9,16 @@ async function test () {
         [0.01, 0.85, 0.11, 0.79, 1.00]
     ]);
 
-    let values = correlations._eigen_qr().values.map(x => x[0]);
-
-    // www.math.iit.edu/~fass/477577_Chapter_14.pdf
-    // en.wikipedia.org/wiki/Arnoldi_iteration
-
-    let A = correlations.clone();
-    let threshold = 1e-6;
-    let maxIterations = 58;
-
-    let q = [new $$.matrix(values.map(x => [1]))];
-
-    let h = new $$.matrix([]);
-
-    for (let k = 1; k < maxIterations; k++) {
-
-        console.log(k);
-
-        q[k] = A.clone().multiply(q[k-1]);
-
-        for (let j = 0; j <= k; j++) {
-
-            if(h.data[j] == undefined) 
-                h.data.push([]); 
-
-            while(h.data[j][k-1] == undefined)
-                h.data[j].push(0);
-
-            if (j == k)
-                continue;
-
-            // makes a scalar
-            h.data[j][k-1] = q[j].clone().transpose().multiply(q[k]).data[0][0];
-
-            q[k].subtract(q[j].clone().multiply(h.data[j][k-1]));
-
-        }
-
-        h.data[k][k-1] = q[k].norm();
-
-        q[k].multiply(1 / h.data[k][k-1]);
-
-    }
-
-    $$.matrix.logMany(
-        {
-            A, 
-            qFirst: q[0], 
-            qSecLast: q[q.length - 2], 
-            qLast: q[q.length - 1], 
-            h
-        },
-        'arnoldi',
-        6
-    );
-
 */
+
 
     let A = new $$.matrix([
         [1, -3, 3],
         [3, -5, 3],
         [6, -6, 4]
     ]);
-
-    let val = -2.00001;
+/*
+    let val = -2.00001; 
     let n = A.data.length;
     let m = $$.matrix.identity(n).multiply(val);
     m = A.clone().subtract(m).pseudoInverse();
@@ -85,8 +31,8 @@ async function test () {
     let test = AV.equals(VV, 1e-6, true);
 
     $$.matrix.logMany({ val, vect, AV, VV, test }, 'stuff', 10)
-
-    //console.log(A.eigen(1e-6))
+  */  
+    $$.matrix.logMany(_eigen_qr(A, 1e-12, 10005), 'eigen_qr', 8);
 
 /*
     let m = new $$.matrix([
@@ -241,5 +187,64 @@ function getVect (
         prev = vector.map(x => x);
 
     }
+
+}
+
+
+function _eigen_qr(A, errorThreshold = 1e-8, maxIterations = 1000) {
+
+    A = A.clone();
+    let values = A.clone();
+    //let vectors = matrix.identity(A.data.length);
+    let prev;
+    let diag;
+
+    let iterations = 0;
+    while (iterations++ <= maxIterations) {
+
+        let QR = values.clone().decompose('qr');
+        values = QR.R.multiply(QR.Q);
+        diag = values.diagonal(true).transpose().data[0];
+        //vectors = vectors.multiply(QR.Q);
+
+        if (prev) {
+
+            let test = true;
+
+            // convergence with previous test
+            for(let i = 0; i < diag.length; i++) 
+                if (Math.abs(diag[i] - prev[i]) > errorThreshold) {
+                    test = false;
+                    break; 
+                }
+
+            // convergence of multiplicity > 1
+            for(let a of diag)
+            for(let b of diag) {
+                let diff = Math.abs(a - b);
+                if (diff < 1e-6 && diff > 1e-12) 
+                    test = false;                
+            }
+  
+            if (test)
+                break; 
+
+        }
+        
+        if (iterations == maxIterations) {
+            $$.matrix.logMany({iterations, values, prev}, 'failing objects', 8);
+            throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
+        }
+
+        prev = diag;
+
+    }
+    
+    return {
+        iterations,
+        A,
+        values: diag,
+        prev
+    };
 
 }
