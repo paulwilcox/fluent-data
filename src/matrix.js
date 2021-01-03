@@ -764,12 +764,19 @@ export default class matrix {
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
     eigen (
         threshold = 1e-12,
-        maxIterationsPerVector = 1000
+        maxIterationsPerVector = 1000,
+        roundEigenValues = null 
     ) {
 
         let A = this.clone();
-        //let eigenValsObj = this._eigen_getVals(A, threshold, maxIterationsPerVector);
-        let eigenValsObj = A._eigen_qr(threshold, maxIterationsPerVector);
+
+        let eigenValsObj = this._eigen_getVals(
+            A, 
+            threshold, 
+            maxIterationsPerVector, 
+            roundEigenValues
+        );
+
         let n = A.data.length;
         let vectors = [];
         let iterations = {
@@ -784,10 +791,23 @@ export default class matrix {
         );
 
         for(let v = 0; v < eigenValsObj.values.length; v++) {
-            let val = eigenValsObj.values[v];
-            let m = matrix.identity(n).multiply(val);
-            m = A.clone().subtract(m).pseudoInverse();
-            let eigenVectObj = this._eigen_getVect(m, threshold, maxIterationsPerVector);
+            let eigenVectObj; 
+            try { 
+                eigenVectObj = this._eigen_getVect(
+                    A, 
+                    eigenValsObj.values[v], 
+                    threshold, 
+                    maxIterationsPerVector
+                );
+            }
+            catch(err) {
+                err.eigenValsObj = eigenValsObj;
+                err.eigenValsObj.about = 
+                    'This eigenValsObj represents successfull iteration of eigenvalues.  ' +
+                    'It is just for completeness of information.  ' +
+                    'It is an iteration for an eigenvector that has failed.  ';
+                throw err;
+            }
             vectors.push(eigenVectObj.vector);
             iterations.forVectors.push(eigenVectObj.iterations);
         }
@@ -800,36 +820,47 @@ export default class matrix {
 
         if (!this._eigen_test(A, eigenValsObj.values, vectors, threshold)) {
             console.log({FailingObjects: result});
-            throw `Produced eigen values and vectors did not pass test.  Failing objects precede`;
+            throw   `Produced eigen values and vectors did not pass test.  ` +
+                    `Failing objects precede. ` +
+                    `You may have to increase the 'maxIterationsPerVector', or, more likey, ` +
+                    `the 'threshold' or 'roundEigenValues' parameters.  ` +
+                    `This is especially true if you have repeated eigenvalues. `;                    
         }
 
         return result;
 
     }
 
-    _eigen_qr(errorThreshold = 1e-8, maxIterations = 1000) {
-
-        let A = this.clone();
+    // Direct QR method
+    _eigen_getVals(
+        A, 
+        stopThreshold = 1e-8, 
+        maxIterations = 1000,
+        roundEigenValues = null
+    ) {
+    
+        A = A.clone();
         let values = A.clone();
         //let vectors = matrix.identity(A.data.length);
         let prev;
-
+        let diag;
+    
         let iterations = 0;
         while (iterations++ <= maxIterations) {
-
+    
             let QR = values.clone().decompose('qr');
             values = QR.R.multiply(QR.Q);
+            diag = values.diagonal(true).transpose().data[0];
             //vectors = vectors.multiply(QR.Q);
-
+    
             if (prev) {
                 let test = true;
-                for(let i = 0; i < values.data.length; i++) {
-                    if (Math.abs(values.data[i][i] - prev.data[i][i]) > errorThreshold) {
+                // convergence with previous test
+                for(let i = 0; i < diag.length; i++) 
+                    if (Math.abs(diag[i] - prev[i]) > stopThreshold) {
                         test = false;
                         break; 
                     }
-                }
-
                 if (test)
                     break; 
             }
@@ -838,28 +869,37 @@ export default class matrix {
                 matrix.logMany({iterations, values, prev}, 'failing objects', 8);
                 throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
             }
-
-            prev = values.clone();
-
+    
+            prev = diag;
+    
         }
         
+        values = new matrix([diag]);
+        if (roundEigenValues != null)
+            values.round(roundEigenValues);
+
         return {
             iterations,
             A,
-            values: values.diagonal(true).data,
+            values: values.data[0],
+            prev
         };
     
-    }
+    }    
 
     // citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
     _eigen_getVect (
         A,
+        eigenvalue,
         threshold = 1e-12,
         maxIterations = 1000
     ) {
 
-        A = A.clone();
-        let value;
+        let n = A.data.length;
+        let ei = matrix.identity(n).multiply(eigenvalue);
+        A = A.clone().subtract(ei).pseudoInverse();
+
+        let value = null;
         let vector = A.data.map(row => 1);
         let prev = A.data.map(row => 1);
 
@@ -887,15 +927,27 @@ export default class matrix {
                 ...prev.map((p,ix) => Math.abs(Math.abs(p) - Math.abs(vector[ix])))
             );
 
-            let result = {iterations, value, vector};
+            let result = {
+                iterations, 
+                eigenvalue,
+                valueAfterShift: value,
+                vector
+            };
 
             if (maxDiff < threshold) 
                 return result;        
                 
             if (iterations > maxIterations) {
-                console.log('failing objects:');
-                console.log(result);
-                throw `eigenPower could not converge even after ${iterations} iterations.`;
+                let message = 
+                    `getVect could not converge even after ${iterations} iterations.  ` +
+                    `You may have to increase the 'maxIterations' or 'threshold' parameters.  ` +
+                    `Most likey the latter.  This is especially true if you have repeated ` +
+                    `eigenvalues. `;
+                console.log(message);
+                throw {
+                    message,
+                    failingObjects: result
+                }
             }
 
             prev = vector.map(x => x);
@@ -904,9 +956,9 @@ export default class matrix {
 
     }
 
-    // Presently using _eigen_gr().  This alternate version is said to be more 
-    // efficient than direct QR, but I"m not seeing that in my test.
-    _eigen_getVals(A, errorThreshold = 1e-8, maxIterations = 2000) {
+    // This alternate version is said to be more efficient 
+    // than direct QR, but I"m not seeing that in my test.
+    _eigen_getVals_notInUse(A, errorThreshold = 1e-8, maxIterations = 2000) {
 
         // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
         // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
