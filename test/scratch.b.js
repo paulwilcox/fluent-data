@@ -11,27 +11,11 @@ async function test () {
 
 */
 
-    // Wow!  My output is -7.684659, 4.684659, 0.
-    // R output is 3, 0, 0
-    // I plug it into a website matrix calculator and (after computing the lambdas expressed)
-    // as polynomials, it comes out with MY output, not R's output!
-    // The website is www.emathhelp.net/calculators/linear-algebra/eigenvalue-and-eigenvector-calculator
-
-    // Nevermind.  I plugged it in wrong in R.  It now matches.
-
-    let m = new $$.matrix([
-        [-5, -6, -3],
-        [ 3,  4, -3],
-        [ 0,  0, -2]
+    runEigenDups([
+        [ 0,   5, -6], 
+        [-6, -11,  9], 
+        [-4,  -6,  4]
     ]);
-
-    $$.matrix.logMany(
-        m.eigen(1e-6, 1000, 6),
-        'eigen',
-        10
-    );
-
-    console.log({test})
 
 /*
     runEigenDups([

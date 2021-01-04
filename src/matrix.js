@@ -1370,6 +1370,9 @@ matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
     let nonTables = {};
     let tables = [];
 
+    if (g.isString(obj)) 
+        obj = { objectIsAString: obj };
+
     for (let key of Object.keys(obj)) 
         if(obj[key] == null || obj[key] == undefined) {
             // do nothing
@@ -1390,7 +1393,10 @@ matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
             nonTables[key] = obj[key];
         }
     
-    if (Object.keys(nonTables).length > 0) {
+    if (Object.keys(nonTables).length == 1 && nonTables.objectIsAString != undefined) {
+        console.log(nonTables.objectIsAString);
+    }
+    else if (Object.keys(nonTables).length > 0) {
         console.log('%c Primitives:', 'color:green;font-weight:bold;margin-top:10px');
         console.table(nonTables);
     }
