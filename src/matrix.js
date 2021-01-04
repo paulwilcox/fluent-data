@@ -897,16 +897,16 @@ export default class matrix {
 
         let n = A.data.length;
         let ei = matrix.identity(n).multiply(eigenvalue);
-        A = A.clone().subtract(ei).pseudoInverse();
+        let M = A.clone().subtract(ei).pseudoInverse();
 
         let value = null;
-        let vector = A.data.map(row => 1);
-        let prev = A.data.map(row => 1);
+        let vector = M.data.map(row => 1);
+        let prev = M.data.map(row => 1);
 
         let iterations = 0;
         while(iterations++ <= maxIterations) {
             
-            let y = A.data.map(row => 
+            let y = M.data.map(row => 
                 row
                 .map((cell,ix) => cell * prev[ix])
                 .reduce((a,b) => a + b)
@@ -936,7 +936,27 @@ export default class matrix {
 
             if (maxDiff < threshold) 
                 return result;        
-                
+
+            // Every once in awhile, a matrix causes non-convergence 
+            // but goes back and fourth between two vectors.  They are
+            // similar, with a change in sign, but not quite multiples
+            // of each other.  And one is correct while the otehr is
+            // incorrect.  Example: [[0,5,-6],[-6,-11,9],[-4,-6,4]].
+            // This tests and random iterations to capture the 
+            // correct vector in case it's stuck in this.  Can't do 
+            // modulus, or at least not an even one, because you might
+            // always hit the wrong one. 
+            if (Math.random() < 0.01) {
+                let test = this._eigen_test(
+                    A,
+                    [eigenvalue],
+                    new matrix([vector]),
+                    threshold
+                );
+                if (test)
+                    return result;
+            }
+
             if (iterations > maxIterations) {
                 let message = 
                     `getVect could not converge even after ${iterations} iterations.  ` +
@@ -944,6 +964,8 @@ export default class matrix {
                     `Most likey the latter.  This is especially true if you have repeated ` +
                     `eigenvalues. `;
                 console.log(message);
+                result.prev = prev;
+                result.maxDiff = maxDiff;
                 throw {
                     message,
                     failingObjects: result

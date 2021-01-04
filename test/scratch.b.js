@@ -11,13 +11,9 @@ async function test () {
 
 */
 
-    runEigenDups([
-        [ 0,   5, -6], 
-        [-6, -11,  9], 
-        [-4,  -6,  4]
-    ]);
+// TODO: Separate threshold parameter into ones for value threshold,
+// vector threshold, multiplicity threshold, and test threshold. 
 
-/*
     runEigenDups([
         [1, -3, 3],
         [3, -5, 3],
@@ -48,6 +44,13 @@ async function test () {
         [-2, -2,  2]
     ]);
 
+    // Very pathological.  Complex eigenvectors.  Online it
+    // gives the complex output.  R gives real number outputs,
+    // but all have + or - 0i.  So real but sort of a warning
+    // that it's complex involved.  ANyways, my iteration 
+    // matches that of R.  To do it though, it requires a 
+    // testing at random iterations.  See source code for
+    // more info in matrix._eigen_getVector.
     runEigenDups([
         [ 0,   5, -6], 
         [-6, -11,  9], 
@@ -69,7 +72,6 @@ async function test () {
     ])
     
     console.log('done')
-*/
 
 }
 
@@ -78,7 +80,7 @@ function runEigenDups (data) {
     let m = new $$.matrix(data);
 
     try {
-        let eigen = m.clone().eigen(1e-12, 1000, 6);
+        let eigen = m.clone().eigen(1e-8, 1000, 6);
         let result = {
             original: m,
             values: eigen.values
@@ -86,91 +88,8 @@ function runEigenDups (data) {
         $$.matrix.logMany(result, 'Actually Passed')
     } catch (e) {
         $$.matrix.logMany(e, 'Error');
+        console.log({e})
     }
 
 }
 
-
-// citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.149.4934&rep=rep1&type=pdf
-function _eigen_getVect (
-    A,
-    eigenvalue,
-    threshold = 1e-12,
-    maxIterations = 1000
-) {
-
-    let n = A.data.length;
-    let ei = $$.matrix.identity(n).multiply(eigenvalue);
-
-    console.log({
-        A: A.data,
-        n,
-        ei: ei.data,
-        test1: A.clone().subtract(ei).data,
-        test2: A.clone().subtract(ei).pseudoInverse().data 
-    })
-    return;
-
-    A = A.clone().subtract(ei).pseudoInverse();
-
-    let value = null;
-    let vector = A.data.map(row => 1);
-    let prev = A.data.map(row => 1);
-
-    let iterations = 0;
-    while(iterations++ <= maxIterations) {        
-
-        let y = A.data.map(row => 
-            row
-            .map((cell,ix) => cell * prev[ix])
-            .reduce((a,b) => a + b)
-        );
-
-        // I originally tried this with 'value = Math.min(...y)',
-        // which is a p-1 norm.  And it works.  And I think any
-        // norm will.  But I see most sources using p-2 norm.  
-        // For real numbers, this is euclidean distance.  And 
-        // it seems to shave off a few iterations.
-        value = y.map(_ => Math.pow(_,2));
-        value = value.reduce((a,b) => a + b);
-        value = Math.pow(value,0.5);
-
-        vector = y.map(_ => _ / value);
-
-        let maxDiff = Math.max(
-            ...prev.map((p,ix) => Math.abs(Math.abs(p) - Math.abs(vector[ix])))
-        );
-
-        let result = {
-            iterations, 
-            eigenvalue,
-            valueAfterShift: value,
-            vector
-        };
-
-if (isNaN(value)) { 
-    console.log({ result, prev });
-    throw 'eigen value after shift is NAN';
-}
-
-        if (maxDiff < threshold) 
-            return result;        
-            
-        if (iterations > maxIterations) {
-            let message = 
-                `getVect could not converge even after ${iterations} iterations.  ` +
-                `You may have to increase the 'maxIterations' or 'threshold' parameters.  ` +
-                `Most likey the latter.  This is especially true if you have repeated ` +
-                `eigenvalues. `;
-            console.log(message);
-            throw {
-                message,
-                failingObjects: result
-            }
-        }
-
-        prev = vector.map(x => x);
-
-    }
-
-}
