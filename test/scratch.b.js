@@ -11,8 +11,34 @@ async function test () {
 
 */
 
+    let n = 10;
+    let v = 99.999;
+
+    let vector = [];
+    for(let i = 0; i < n; i++) 
+        vector.push(v);
+
+    let mx = [];
+    for(let i = 0; i < n; i++)
+        mx.push(vector);
+
+    vector = new $$.matrix([vector]).transpose();
+    mx = new $$.matrix(mx);
+
+    let result = mx.clone().multiply(vector);
+
+    if (n <= 10)
+        $$.matrix.logMany({vector, mx, result});
+    else 
+        console.log(result.data[0][0])
+
+    return;
+
+
 // TODO: Separate threshold parameter into ones for value threshold,
 // vector threshold, multiplicity threshold, and test threshold. 
+// 
+// matrix.eigen({value: 1e-8, vector: 1e-8, multiplicity: 1e-4, test: 1e-6})
 
     runEigenDups([
         [1, -3, 3],
