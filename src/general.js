@@ -1,4 +1,8 @@
+// e.g. round(5.239, 2) is 5.24
 export let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+
+// e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
+export let roundToMultiple = (term, multiple) => Math.round(term / multiple) * multiple
 
 // developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 export let random = (min, max, integers = false) => {
