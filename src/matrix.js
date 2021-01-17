@@ -763,71 +763,123 @@ export default class matrix {
 
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
     eigen (
-        threshold = 1e-12,
-        maxIterationsPerVector = 1000,
-        roundEigenValues = null 
+        stopThreshold = 1e-8,
+        maxIterationsPerVector = 1000
     ) {
 
-        let A = this.clone();
+        // initializations
 
-        let eigenValsObj = this._eigen_getVals(
-            A, 
-            threshold, 
-            maxIterationsPerVector, 
-            roundEigenValues
-        );
+            let multiplicityThreshold = 1e-3;
 
-        let n = A.data.length;
-        let vectors = [];
-        let iterations = {
-            forValues: eigenValsObj.iterations,
-            forVectors: []
-        }
+            let A = this.clone();
 
-        eigenValsObj.values.sort((a,b) => 
-              Math.abs(a) < Math.abs(b) ? 1
-            : Math.abs(a) > Math.abs(b) ? -1
-            : 0
-        );
+        // calculate eigenvalues
 
-        for(let v = 0; v < eigenValsObj.values.length; v++) {
-            let eigenVectObj; 
-            try { 
-                eigenVectObj = this._eigen_getVect(
-                    A, 
-                    eigenValsObj.values[v], 
-                    threshold, 
-                    maxIterationsPerVector
-                );
+            let eigenValsObj = this._eigen_getVals(
+                A, 
+                stopThreshold, 
+                maxIterationsPerVector
+            );
+
+            eigenValsObj.values.sort((a,b) => 
+                Math.abs(a) < Math.abs(b) ? 1
+                : Math.abs(a) > Math.abs(b) ? -1
+                : 0
+            );
+
+            eigenValsObj.rawValues = eigenValsObj.values.map(v => v);
+
+        // if a multiplicity is detected, average out the multiples
+
+            if (isFinite(multiplicityThreshold)) {
+
+                let mults = [];
+                let multFound = false;
+                let values = eigenValsObj.values; 
+
+                for (let v in values) {
+                    if (v == 0 || Math.abs(values[v] - values[v-1]) > multiplicityThreshold)   
+                        mults.push([values[v]]);
+                    else {
+                        mults[mults.length - 1].push(values[v]);  
+                        multFound = true;
+                    }
+                }
+                
+                if (multFound) {
+                    for(let v in values) {
+                        let mult = mults.find(m => m.some(val => values[v] == val));
+                        if (mult.length == 1)
+                            continue;
+                        values[v] = mult.reduce((a,b) => a + b, 0) / mult.length; // average
+                        values[v] = g.roundToMultiple(values[v], multiplicityThreshold);
+                    }            
+                    eigenValsObj.values = values;
+                }
+
             }
-            catch(err) {
-                err.eigenValsObj = eigenValsObj;
-                err.eigenValsObj.about = 
-                    'This eigenValsObj represents successfull iteration of eigenvalues.  ' +
-                    'It is just for completeness of information.  ' +
-                    'It is an iteration for an eigenvector that has failed.  ';
-                throw err;
+
+        // Final rounding of eigenvals (one less precision than the stopThreshold).
+
+            // In one case, I've noticed this helps in the vector creation and testing phases 
+            // because the rounding can bring the estimates to their exact figure, expecially
+            // when the exact figures are integers or otherwise fairlry 'clean' numbers.   
+
+            let [str, precision] = stopThreshold.toExponential().split('e');
+            let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
+            
+            eigenValsObj.values = eigenValsObj.values.map(v => 
+                g.roundToMultiple(v, demoted)
+            );
+
+        // caluclate vectors
+
+            let vectors = [];
+            let iterations = {
+                forValues: eigenValsObj.iterations,
+                forVectors: []
             }
-            vectors.push(eigenVectObj.vector);
-            iterations.forVectors.push(eigenVectObj.iterations);
-        }
 
-        let result = {
-            values: eigenValsObj.values,
-            vectors: new matrix(vectors).transpose(),
-            iterations
-        };
+            for(let v = 0; v < eigenValsObj.values.length; v++) {
+                let eigenVectObj; 
+                try { 
+                    eigenVectObj = this._eigen_getVect(
+                        A, 
+                        eigenValsObj.values[v], 
+                        stopThreshold, 
+                        maxIterationsPerVector
+                    );
+                }
+                catch(err) {
+                    err.eigenValsObj = eigenValsObj;
+                    err.eigenValsObj.about = 
+                        'This eigenValsObj represents successfull iteration of eigenvalues.  ' +
+                        'It is just for completeness of information.  ' +
+                        'It is an iteration for an eigenvector that has failed.  ';
+                    throw err;
+                }
+                vectors.push(eigenVectObj.vector);
+                iterations.forVectors.push(eigenVectObj.iterations);
+            }
 
-        if (!this._eigen_test(A, eigenValsObj.values, vectors, threshold)) {
-            console.log({FailingObjects: result});
-            throw   `Produced eigen values and vectors did not pass test.  ` +
-                    `Failing objects precede. ` +
-                    `You may have to increase the 'maxIterationsPerVector', or, more likey, ` +
-                    `the 'threshold' or 'roundEigenValues' parameters.  ` +
-                    `This is especially true if you have repeated eigenvalues. `;                    
-        }
+        // terminations
 
-        return result;
+            let result = {
+                values: eigenValsObj.values,
+                vectors: new matrix(vectors).transpose(),
+                iterations
+            };
+
+            if (!this._eigen_test(A, eigenValsObj.values, vectors, stopThreshold)) {
+                console.log({FailingObjects: result});
+                throw   `Produced eigen values and vectors did not pass test.  ` +
+                        `Failing objects precede. ` +
+                        `You may have to increase the 'maxIterationsPerVector', or, more likey, ` +
+                        `the 'threshold' or 'roundEigenValues' parameters.  ` +
+                        `This is especially true if you have repeated eigenvalues. `;                    
+            }
+
+            return result;
 
     }
 
@@ -835,13 +887,11 @@ export default class matrix {
     _eigen_getVals(
         A, 
         stopThreshold = 1e-8, 
-        maxIterations = 1000,
-        roundEigenValues = null
+        maxIterations = 1000
     ) {
     
         A = A.clone();
         let values = A.clone();
-        //let vectors = matrix.identity(A.data.length);
         let prev;
         let diag;
     
@@ -851,7 +901,6 @@ export default class matrix {
             let QR = values.clone().decompose('qr');
             values = QR.R.multiply(QR.Q);
             diag = values.diagonal(true).transpose().data[0];
-            //vectors = vectors.multiply(QR.Q);
     
             if (prev) {
                 let test = true;
@@ -875,8 +924,6 @@ export default class matrix {
         }
         
         values = new matrix([diag]);
-        if (roundEigenValues != null)
-            values.round(roundEigenValues);
 
         return {
             iterations,
@@ -940,9 +987,9 @@ export default class matrix {
             // Every once in awhile, a matrix causes non-convergence 
             // but goes back and fourth between two vectors.  They are
             // similar, with a change in sign, but not quite multiples
-            // of each other.  And one is correct while the otehr is
+            // of each other.  And one is correct while the other is
             // incorrect.  Example: [[0,5,-6],[-6,-11,9],[-4,-6,4]].
-            // This tests and random iterations to capture the 
+            // This tests at random iterations to capture the 
             // correct vector in case it's stuck in this.  Can't do 
             // modulus, or at least not an even one, because you might
             // always hit the wrong one. 
