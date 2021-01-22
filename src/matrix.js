@@ -763,13 +763,28 @@ export default class matrix {
 
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
     eigen (
-        stopThreshold = 1e-8,
-        maxIterationsPerVector = 1000
+        thresholds = 1e-8 // or pass an object that looks like 'params' below
     ) {
 
         // initializations
 
-            let multiplicityThreshold = 1e-3;
+            let params = {
+                valueThreshold: 1e-8,
+                valueLoopMax: 1000,
+                valueMerge: 1e-3,
+                vectorThreshold: 1e-8,
+                vectorLoopMax: 1000,
+                testThreshold: 1e-6
+            };
+
+            if (!isFinite(thresholds))
+                Object.assign(params, thresholds);
+
+            params.threshold = isFinite(thresholds) ? thresholds : params.threshold;
+            params.valueThreshold = params.threshold || params.valueThreshold;
+            params.vectorThreshold = params.threshold || params.vectorThreshold;
+            params.valueLoopMax = params.loopMax || params.valueLoopMax;
+            params.vectorLoopMax = params.loopMax || params.vectorLoopMax;
 
             let A = this.clone();
 
@@ -777,60 +792,36 @@ export default class matrix {
 
             let eigenValsObj = this._eigen_getVals(
                 A, 
-                stopThreshold, 
-                maxIterationsPerVector
+                params.valueThreshold, 
+                params.valueLoopMax
             );
 
+            // Sort in order of dominance.  But maybe 
+            // consider sorting in normal order? 
             eigenValsObj.values.sort((a,b) => 
                 Math.abs(a) < Math.abs(b) ? 1
                 : Math.abs(a) > Math.abs(b) ? -1
-                : 0
+                : b - a
             );
 
             eigenValsObj.rawValues = eigenValsObj.values.map(v => v);
 
-        // if a multiplicity is detected, average out the multiples
+            // if a multiplicity is detected, average out the multiples
+            if (params.valueMerge)
+                this._eigen_mergeVals(eigenValsObj.values, params.valueMerge); 
 
-            if (isFinite(multiplicityThreshold)) {
+            // Final rounding of eigenvals (one less precision than the stopThreshold).
 
-                let mults = [];
-                let multFound = false;
-                let values = eigenValsObj.values; 
+                // In one case, I've noticed this helps in the vector creation and testing phases 
+                // because the rounding can bring the estimates to their exact figure, expecially
+                // when the exact figures are integers or otherwise fairlry 'clean' numbers.   
 
-                for (let v in values) {
-                    if (v == 0 || Math.abs(values[v] - values[v-1]) > multiplicityThreshold)   
-                        mults.push([values[v]]);
-                    else {
-                        mults[mults.length - 1].push(values[v]);  
-                        multFound = true;
-                    }
-                }
+                let [str, precision] = params.valueThreshold.toExponential().split('e');
+                let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
                 
-                if (multFound) {
-                    for(let v in values) {
-                        let mult = mults.find(m => m.some(val => values[v] == val));
-                        if (mult.length == 1)
-                            continue;
-                        values[v] = mult.reduce((a,b) => a + b, 0) / mult.length; // average
-                        values[v] = g.roundToMultiple(values[v], multiplicityThreshold);
-                    }            
-                    eigenValsObj.values = values;
-                }
-
-            }
-
-        // Final rounding of eigenvals (one less precision than the stopThreshold).
-
-            // In one case, I've noticed this helps in the vector creation and testing phases 
-            // because the rounding can bring the estimates to their exact figure, expecially
-            // when the exact figures are integers or otherwise fairlry 'clean' numbers.   
-
-            let [str, precision] = stopThreshold.toExponential().split('e');
-            let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
-            
-            eigenValsObj.values = eigenValsObj.values.map(v => 
-                g.roundToMultiple(v, demoted)
-            );
+                eigenValsObj.values = eigenValsObj.values.map(v => 
+                    g.roundToMultiple(v, demoted)
+                );
 
         // caluclate vectors
 
@@ -846,8 +837,8 @@ export default class matrix {
                     eigenVectObj = this._eigen_getVect(
                         A, 
                         eigenValsObj.values[v], 
-                        stopThreshold, 
-                        maxIterationsPerVector
+                        params.vectorThreshold, 
+                        params.vectorLoopMax
                     );
                 }
                 catch(err) {
@@ -870,7 +861,7 @@ export default class matrix {
                 iterations
             };
 
-            if (!this._eigen_test(A, eigenValsObj.values, vectors, stopThreshold)) {
+            if (params.testThreshold && !this._eigen_test(A, eigenValsObj.values, vectors, params.testThreshold)) {
                 console.log({FailingObjects: result});
                 throw   `Produced eigen values and vectors did not pass test.  ` +
                         `Failing objects precede. ` +
@@ -915,7 +906,14 @@ export default class matrix {
             }
             
             if (iterations == maxIterations) {
-                matrix.logMany({iterations, values, prev}, 'failing objects', 8);
+                matrix.logMany({
+                    iterations, 
+                    stopThreshold, 
+                    values, 
+                    diag, 
+                    prev,
+                    test: diag.map((d,i) => Math.abs(d - prev[i]))
+                }, 'failing objects', 8);
                 throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
             }
     
@@ -1025,96 +1023,34 @@ export default class matrix {
 
     }
 
-    // This alternate version is said to be more efficient 
-    // than direct QR, but I"m not seeing that in my test.
-    _eigen_getVals_notInUse(A, errorThreshold = 1e-8, maxIterations = 2000) {
+    _eigen_mergeVals (values, mergeThreshold) {
 
-        // people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf
-        // Vectors not coming out right, but cross-ref says do same thing: cs.utexas.edu/users/flame/pubs/flawn60.pdf
-        // Another possible resource: addi.ehu.es/bitstream/handle/10810/26427/TFG_Erana_Robles_Gorka.pdf?sequence=1&isAllowed=y
+        let sorted = values.map(v => v).sort((a,b) => 
+            a < b ? 1 : a > b ? -1 : 0
+        );
 
-        // a0 b1  0  0  0
-        // b1 a1 b2  0  0
-        //  0 b2 a2 b3  0
-        //  0 0  b3 a3 b4
-        //  0 0   0 b4 a4
+        let mults = [];
+        let multFound = false;
 
-        let n = this.data.length - 1;
-        let m = n;
-        let T = this._eigen_Hessenderize(A.clone());
-        
-        let a = (ix) => T.data[ix][ix];
-        let b = (ix) => T.data[ix][ix-1];
-        let set_a = (ix,val) => T.data[ix][ix] = val;
-        let set_b = (ix,val) => {
-            T.data[ix][ix-1] = val;
-            T.data[ix-1][ix] = val;
-        }
-
-        let iterations = {};
-        let sumIterations = () => Object.values(iterations).reduce((a,b) => a + b, 0);
-        while (m > 0) {
-
-            let d = (a(m-1) - a(m)) / 2;
-            
-            let shift;
-            if (d == 0) 
-                shift = a(m) - Math.abs(b(m));
+        for (let v in sorted) {
+            if (v == 0 || Math.abs(sorted[v] - sorted[v-1]) > mergeThreshold)   
+                mults.push([sorted[v]]);
             else {
-                shift = (d + Math.sign(d) * Math.pow(Math.pow(d,2)+Math.pow(b(m),2),0.5));
-                shift = a(m) - Math.pow(b(m),2) / shift;
+                mults[mults.length - 1].push(sorted[v]);  
+                multFound = true;
             }
-
-            let x = a(0) - shift;
-            let y = b(1);
-
-            for (let i = 0; i < m; i++) {
-
-                let sin, cos;
-                if (m > 1) {
-                    let givens = this._eigen_givens(x, y, 0);
-                    sin = -givens.sin;
-                    cos = givens.cos;
-                }
-                else {
-                    let sc = this._eigen_eigenDirect_sc(new matrix([[a(0), b(1)], [b(1), a(2)]]), 1e-16);
-                    sin = sc.sin;
-                    cos = sc.cos;
-                }
-
-                let w = cos*x - sin*y;
-                d = a(i) - a(i+1);
-                let z = (2*cos*b(i+1) + d*sin)*sin;
-                set_a(i, a(i)-z);
-                set_a(i+1, a(i+1)+z);
-                set_b(i+1, d*cos*sin + (Math.pow(cos,2)-Math.pow(sin,2))*b(i+1));
-                x = b(i+1);
-
-                if (i > 0)
-                    set_b(i,w);
-
-                if (i < m-1) { 
-                    y = -sin * b(i+2);
-                    set_b(i+2, cos*b(i+2));
-                }
-
-                iterations['m = ' + m] = (iterations['m = ' + m] || 0) + 1;
-                if (sumIterations() >= maxIterations)
-                    break;
-
-            }
-
-            if(Math.abs(b(1) < 1e-32*(Math.abs(a(m-1))))) 
-                m-=1;
-            if (sumIterations() >= maxIterations)
-                break;
-
         }
+        
+        if (multFound) 
+            for(let v in values) {
+                let mult = mults.find(m => m.some(val => values[v] == val));
+                if (mult.length == 1)
+                    continue;
+                values[v] = mult.reduce((a,b) => a + b, 0) / mult.length; // average
+                values[v] = g.roundToMultiple(values[v], mergeThreshold);
+            }            
 
-        return {
-            iterations,
-            values: T.clone().diagonal(true).transpose().data[0]
-        };
+        return values;
 
     }
 
@@ -1152,102 +1088,6 @@ export default class matrix {
         }
 
         return A;
-
-    }
-
-    _eigen_givens (a,b, zeroThreshold) {
-
-        // en.wikipedia.org/wiki/Givens_rotation
-
-        let sin, cos;
-
-        if (b == 0 || Math.abs(b) < zeroThreshold) {
-            cos = Math.sign(a) || 1;
-            sin = 0;
-        }
-        else if (a == 0 || Math.abs(a) < zeroThreshold) {
-            cos = 0;
-            sin = Math.sign(b);
-        }
-        else if (Math.abs(a) > Math.abs(b)) {
-            let t = b / a;
-            let u = Math.sign(a) * Math.pow(1 + t*t, 0.5);
-            cos = 1 / u;
-            sin = cos * t;
-        }
-        else {
-            let t = a / b;
-            let u = Math.sign(b) * Math.pow(1 + t*t, 0.5);
-            sin = 1 / u;
-            cos = sin * t;
-        }
-
-        return { sin, cos };
-
-    }
-
-    _eigen_eigenDirect_sc (symetric2x2, zeroThreshold) {
-
-        // yutsumura.com/diagonalize-a-2-by-2-matrix-if-diagonalizable/
-        // study.com/academy/lesson/how-to-use-the-quadratic-formula-to-find-roots-of-equations.html
-        // lpsa.swarthmore.edu/MtrxVibe/EigMat/MatrixEigen.html
-        // And of course: Misty Drake.
-        // example: let symetric2x2 = new matrix([[1, 4], [4, 3] ]);*/
-
-        // bringing in given's zero catch logic
-        if (symetric2x2.data[0][1] < zeroThreshold) return {
-            sin: 0,
-            cos: Math.sign(symetric2x2.data[0][0]) || 1
-        }
-        else if (symetric2x2.data[0][0] < zeroThreshold) return {
-            sin: Math.sign(symetric2x2.data[0][1]),
-            cos: 0
-        }        
-
-        // charateristic fucntion (ax^2 + bx + c)
-        let a = 1; 
-        let b = -(symetric2x2.data[0][0] + symetric2x2.data[1][1]);
-        let c = symetric2x2.data[0][0] * symetric2x2.data[1][1] - symetric2x2.data[0][1] * symetric2x2.data[1][0];
-
-        let eigenvalues = [
-            (-b - Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a),
-            (-b + Math.pow(Math.pow(b,2) - 4*a*c, 0.5)) / (2*a)
-        ];
-
-        let getEigenvector = (eigval) => {
-            // SubtractRoot is of the form [ [a, b], [c, d] ]
-            // We're looking for some [v1,v2] such that subtractRoot * [v1,v2] = [0,0]
-            // But [a, b] and [c, d] are linearly dependent
-            // So really we just need some [v1,v2] usch that [a,b] * [v1,v2] = [0]
-            // There are lots of possibilites.  Lets assume v1 = 1;
-            // We then need [a,b] * [1,v2] = 0
-            // a * 1 + b*v2 = a + b*v2 = 0
-            // b*v2 = -a | v2 = -a/b
-            let subtractRoot = symetric2x2.clone().subtract(
-                matrix.identity(symetric2x2.data.length).multiply(eigval)
-            );
-            subtractRoot = subtractRoot.data[0]; 
-            let v2 = -subtractRoot[0] / subtractRoot[1];
-            return [1,v2];
-        };
-
-        let eigenvectors = new matrix([
-            getEigenvector(eigenvalues[0]), 
-            getEigenvector(eigenvalues[1])
-        ]).transpose();
-
-        // Eigenvectors output as form [1,a][1,b].
-        // What we need is form [c,-s],[s,c].
-        // Because the original matrix is symetric diagonal, this 
-        // is accomplished simlpy by rescaling one of the vectors
-        let divisor = eigenvectors.data[1][1];
-        for(let row of eigenvectors.data) 
-            row[1] = row[1] / divisor;
-
-        return { 
-            sin: eigenvectors[0,1], 
-            cos: eigenvectors[0,0]
-        }
 
     }
 
