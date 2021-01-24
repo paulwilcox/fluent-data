@@ -2,7 +2,22 @@
 export let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
 
 // e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
-export let roundToMultiple = (term, multiple) => Math.round(term / multiple) * multiple
+export let roundToMultiple = (term, multiple) => {
+
+    let result = Math.round(term / multiple) * multiple;
+
+    // Binary and floating point arithmetic sometimes makes it so that the
+    // result comes out as a long decimal with an extreme fraction at the
+    // end.  Obviously that's annoying as this is a rounding function.
+    // This seeks to cut that off by getting the number of digits of the 
+    // multiple parameter and rounding to that.
+    let multStr = multiple.toExponential();
+    let [multNonE, multE] = multStr.split('e');
+    let multDec = (multNonE.split('.')[1] || '').length - parseInt(multE);
+
+    return round(result, multDec);
+
+}
 
 // developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 export let random = (min, max, integers = false) => {
