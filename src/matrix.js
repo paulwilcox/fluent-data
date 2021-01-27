@@ -5,7 +5,7 @@ export default class matrix {
     constructor (
         data, 
         selector = arrayRow => arrayRow, // csv of prop names or func returning array of numbers
-        skipChecks = false // if true, skips validity checks
+        rowNames // string of a prop name or func identifiying the property representing the name
     ) {
 
         this.colNames = null;
@@ -25,9 +25,11 @@ export default class matrix {
 
         this.data = data.map(selector)
 
-        if (!skipChecks)
-            this.validate();
-
+        if (rowNames)
+            this.rowNames = g.isString(rowNames)
+                ? data.map(row => row[rowNames])
+                : data.map(rowNames);
+        
     }
     
     setColNames (colNames) {

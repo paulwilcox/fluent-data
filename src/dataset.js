@@ -151,9 +151,9 @@ export default class dataset {
 
     matrix(        
         selector, // csv of prop names or func returning array of numbers
-        skipChecks = false // if true, skips validity checks)
+        rowNames // string of a prop name or func identifiying the property representing the name
     ) {
-        return new Matrix(this.data, selector, skipChecks);
+        return new Matrix(this.data, selector, rowNames);
     }
 
     with (func) {
