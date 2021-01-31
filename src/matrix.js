@@ -323,7 +323,7 @@ export default class matrix {
             let vector = [];
             for (let i = 0; i < this.data.length; i++)
                 vector.push(this.data[i][i]);
-            return new matrix(vector, x => [x], true);
+            return new matrix(vector, x => [x]);
         }
 
         for (let r = 0; r < this.data.length; r++)
@@ -1230,7 +1230,7 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
         }
         result.push(row);
     }
-    return new matrix(result, row => row, true);
+    return new matrix(result, row => row);
 }
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); }
@@ -1239,7 +1239,7 @@ matrix.identity = function (
     numRows, 
     numCols = null // null for numCols = numRows
 ) { 
-    return matrix.repeat(1, numRows, numCols || numRows, true); 
+    return matrix.repeat(1, numRows, numCols || numRows); 
 }
 
 matrix.randomizer = class {
