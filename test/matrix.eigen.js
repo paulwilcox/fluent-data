@@ -1,5 +1,3 @@
-import * as g from '../src/general.js';
-
 async function test () {
     
     let eigen = new $$.matrix([
@@ -11,7 +9,11 @@ async function test () {
     ]).eigen(1e-8);
 
     let expected = [2.85309, 1.80633, 0.20449, 0.10241, 0.03368];
-    let test = eigen.values.every((v,ix) => g.round(v,5) == expected[ix]);
+    let test = new $$.matrix([eigen.values])
+        .transpose()
+        .round(5)
+        .data
+        .every((v,ix) => v == expected[ix]);
     if(!test) 
         throw 'Eigenvales for 5x5 decimal matrix did not come out as expected.'
 
@@ -79,6 +81,8 @@ async function test () {
             [-4,  -6,  4]
         ]
     );
+
+    return true;
 
 }
 
