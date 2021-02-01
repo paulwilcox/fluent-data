@@ -30,6 +30,8 @@ export default class matrix {
                 ? data.map(row => row[rowNames])
                 : data.map(rowNames);
         
+        this.validate();
+
     }
     
     setColNames (colNames) {
@@ -1239,7 +1241,7 @@ matrix.identity = function (
     numRows, 
     numCols = null // null for numCols = numRows
 ) { 
-    return matrix.repeat(1, numRows, numCols || numRows); 
+    return matrix.repeat(1, numRows, numCols || numRows, true); 
 }
 
 matrix.randomizer = class {
