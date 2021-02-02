@@ -10,7 +10,6 @@ export default class matrix {
 
         this.colNames = null;
         this.rowNames = null;
-        this.autoClone = false;
         this.data;
 
         if (!data) {
@@ -36,8 +35,6 @@ export default class matrix {
     }
     
     setColNames (colNames) {
-        if (this.autoClone)
-            return this.clone().setColNames(...args);
         if (g.isString(colNames))
             colNames = colNames.split(',').map(name => name.trim());
         if (this.data.length > 0 && this.data[0].length != colNames.length)
@@ -47,8 +44,6 @@ export default class matrix {
     }
 
     setRowNames (rowNames) {
-        if (this.autoClone)
-            return this.clone().setRowNames(...args);
         if (g.isString(rowNames))
             rowNames = rowNames.split(',').map(name => name.trim());
         if (this.data.length > 0 && this.data.length != rowNames.length)
@@ -68,10 +63,6 @@ export default class matrix {
             }
         }
         return this;
-    }
-
-    preferClone(preferredOrNot) {
-        this.autoClone = preferred;
     }
 
     clone() {
@@ -136,11 +127,28 @@ export default class matrix {
         return true;
     }
 
+    transpose() {
+
+        let result = [];
+        for(let r in this.data) 
+            for(let c in this.data[r]) 
+                if (r == 0)
+                    result.push([this.data[r][c]]);
+                else 
+                    result[c].push(this.data[r][c]);
+        this.data = result;
+        
+        let rn = this.rowNames;
+        let cn = this.colNames;
+        this.rowNames = cn;
+        this.colNames = rn;
+
+        return this;
+
+    }
+
     // (func) or (otherMatrix, func)
     apply(...args) {
-
-        if (this.autoClone)
-            return this.clone().apply(...args);
 
         let func = typeof args[0] == 'function' 
             ? (r,c) => args[0](this.data[r][c])
@@ -155,23 +163,16 @@ export default class matrix {
     }
     //
     add(other) {
-        if (this.autoClone)
-            return this.clone().add(...args);
         this.apply(other, (a,b) => a+b);
         return this;
     }
     //
     subtract(other) {
-        if (this.autoClone)
-            return this.clone().subtract(...args);
         this.apply(other, (a,b) => a-b);
         return this;
     }
 
     reduce(direction, func, seed = undefined) {
-
-        if (this.autoClone)
-            return this.clone().reduce(...args);
 
         let aggregated = [];
         
@@ -210,33 +211,7 @@ export default class matrix {
 
     }
 
-    transpose() {
-
-        if (this.autoClone)
-            return this.clone().transpose();
-
-        let result = [];
-        for(let r in this.data) 
-            for(let c in this.data[r]) 
-                if (r == 0)
-                    result.push([this.data[r][c]]);
-                else 
-                    result[c].push(this.data[r][c]);
-        this.data = result;
-        
-        let rn = this.rowNames;
-        let cn = this.colNames;
-        this.rowNames = cn;
-        this.colNames = rn;
-
-        return this;
-
-    }
-
     multiply(other) {
-
-        if (this.autoClone)
-            return this.clone().multiply(...args);
 
         if (!isNaN(other) && isFinite(other)) 
             for (let r in this.data)
@@ -304,9 +279,6 @@ export default class matrix {
     // TODO: consider replacing this with pseudoInverse
     inverse() {
 
-        if (this.autoClone)
-            return this.clone().inverse(...args);
-
         if (this.data.length == 0)
             throw `Matrix is empty.  Cannot take inverse.`;
 
@@ -335,8 +307,6 @@ export default class matrix {
     pseudoInverse(
         ...args // passed to decompose('svd.compact')
     ) {
-        if (this.autoClone)
-            return this.clone().pseudoInverse(...args);
         let svd = this.decompose('svd.compact', ...args);
         let inv = svd.D.clone().apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
         return svd.R.multiply(inv).multiply(svd.L.transpose());
@@ -347,9 +317,6 @@ export default class matrix {
         // matrix with non-diagonal cells zeroed out.
         asVector = false
     ) {
-        
-        if (this.autoClone)
-            return this.clone().diagonal(...args);
 
         if (!this.isSquare())
             throw 'Matrix is not a square.  Cannot get diagonal vector.';
@@ -371,8 +338,6 @@ export default class matrix {
     }
 
     round(digits) {
-        if (this.autoClone)
-            return this.clone().round(...args);
         for(let row of this.data) 
             for(let c in row) {
                 row[c] = parseFloat(row[c].toFixed(digits));
@@ -490,9 +455,6 @@ export default class matrix {
         fullyReduce = true,
         returnAllObjects = false
     ) {
-
-        if (this.autoClone)
-            return this.clone().solve(...args);
 
         let leadingItem = (row) => {
             for(let c in row) 
@@ -620,9 +582,6 @@ export default class matrix {
 
     // TODO: incorporate errorThreshold and maxIterations into QR and LU decompositions
     decompose(method, errorThreshold, maxIterations) {
-
-        if (this.autoClone)
-            return this.clone().decompose(...args);
 
         method = method.toLowerCase();
 
@@ -813,9 +772,6 @@ export default class matrix {
     ) {
 
         // initializations
-
-            if (this.autoClone)
-                return this.clone().eigen(...args);
 
             let params = {
                 valueThreshold: 1e-8,
@@ -1162,9 +1118,6 @@ export default class matrix {
 
     get(rows, cols) {
 
-        if (this.autoClone)
-            return this.clone().get(...args);
-
         let allRows = [...Array(this.data.length).keys()];
         let allCols = [...Array(this.data[0].length).keys()];
     
@@ -1326,7 +1279,8 @@ matrix.randomizer = class {
 
 matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
 
-    console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+    if (objectTitle)
+        console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
 
     let nonTables = {};
     let tables = [];
@@ -1367,6 +1321,7 @@ matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
         table.tableFunc();
     }
 
-    console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+    if (objectTitle)
+        console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
 
 }

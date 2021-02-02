@@ -593,6 +593,8 @@ class matrix {
                 ? data.map(row => row[rowNames])
                 : data.map(rowNames);
         
+        this.validate();
+
     }
     
     setColNames (colNames) {
@@ -624,6 +626,21 @@ class matrix {
             }
         }
         return this;
+    }
+
+    clone() {
+        let result = [];
+        for(let row of this.data) {
+            let newRow = [];
+            for (let cell of row) 
+                newRow.push(cell);
+            result.push(newRow);
+        }
+        let mx = new matrix();
+        mx.data = result;
+        mx.colNames = this.colNames;
+        mx.rowNames = this.rowNames;
+        return mx;
     }
 
     log(roundDigits) {
@@ -673,19 +690,24 @@ class matrix {
         return true;
     }
 
-    clone() {
+    transpose() {
+
         let result = [];
-        for(let row of this.data) {
-            let newRow = [];
-            for (let cell of row) 
-                newRow.push(cell);
-            result.push(newRow);
-        }
-        let mx = new matrix();
-        mx.data = result;
-        mx.colNames = this.colNames;
-        mx.rowNames = this.rowNames;
-        return mx;
+        for(let r in this.data) 
+            for(let c in this.data[r]) 
+                if (r == 0)
+                    result.push([this.data[r][c]]);
+                else 
+                    result[c].push(this.data[r][c]);
+        this.data = result;
+        
+        let rn = this.rowNames;
+        let cn = this.colNames;
+        this.rowNames = cn;
+        this.colNames = rn;
+
+        return this;
+
     }
 
     // (func) or (otherMatrix, func)
@@ -748,26 +770,6 @@ class matrix {
         }
 
         this.data = aggregated;
-        return this;
-
-    }
-
-    transpose() {
-
-        let result = [];
-        for(let r in this.data) 
-            for(let c in this.data[r]) 
-                if (r == 0)
-                    result.push([this.data[r][c]]);
-                else 
-                    result[c].push(this.data[r][c]);
-        this.data = result;
-        
-        let rn = this.rowNames;
-        let cn = this.colNames;
-        this.rowNames = cn;
-        this.colNames = rn;
-
         return this;
 
     }
@@ -878,7 +880,7 @@ class matrix {
         // matrix with non-diagonal cells zeroed out.
         asVector = false
     ) {
-        
+
         if (!this.isSquare())
             throw 'Matrix is not a square.  Cannot get diagonal vector.';
         
@@ -886,13 +888,14 @@ class matrix {
             let vector = [];
             for (let i = 0; i < this.data.length; i++)
                 vector.push(this.data[i][i]);
-            return new matrix(vector, x => [x], true);
+            return new matrix(vector, x => [x]);
         }
 
         for (let r = 0; r < this.data.length; r++)
         for (let c = 0; c < this.data[r].length; c++)
             if (r != c) 
                 this.data[r][c] = 0;
+
         return this;
 
     }
@@ -1793,7 +1796,7 @@ matrix.repeat = function (repeater, numRows, numCols, diagOnly) {
         }
         result.push(row);
     }
-    return new matrix(result, row => row, true);
+    return new matrix(result, row => row);
 };
 
 matrix.zeroes = function (numRows, numCols) { return matrix.repeat(0, numRows, numCols, false); };
@@ -1839,7 +1842,8 @@ matrix.randomizer = class {
 
 matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
 
-    console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+    if (objectTitle)
+        console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
 
     let nonTables = {};
     let tables = [];
@@ -1878,7 +1882,8 @@ matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
         table.tableFunc();
     }
 
-    console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
+    if (objectTitle)
+        console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
 
 };
 
