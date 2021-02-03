@@ -192,8 +192,9 @@ export default class matrix {
                 let agg = seed || 0;
                 for(let row of this.data) 
                     agg = func(agg, row[c]);
-                aggregated.push([agg]);
+                aggregated.push(agg);
             }
+            aggregated = [aggregated];
         }
 
         else if (direction == 'all' || direction == 0) {
