@@ -81,16 +81,35 @@ export default class matrix {
     }
 
     log(roundDigits) {
+
         let clone = roundDigits === undefined ? this.clone() : this.clone().round(roundDigits);
         let printable = {};
+
+        // if the keyName is a repeat in keyHolder, add a ' (#)' after it.
+        let addNumSuffix = (keyHolder, keyName) => {
+            if(!Object.keys(keyHolder).includes(keyName))
+                return keyName;
+            let num = parseInt(keyName.match(/(?<= \()\d+(?=\)$)/));
+            if (isNaN(num)) 
+                num = 1;
+            return keyName.replace(/ \(\d+\)$/, '') + ` (${num + 1})`;
+        }
+        
         for (let r in clone.data) {
             let obj = {};
-            for (let c in clone.data[r]) 
-                obj[clone.colNames ? clone.colNames[c] : c] = clone.data[r][c];
-            printable[clone.rowNames ? clone.rowNames[r] : r] = obj;
+            for (let c in clone.data[r]) {
+                let colName = clone.colNames ? clone.colNames[c] : c;
+                colName = addNumSuffix(obj, colName);
+                obj[colName] = clone.data[r][c];
+            }
+            let rowName = clone.rowNames[r] ? clone.rowNames[r] : r;
+            rowName = addNumSuffix(printable, rowName);    
+            printable[rowName] = obj;
         }
+
         console.table(printable);
         return this;
+
     }
 
     isSquare() {
