@@ -129,15 +129,14 @@ async function test () {
             [ 32.8, 7.4, -1,  10]
         ]);
 
-        result = mx.clone().pseudoInverse().equals(new $$.matrix([
-            [-0.004615002,  0.002911398, -0.007155201,  0.0062192961, -0.006909142,  0.0047711857, -0.0001766036], 
-            [ 0.035594752,  0.013295044,  0.027166709,  0.0071479360,  0.046617154,  0.0002212288,  0.0247010297], 
-            [-0.034430581,  0.016398075, -0.038436920, -0.0243374305,  0.036586879,  0.0430198503,  0.0010583557], 
-            [ 0.003794151, -0.016065237, -0.004731081, -0.0005222477,  0.016283676, -0.0044875322,  0.0053941365] 
-        ]), 1e-8);
+        result = mx.clone().pseudoInverse()
+            .multiply(mx).round(8)
+            .equals($$.matrix.identity(4));
 
         if (!result) 
-            throw 'pseudoInverse did not produce expected result.';
+            throw 'pseudoInverse multiplied by original did not produce identity matrix.';
+
+        console.log(result);
 
     // terminations
 
