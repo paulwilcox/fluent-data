@@ -50,7 +50,7 @@ async function test () {
                 ? new $$.matrix([[1, -1,  4], [1,  4, -2], [1,  4,  2], [1, -1,  0]])
                 : new $$.matrix.randomizer().setSize(r,c).setValues(-10,10).get();
 
-            let d = mx.decompose('qr');    
+            let d = mx.decomposeQR();    
             if (!d.test(4)) {
                 console.log(
                     'Failed QR decomposition results follow',
@@ -104,7 +104,7 @@ async function test () {
 
             let d;
             try {
-                d = mx.decompose('svd.compact');
+                d = mx.decomposeSVDcomp();
                 d.rebuilt = d.L.clone().multiply(d.D).multiply(d.R.clone().transpose());
                 if (!d.rebuilt.equals(mx, 1e-8)) 
                     throw `${mxType} ${r}x${c} matrix SVD decomposition resulted in L*D*R.transpose() <> A.`;

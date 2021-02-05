@@ -327,7 +327,7 @@ export default class matrix {
     pseudoInverse(
         ...args // passed to decompose('svd.compact')
     ) {
-        let svd = this.decompose('svd.compact', ...args);
+        let svd = this.decomposeSVDcomp(...args);
         let inv = svd.D.clone().apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
         return svd.R.multiply(inv).multiply(svd.L.transpose());
     }
@@ -600,40 +600,14 @@ export default class matrix {
 
     }
 
-    // TODO: incorporate errorThreshold and maxIterations into QR and LU decompositions
-    decompose(method, errorThreshold, maxIterations) {
-
-        method = method.toLowerCase();
-
-        if (method == 'qr')
-            return this._decomposeQR();
-
-        else if (method == 'lu')
-            return this._decomposeLU();
-
-        else if (method == 'svd.compact')
-            return this._decomposeSVDcompact(
-                errorThreshold || 1e-8, 
-                maxIterations || 1000
-            );
-
-        else 
-            throw `Decompose method '${method}' not recognized.`;
-
-    }
-
-    _decomposeQR() {
+    decomposeQR() {
 
         // example: www.cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
         // properties: en.wikipedia.org/wiki/QR_decomposition
 
         let R = this.clone();
         let Q;
-    /*
-        if (this.data.length < this.data[0].length)
-            throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
-                    `Cannot take the Household transform.`;
-    */
+
         let cycle = (level = 0) => {
                 
             if (level >= this.data.length - 1)
@@ -685,7 +659,7 @@ export default class matrix {
 
     }
 
-    _decomposeLU() {
+    decomposeLU() {
 
         let m = this.data.length - 1;
         let U = this.clone();
@@ -717,7 +691,10 @@ export default class matrix {
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p129 describes the full vs compact SVD (this and R does the compact)
-    _decomposeSVDcompact(errorThreshold, maxIterations) {
+    decomposeSVDcomp(
+        errorThreshold = 1e-8, 
+        maxIterations = 1000
+    ) {
 
         let m = this.data.length;
         let n = this.data[0].length;
@@ -754,10 +731,10 @@ export default class matrix {
 
             L = this.clone()
                 .multiply(R.clone().transpose())
-                .decompose('qr').Q
+                .decomposeQR().Q
                 .get(null, ix => ix >= 0 && ix <= r - 1);
     
-            let qr = this.clone().transpose().multiply(L).decompose('qr');
+            let qr = this.clone().transpose().multiply(L).decomposeQR();
             R = qr.Q.clone().get(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.clone().transpose();
     
@@ -787,7 +764,7 @@ export default class matrix {
     }
 
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
-    eigen (
+    decomposeEigen (
         thresholds = 1e-8 // or pass an object that looks like 'params' below
     ) {
 
@@ -914,7 +891,7 @@ export default class matrix {
         let iterations = 0;
         while (iterations++ <= maxIterations) {
     
-            let QR = values.clone().decompose('qr');
+            let QR = values.clone().decomposeQR();
             values = QR.R.multiply(QR.Q);
             diag = values.diagonal(true).transpose().data[0];
     

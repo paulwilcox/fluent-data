@@ -8,8 +8,8 @@ async function test () {
         [1, -1,  0]
     ])
     
-    let d = mx.clone().decompose('svd.compact');    
+    let d = mx.clone().decom.QR();    
 
-    $$.matrix.logMany(d);
+    console.log(d);
 
 }
