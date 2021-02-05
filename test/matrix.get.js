@@ -35,8 +35,8 @@ async function test () {
     );
 
     compare(
-        'row => Math.max(...row) >= 5, null',
-        mx.clone().get(row => Math.max(...row) >= 5, null),
+        '(ix,row) => Math.max(...row) >= 5, null',
+        mx.clone().get((ix,row) => Math.max(...row) >= 5, null),
         make([[3,8,7,9], [4,6,2,1], [9,3,5,5]], 'r0,r1,r2', 'c0,c1,c2,c3')
     );
     

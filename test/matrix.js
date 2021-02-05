@@ -136,8 +136,6 @@ async function test () {
         if (!result) 
             throw 'pseudoInverse multiplied by original did not produce identity matrix.';
 
-        console.log(result);
-
     // terminations
 
         return true;

@@ -102,7 +102,7 @@ export default class matrix {
                 colName = addNumSuffix(obj, colName);
                 obj[colName] = clone.data[r][c];
             }
-            let rowName = clone.rowNames[r] ? clone.rowNames[r] : r;
+            let rowName = clone.rowNames ? clone.rowNames[r] : r;
             rowName = addNumSuffix(printable, rowName);    
             printable[rowName] = obj;
         }
@@ -639,7 +639,7 @@ export default class matrix {
             if (level >= this.data.length - 1)
                 return;
     
-            let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
+            let Rsub = R.clone().get(ix => ix >= level, ix => ix >= level);
             if (Rsub.data[0].length == 0) 
                 throw `QR decomposition did not converge in time to produce an upper triangular R.`;
             let col0 = Rsub.clone().get(null, 0);
@@ -660,8 +660,8 @@ export default class matrix {
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
-            let upperSquare = R.clone().get((row,ix) => ix < R.data[0].length, null);
-            let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
+            let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
@@ -694,8 +694,8 @@ export default class matrix {
         for (let k = 0; k < m; k++)
         for (let j = k + 1; j <= m; j++) {
             L.data[j][k] = U.data[j][k]/U.data[k][k];
-            let term = U.clone().get(j,(col,ix) => ix >= k && ix <= m).subtract(
-                U.clone().get(k,(col,ix) => ix >= k && ix <= m).multiply(L.data[j][k])
+            let term = U.clone().get(j,ix => ix >= k && ix <= m).subtract(
+                U.clone().get(k,ix => ix >= k && ix <= m).multiply(L.data[j][k])
             ).data[0];
             console.log(JSON.stringify(term))
             for (let i = k; i <= m; i++)
@@ -742,7 +742,7 @@ export default class matrix {
         } 
     
         let test = () => {
-            D = D.get((row,id) => id < r, (col,id) => id < r);
+            D = D.get(id => id < r, id => id < r);
                 return L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
             && L.clone().transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
             && R.clone().transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
@@ -755,10 +755,10 @@ export default class matrix {
             L = this.clone()
                 .multiply(R.clone().transpose())
                 .decompose('qr').Q
-                .get(null,(col,ix) => ix >= 0 && ix <= r - 1);
+                .get(null, ix => ix >= 0 && ix <= r - 1);
     
             let qr = this.clone().transpose().multiply(L).decompose('qr');
-            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= r - 1).transpose();
+            R = qr.Q.clone().get(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.clone().transpose();
     
             if (iterations % 10 == 0) {
@@ -1153,7 +1153,7 @@ export default class matrix {
         // > 1 turns into [1],
         // > [false,true,true,false] turns into [1,2]
         // > [-2,-1] turns into [0,3] for 'row' direction and matrix having 4 rows
-        // > (row,ix) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
+        // > (ix,row) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
         let arrayify = (param, direction) => {
     
             // convert int form to int array form
@@ -1201,7 +1201,7 @@ export default class matrix {
                 let _param = [];
                 if (direction == 'rows')
                     for(let r = 0; r < this.data.length; r++)  {
-                        if (param(this.data[r], r))
+                        if (param(r, this.data[r]))
                             _param.push(r);
                     }
                 else 
@@ -1209,7 +1209,7 @@ export default class matrix {
                         let transposed = [];
                         for(let r = 0; r < this.data.length; r++)
                             transposed.push(this.data[r][c]);
-                        if(param(transposed, c))
+                        if(param(c, transposed))
                             _param.push(c);
                     }
                 param = _param;
