@@ -764,7 +764,7 @@ export default class matrix {
     }
 
     // www-users.cs.umn.edu/~saad/eig_book_2ndEd.pdf (p89)
-    decomposeEigen (
+    eigen (
         thresholds = 1e-8 // or pass an object that looks like 'params' below
     ) {
 
@@ -829,8 +829,7 @@ export default class matrix {
 
             let vectors = [];
             let iterations = {
-                forValues: eigenValsObj.iterations,
-                forVectors: []
+                values: eigenValsObj.iterations
             }
 
             for(let v = 0; v < eigenValsObj.values.length; v++) {
@@ -852,13 +851,26 @@ export default class matrix {
                     throw err;
                 }
                 vectors.push(eigenVectObj.vector);
-                iterations.forVectors.push(eigenVectObj.iterations);
+                iterations[`vector ${v}`] = eigenVectObj.iterations;
             }
 
         // terminations
 
+            // TODO: Change it so that values and vectors are the raw 
+            // forms (unnormalized and unsorted) than can be 
+            // recomposed.  And then Values and Vectors are the 
+            // sorted and normalized versions.
+
             let result = {
-                values: eigenValsObj.values,
+                values: new matrix([eigenValsObj.values]).transpose(),
+                get Values() { 
+                    let mx = matrix.identity(eigenValsObj.values.length); 
+                    for(let r in mx.data)
+                    for(let c in mx.data[r]) 
+                        if (r == c)
+                            mx.data[r][c] = this.values.data[r][0];
+                    return mx;
+                },
                 vectors: new matrix(vectors).transpose(),
                 iterations
             };

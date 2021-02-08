@@ -6,7 +6,7 @@ async function test () {
         [0.96, 0.13, 1.00, 0.50, 0.11],
         [0.42, 0.71, 0.50, 1.00, 0.79],
         [0.01, 0.85, 0.11, 0.79, 1.00]
-    ]).decomposeEigen(1e-8);
+    ]).eigen(1e-8);
 
     let expected = [2.85309, 1.80633, 0.20449, 0.10241, 0.03368];
     let test = new $$.matrix([eigen.values])
@@ -91,7 +91,7 @@ function runEigen (title, params, data) {
     let m = new $$.matrix(data);
 
     try {
-        let result = m.clone().decomposeEigen(params);
+        let result = m.clone().eigen(params);
     } 
     catch (e) {
         throw `eigen() failed for '${title}'.  See console for more details.  ` + 

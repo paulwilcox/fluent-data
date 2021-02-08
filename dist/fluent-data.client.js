@@ -642,16 +642,35 @@ class matrix {
     }
 
     log(roundDigits) {
+
         let clone = roundDigits === undefined ? this.clone() : this.clone().round(roundDigits);
         let printable = {};
+
+        // if the keyName is a repeat in keyHolder, add a ' (#)' after it.
+        let addNumSuffix = (keyHolder, keyName) => {
+            if(!Object.keys(keyHolder).includes(keyName))
+                return keyName;
+            let num = parseInt(keyName.match(/(?<= \()\d+(?=\)$)/));
+            if (isNaN(num)) 
+                num = 1;
+            return keyName.replace(/ \(\d+\)$/, '') + ` (${num + 1})`;
+        };
+        
         for (let r in clone.data) {
             let obj = {};
-            for (let c in clone.data[r]) 
-                obj[clone.colNames ? clone.colNames[c] : c] = clone.data[r][c];
-            printable[clone.rowNames ? clone.rowNames[r] : r] = obj;
+            for (let c in clone.data[r]) {
+                let colName = clone.colNames ? clone.colNames[c] : c;
+                colName = addNumSuffix(obj, colName);
+                obj[colName] = clone.data[r][c];
+            }
+            let rowName = clone.rowNames ? clone.rowNames[r] : r;
+            rowName = addNumSuffix(printable, rowName);    
+            printable[rowName] = obj;
         }
+
         console.table(printable);
         return this;
+
     }
 
     isSquare() {
@@ -753,8 +772,9 @@ class matrix {
                 let agg = seed || 0;
                 for(let row of this.data) 
                     agg = func(agg, row[c]);
-                aggregated.push([agg]);
+                aggregated.push(agg);
             }
+            aggregated = [aggregated];
         }
 
         else if (direction == 'all' || direction == 0) {
@@ -868,7 +888,7 @@ class matrix {
     pseudoInverse(
         ...args // passed to decompose('svd.compact')
     ) {
-        let svd = this.decompose('svd.compact', ...args);
+        let svd = this.decomposeSVDcomp(...args);
         let inv = svd.D.clone().apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
         return svd.R.multiply(inv).multiply(svd.L.transpose());
     }
@@ -1141,46 +1161,20 @@ class matrix {
 
     }
 
-    // TODO: incorporate errorThreshold and maxIterations into QR and LU decompositions
-    decompose(method, errorThreshold, maxIterations) {
-
-        method = method.toLowerCase();
-
-        if (method == 'qr')
-            return this._decomposeQR();
-
-        else if (method == 'lu')
-            return this._decomposeLU();
-
-        else if (method == 'svd.compact')
-            return this._decomposeSVDcompact(
-                errorThreshold || 1e-8, 
-                maxIterations || 1000
-            );
-
-        else 
-            throw `Decompose method '${method}' not recognized.`;
-
-    }
-
-    _decomposeQR() {
+    decomposeQR() {
 
         // example: www.cs.nthu.edu.tw/~cherung/teaching/2008cs3331/chap4%20example.pdf
         // properties: en.wikipedia.org/wiki/QR_decomposition
 
         let R = this.clone();
         let Q;
-    /*
-        if (this.data.length < this.data[0].length)
-            throw   `Matrix has more columns (${this.data[0].length}) than rows (${this.data.length}).  ` + 
-                    `Cannot take the Household transform.`;
-    */
+
         let cycle = (level = 0) => {
                 
             if (level >= this.data.length - 1)
                 return;
     
-            let Rsub = R.clone().get((row,ix) => ix >= level, (col,ix) => ix >= level);
+            let Rsub = R.clone().get(ix => ix >= level, ix => ix >= level);
             if (Rsub.data[0].length == 0) 
                 throw `QR decomposition did not converge in time to produce an upper triangular R.`;
             let col0 = Rsub.clone().get(null, 0);
@@ -1201,8 +1195,8 @@ class matrix {
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
-            let upperSquare = R.clone().get((row,ix) => ix < R.data[0].length, null);
-            let lowerRectangle = R.clone().get((row,ix) => ix >= R.data[0].length, null);
+            let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
@@ -1226,7 +1220,7 @@ class matrix {
 
     }
 
-    _decomposeLU() {
+    decomposeLU() {
 
         let m = this.data.length - 1;
         let U = this.clone();
@@ -1235,8 +1229,8 @@ class matrix {
         for (let k = 0; k < m; k++)
         for (let j = k + 1; j <= m; j++) {
             L.data[j][k] = U.data[j][k]/U.data[k][k];
-            let term = U.clone().get(j,(col,ix) => ix >= k && ix <= m).subtract(
-                U.clone().get(k,(col,ix) => ix >= k && ix <= m).multiply(L.data[j][k])
+            let term = U.clone().get(j,ix => ix >= k && ix <= m).subtract(
+                U.clone().get(k,ix => ix >= k && ix <= m).multiply(L.data[j][k])
             ).data[0];
             console.log(JSON.stringify(term));
             for (let i = k; i <= m; i++)
@@ -1258,7 +1252,10 @@ class matrix {
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p129 describes the full vs compact SVD (this and R does the compact)
-    _decomposeSVDcompact(errorThreshold, maxIterations) {
+    decomposeSVDcomp(
+        errorThreshold = 1e-8, 
+        maxIterations = 1000
+    ) {
 
         let m = this.data.length;
         let n = this.data[0].length;
@@ -1283,7 +1280,7 @@ class matrix {
         }; 
     
         let test = () => {
-            D = D.get((row,id) => id < r, (col,id) => id < r);
+            D = D.get(id => id < r, id => id < r);
                 return L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
             && L.clone().transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
             && R.clone().transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
@@ -1295,11 +1292,11 @@ class matrix {
 
             L = this.clone()
                 .multiply(R.clone().transpose())
-                .decompose('qr').Q
-                .get(null,(col,ix) => ix >= 0 && ix <= r - 1);
+                .decomposeQR().Q
+                .get(null, ix => ix >= 0 && ix <= r - 1);
     
-            let qr = this.clone().transpose().multiply(L).decompose('qr');
-            R = qr.Q.clone().get(null,(col,ix) => ix >= 0 && ix <= r - 1).transpose();
+            let qr = this.clone().transpose().multiply(L).decomposeQR();
+            R = qr.Q.clone().get(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.clone().transpose();
     
             if (iterations % 10 == 0) {
@@ -1393,8 +1390,7 @@ class matrix {
 
             let vectors = [];
             let iterations = {
-                forValues: eigenValsObj.iterations,
-                forVectors: []
+                values: eigenValsObj.iterations
             };
 
             for(let v = 0; v < eigenValsObj.values.length; v++) {
@@ -1416,13 +1412,21 @@ class matrix {
                     throw err;
                 }
                 vectors.push(eigenVectObj.vector);
-                iterations.forVectors.push(eigenVectObj.iterations);
+                iterations[`vector ${v}`] = eigenVectObj.iterations;
             }
 
         // terminations
 
             let result = {
-                values: eigenValsObj.values,
+                values: new matrix([eigenValsObj.values]).transpose(),
+                get Values() { 
+                    let mx = matrix.identity(eigenValsObj.values.length); 
+                    for(let r in mx.data)
+                    for(let c in mx.data[r]) 
+                        if (r == c)
+                            mx.data[r][c] = this.values.data[r][0];
+                    return mx;
+                },
                 vectors: new matrix(vectors).transpose(),
                 iterations
             };
@@ -1455,7 +1459,7 @@ class matrix {
         let iterations = 0;
         while (iterations++ <= maxIterations) {
     
-            let QR = values.clone().decompose('qr');
+            let QR = values.clone().decomposeQR();
             values = QR.R.multiply(QR.Q);
             diag = values.diagonal(true).transpose().data[0];
     
@@ -1694,7 +1698,7 @@ class matrix {
         // > 1 turns into [1],
         // > [false,true,true,false] turns into [1,2]
         // > [-2,-1] turns into [0,3] for 'row' direction and matrix having 4 rows
-        // > (row,ix) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
+        // > (ix,row) => row[0] > ix selects any row where the value of the first cell is greter than the row position  
         let arrayify = (param, direction) => {
     
             // convert int form to int array form
@@ -1742,7 +1746,7 @@ class matrix {
                 let _param = [];
                 if (direction == 'rows')
                     for(let r = 0; r < this.data.length; r++)  {
-                        if (param(this.data[r], r))
+                        if (param(r, this.data[r]))
                             _param.push(r);
                     }
                 else 
@@ -1750,7 +1754,7 @@ class matrix {
                         let transposed = [];
                         for(let r = 0; r < this.data.length; r++)
                             transposed.push(this.data[r][c]);
-                        if(param(transposed, c))
+                        if(param(c, transposed))
                             _param.push(c);
                     }
                 param = _param;
