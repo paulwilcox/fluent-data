@@ -1359,19 +1359,12 @@ class matrix {
                 params.valueLoopMax
             );
 
-            // Sort in order of dominance.  But maybe 
-            // consider sorting in normal order? 
-            eigenValsObj.values.sort((a,b) => 
-                Math.abs(a) < Math.abs(b) ? 1
-                : Math.abs(a) > Math.abs(b) ? -1
-                : b - a
-            );
-
-            eigenValsObj.rawValues = eigenValsObj.values.map(v => v);
+            let rawValues = eigenValsObj.values.map(v => v);
+            let values = eigenValsObj.values;
 
             // if a multiplicity is detected, average out the multiples
             if (params.valueMerge)
-                this._eigen_mergeVals(eigenValsObj.values, params.valueMerge); 
+                values = this._eigen_mergeVals(values, params.valueMerge); 
 
             // Final rounding of eigenvals (one less precision than the stopThreshold).
 
@@ -1381,10 +1374,7 @@ class matrix {
 
                 let [str, precision] = params.valueThreshold.toExponential().split('e');
                 let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
-                
-                eigenValsObj.values = eigenValsObj.values.map(v => 
-                    roundToMultiple(v, demoted)
-                );
+                values = values.map(v => roundToMultiple(v, demoted));
 
         // caluclate vectors
 
@@ -1393,12 +1383,12 @@ class matrix {
                 values: eigenValsObj.iterations
             };
 
-            for(let v = 0; v < eigenValsObj.values.length; v++) {
+            for(let v = 0; v < values.length; v++) {
                 let eigenVectObj; 
                 try { 
                     eigenVectObj = this._eigen_getVect(
                         A, 
-                        eigenValsObj.values[v], 
+                        values[v], 
                         params.vectorThreshold, 
                         params.vectorLoopMax
                     );
@@ -1415,32 +1405,47 @@ class matrix {
                 iterations[`vector ${v}`] = eigenVectObj.iterations;
             }
 
+            vectors = new matrix(vectors).transpose();
+
         // terminations
 
+            let normalized = this._eigen_sortAndNormalize(values, vectors);
+
             let result = {
-                values: new matrix([eigenValsObj.values]).transpose(),
-                get Values() { 
-                    let mx = matrix.identity(eigenValsObj.values.length); 
-                    for(let r in mx.data)
-                    for(let c in mx.data[r]) 
-                        if (r == c)
-                            mx.data[r][c] = this.values.data[r][0];
-                    return mx;
-                },
-                vectors: new matrix(vectors).transpose(),
+                rawValues,
+                values: new matrix([values]).transpose(),
+                vectors,
+                Values: normalized.Values,
+                Vectors: normalized.Vectors,
                 iterations
             };
 
-            if (params.testThreshold && !this._eigen_test(A, eigenValsObj.values, vectors, params.testThreshold)) {
-                console.log({FailingObjects: result});
-                throw   `Produced eigen values and vectors did not pass test.  ` +
-                        `Failing objects precede. ` +
-                        `You may have to increase the 'maxIterationsPerVector', or, more likey, ` +
-                        `the 'threshold' or 'roundEigenValues' parameters.  ` +
-                        `This is especially true if you have repeated eigenvalues. `;                    
-            }
+throw JSON.stringify({values, vectors})
 
-            return result;
+    }
+
+    _eigen_sortAndNormalize(
+        valuesArray,
+        vectors
+    ) {
+
+        // Sort in order of dominance.   
+        let sortedValues = valuesArray.map((value,ix) => ({ value, ix })).sort((a,b) => 
+            Math.abs(a.value) < Math.abs(b.value) ? 1
+            : Math.abs(a.value) > Math.abs(b.value) ? -1
+            : b.value - a.value
+        );
+
+        let vectorsArray = [];
+        for(let sorted of sortedValues) {
+            let column = vectors.clone().get(null, sorted.ix).data;
+            vectorsArray.push(column);
+        }
+        
+        return {
+            Values: new matrix([sortedValues.map(sv => sv.value)]),
+            Vectors: new matrix(vectorsArray)
+        }
 
     }
 

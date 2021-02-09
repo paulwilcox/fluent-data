@@ -886,15 +886,21 @@ export default class matrix {
             : b.value - a.value
         );
 
-        let vectorsArray = [];
+        let Values = matrix.identity(valuesArray.length);
+        for(let r in Values.data)
+        for(let c in Values.data[r])
+            if (r == c)
+                Values.data[r][c] = sortedValues[r].value;
+
+        let columnsAsArrays = [];
         for(let sorted of sortedValues) {
-            let column = vectors.clone().get(null, sorted.ix).data;
-            vectorsArray.push(column);
+            let columnAsArray = vectors.clone().get(null, sorted.ix).transpose().data[0];
+            columnsAsArrays.push(columnAsArray);
         }
         
         return {
-            Values: new matrix([sortedValues.map(sv => sv.value)]),
-            Vectors: new matrix(vectorsArray)
+            Values,
+            Vectors: new matrix(columnsAsArrays).transpose()
         }
 
     }
