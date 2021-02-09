@@ -2,14 +2,13 @@
 async function test () {
 
     let mx = new $$.matrix([
-        [1, -1,  4], 
-        [1,  4, -2], 
-        [1,  4,  2], 
-        [1, -1,  0]
+        [ 3, -1,  2],
+        [ 3, -1,  6],
+        [-2,  2, -2]
     ])
     
-    let d = mx.clone().decom.QR();    
+    let eigen = mx.eigen(1e-8);    
 
-    console.log(d);
+    $$.matrix.logMany(eigen);
 
 }

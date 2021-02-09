@@ -671,7 +671,6 @@ export default class matrix {
             let term = U.clone().get(j,ix => ix >= k && ix <= m).subtract(
                 U.clone().get(k,ix => ix >= k && ix <= m).multiply(L.data[j][k])
             ).data[0];
-            console.log(JSON.stringify(term))
             for (let i = k; i <= m; i++)
                 U.data[j][i] = term[i];
         }
@@ -798,19 +797,12 @@ export default class matrix {
                 params.valueLoopMax
             );
 
-            // Sort in order of dominance.  But maybe 
-            // consider sorting in normal order? 
-            eigenValsObj.values.sort((a,b) => 
-                Math.abs(a) < Math.abs(b) ? 1
-                : Math.abs(a) > Math.abs(b) ? -1
-                : b - a
-            );
-
-            eigenValsObj.rawValues = eigenValsObj.values.map(v => v);
+            let rawValues = eigenValsObj.values.map(v => v);
+            let values = eigenValsObj.values;
 
             // if a multiplicity is detected, average out the multiples
             if (params.valueMerge)
-                this._eigen_mergeVals(eigenValsObj.values, params.valueMerge); 
+                values = this._eigen_mergeVals(values, params.valueMerge); 
 
             // Final rounding of eigenvals (one less precision than the stopThreshold).
 
@@ -820,10 +812,7 @@ export default class matrix {
 
                 let [str, precision] = params.valueThreshold.toExponential().split('e');
                 let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
-                
-                eigenValsObj.values = eigenValsObj.values.map(v => 
-                    g.roundToMultiple(v, demoted)
-                );
+                values = values.map(v => g.roundToMultiple(v, demoted));
 
         // caluclate vectors
 
@@ -832,17 +821,20 @@ export default class matrix {
                 values: eigenValsObj.iterations
             }
 
-            for(let v = 0; v < eigenValsObj.values.length; v++) {
+            for(let v = 0; v < values.length; v++) {
                 let eigenVectObj; 
+            
                 try { 
                     eigenVectObj = this._eigen_getVect(
                         A, 
-                        eigenValsObj.values[v], 
+                        values[v], 
                         params.vectorThreshold, 
                         params.vectorLoopMax
                     );
                 }
                 catch(err) {
+                    if (g.isString(err))
+                        throw err;
                     err.eigenValsObj = eigenValsObj;
                     err.eigenValsObj.about = 
                         'This eigenValsObj represents successfull iteration of eigenvalues.  ' +
@@ -854,28 +846,22 @@ export default class matrix {
                 iterations[`vector ${v}`] = eigenVectObj.iterations;
             }
 
+            vectors = new matrix(vectors).transpose();
+
         // terminations
 
-            // TODO: Change it so that values and vectors are the raw 
-            // forms (unnormalized and unsorted) than can be 
-            // recomposed.  And then Values and Vectors are the 
-            // sorted and normalized versions.
+            let normalized = this._eigen_sortAndNormalize(values, vectors);
 
             let result = {
-                values: new matrix([eigenValsObj.values]).transpose(),
-                get Values() { 
-                    let mx = matrix.identity(eigenValsObj.values.length); 
-                    for(let r in mx.data)
-                    for(let c in mx.data[r]) 
-                        if (r == c)
-                            mx.data[r][c] = this.values.data[r][0];
-                    return mx;
-                },
-                vectors: new matrix(vectors).transpose(),
+                rawValues,
+                values: new matrix([values]).transpose(),
+                vectors,
+                Values: normalized.Values,
+                Vectors: normalized.Vectors,
                 iterations
             };
 
-            if (params.testThreshold && !this._eigen_test(A, eigenValsObj.values, vectors, params.testThreshold)) {
+            if (params.testThreshold && !this._eigen_test(A, values, vectors, params.testThreshold)) {
                 console.log({FailingObjects: result});
                 throw   `Produced eigen values and vectors did not pass test.  ` +
                         `Failing objects precede. ` +
@@ -888,13 +874,38 @@ export default class matrix {
 
     }
 
+    _eigen_sortAndNormalize(
+        valuesArray,
+        vectors
+    ) {
+
+        // Sort in order of dominance.   
+        let sortedValues = valuesArray.map((value,ix) => ({ value, ix })).sort((a,b) => 
+            Math.abs(a.value) < Math.abs(b.value) ? 1
+            : Math.abs(a.value) > Math.abs(b.value) ? -1
+            : b.value - a.value
+        );
+
+        let vectorsArray = [];
+        for(let sorted of sortedValues) {
+            let column = vectors.clone().get(null, sorted.ix).data;
+            vectorsArray.push(column);
+        }
+        
+        return {
+            Values: new matrix([sortedValues.map(sv => sv.value)]),
+            Vectors: new matrix(vectorsArray)
+        }
+
+    }
+
     // Direct QR method
     _eigen_getVals(
         A, 
         stopThreshold = 1e-8, 
         maxIterations = 1000
     ) {
-    
+
         A = A.clone();
         let values = A.clone();
         let prev;
@@ -964,7 +975,7 @@ export default class matrix {
 
         let iterations = 0;
         while(iterations++ <= maxIterations) {
-            
+
             let y = M.data.map(row => 
                 row
                 .map((cell,ix) => cell * prev[ix])
@@ -1006,12 +1017,22 @@ export default class matrix {
             // modulus, or at least not an even one, because you might
             // always hit the wrong one. 
             if (Math.random() < 0.01) {
-                let test = this._eigen_test(
-                    A,
-                    [eigenvalue],
-                    new matrix([vector]),
-                    threshold
-                );
+                let test;
+                try {
+                    test = this._eigen_test(
+                        A,
+                        [eigenvalue],
+                        new matrix([vector]).transpose(),
+                        threshold
+                    );
+                }
+                catch (e) {
+                    matrix.logMany({
+                        val: [eigenvalue],
+                        vect: new matrix([vector]).transpose(),
+                    });
+                    throw e;
+                }
                 if (test)
                     return result;
             }
@@ -1113,8 +1134,8 @@ export default class matrix {
         if(Array.isArray(vectors))
             vectors = new matrix(vectors);
 
-        for (let i = 0; i < vectors.data.length; i++) {
-            let getVect = () => vectors.clone().transpose().get(null, i);
+        for (let i = 0; i < vectors.data[0].length; i++) {
+            let getVect = () => vectors.clone().get(null, i);
             let AV = origMatrix.clone().multiply(getVect());
             let VV = getVect().multiply(values[i]);
             if (!AV.equals(VV, errorThreshold, true))
