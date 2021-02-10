@@ -248,6 +248,9 @@ export default class matrix {
             this.data = this._multiplyMatrix(other);
         }
 
+        else // I'm not sure I'm keeping arrays, so I'm not mentioning them here.
+            throw `In 'matrix.multiply(other)', 'other' is not a scalar or matrix.`; 
+
         return this;
 
     }
