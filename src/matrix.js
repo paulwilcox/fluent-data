@@ -850,6 +850,10 @@ export default class matrix {
 
         // terminations
 
+            // present algorithms already output eigenvalues sorted by dominance
+            // and eigenvectors normalized to unit length 1.  However, this 
+            // ensures that there is an option to guaranteed that in case there
+            // are changes to the implementation that affect this.
             let normalized = this._eigen_sortAndNormalize(values, vectors);
 
             let result = {
@@ -894,7 +898,10 @@ export default class matrix {
 
         let columnsAsArrays = [];
         for(let sorted of sortedValues) {
-            let columnAsArray = vectors.clone().get(null, sorted.ix).transpose().data[0];
+            let vector = vectors.clone().get(null, sorted.ix);
+            let norm = vector.norm('euclidian');
+            vector = vector.multiply(1/norm);  // set to length 1
+            let columnAsArray = vector.transpose().data[0];
             columnsAsArrays.push(columnAsArray);
         }
         
