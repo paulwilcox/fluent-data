@@ -612,7 +612,7 @@ export default class matrix {
         let Q;
 
         let cycle = (level = 0) => {
-                
+
             if (level >= this.data.length - 1)
                 return;
     
@@ -623,8 +623,10 @@ export default class matrix {
             let e = matrix.identity(Rsub.data.length).get(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
             let vvt = v.clone().multiply(v.clone().transpose());
-    
-            let H = v.clone().transpose().multiply(v).data[0];
+
+            let H = v.clone().transpose().multiply(v).apply(
+                cell => cell == 0 ? 1e-32 : cell == -0 ? -1e-32 : cell
+            ).data[0];
             H = 2 / H;
             H = vvt.clone().multiply(H);
             H = matrix.identity(H.data[0].length).subtract(H);
@@ -633,7 +635,7 @@ export default class matrix {
             for (let c = level; c < I.data[0].length; c++) 
                 I.data[r][c] = H.data[r-level][c-level];
             H = I;
-    
+
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
@@ -705,7 +707,7 @@ export default class matrix {
         let L = matrix.identity(m,r); 
         let D = matrix.identity(r);
         let R = matrix.identity(r,n);
-    
+
         // Sometimes singulars come out negative.  But compared to R
         // output, only the sign is off.  So this just corrects that.
         let signCorrect = () => {
@@ -735,11 +737,11 @@ export default class matrix {
                 .multiply(R.clone().transpose())
                 .decomposeQR().Q
                 .get(null, ix => ix >= 0 && ix <= r - 1);
-    
+
             let qr = this.clone().transpose().multiply(L).decomposeQR();
             R = qr.Q.clone().get(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.clone().transpose();
-    
+
             if (iterations % 10 == 0) {
                 R.transpose();
                 signCorrect();
@@ -807,7 +809,7 @@ export default class matrix {
             if (params.valueMerge)
                 values = this._eigen_mergeVals(values, params.valueMerge); 
 
-            // Final rounding of eigenvals (one less precision than the stopThreshold).
+                // Final rounding of eigenvals (one less precision than the stopThreshold).
 
                 // In one case, I've noticed this helps in the vector creation and testing phases 
                 // because the rounding can bring the estimates to their exact figure, expecially
@@ -929,7 +931,8 @@ export default class matrix {
     
         let iterations = 0;
         while (iterations++ <= maxIterations) {
-    
+
+
             let QR = values.clone().decomposeQR();
             values = QR.R.multiply(QR.Q);
             diag = values.diagonal(true).transpose().data[0];
