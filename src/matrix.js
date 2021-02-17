@@ -29,7 +29,13 @@ export default class matrix {
             this.rowNames = g.isString(rowNames)
                 ? data.map(row => row[rowNames])
                 : data.map(rowNames);
+
+        if (this.colNames == null)
+            this.colNames = this.data.length == 0 ? null : this.data[0].map((v,ix) => `c${ix}`);
         
+        if (this.rowNames == null)
+            this.rowNames = this.data.map((v,ix) => `r${ix}`);
+                        
         this.validate();
 
     }
@@ -860,13 +866,13 @@ export default class matrix {
             // ensures that there is an option to guaranteed that in case there
             // are changes to the implementation that affect this.
             let normalized = this._eigen_sortAndNormalize(values, vectors);
+            normalized.vectors.rowNames = this.colNames;
+            normalized.vectors.colNames = normalized.vectors.colNames.map((n,ix) => `c${ix}`);
 
             let result = {
                 rawValues,
-                values: new matrix([values]).transpose(),
-                vectors,
-                Values: normalized.Values,
-                Vectors: normalized.Vectors,
+                values: normalized.values.diagonal(true).transpose().data[0],
+                vectors: normalized.vectors,
                 iterations
             };
 
@@ -895,11 +901,11 @@ export default class matrix {
             : b.value - a.value
         );
 
-        let Values = matrix.identity(valuesArray.length);
-        for(let r in Values.data)
-        for(let c in Values.data[r])
+        let values = matrix.identity(valuesArray.length);
+        for(let r in values.data)
+        for(let c in values.data[r])
             if (r == c)
-                Values.data[r][c] = sortedValues[r].value;
+                values.data[r][c] = sortedValues[r].value;
 
         let columnsAsArrays = [];
         for(let sorted of sortedValues) {
@@ -911,8 +917,8 @@ export default class matrix {
         }
         
         return {
-            Values,
-            Vectors: new matrix(columnsAsArrays).transpose()
+            values,
+            vectors: new matrix(columnsAsArrays).transpose()
         }
 
     }
