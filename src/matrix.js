@@ -1254,9 +1254,25 @@ export default class matrix {
     
         }
     
+        let indexify = (array, names, direction) => {
+            for(let i = 0; i < array.length; i++) {
+                if (!g.isString(array[i]))
+                    continue;
+                if (!names)
+                    throw `No names for ${direction} exists in order to match '${array[i]}'`;
+                let ix = names.findIndex(item => array[i] == item);
+                if (ix == -1)
+                    throw `'${array[i]}' cannot be found in the collection of names for ${direction}.`;
+                array[i] = ix; 
+            }
+            return array;
+        }
+
         rows = arrayify(rows, 'rows');
+        rows = indexify(rows, this.rowNames, 'rows');
         cols = arrayify(cols, 'cols');
-    
+        cols = indexify(cols, this.colNames, 'cols');
+
         let subset = [];
         for(let r of rows) {
             let row = [];

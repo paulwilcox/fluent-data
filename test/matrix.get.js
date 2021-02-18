@@ -39,7 +39,13 @@ async function test () {
         mx.clone().get((ix,row) => Math.max(...row) >= 5, null),
         make([[3,8,7,9], [4,6,2,1], [9,3,5,5]], 'r0,r1,r2', 'c0,c1,c2,c3')
     );
-    
+
+    compare(
+        `['r0','r3'], ['c0','c3']`,
+        mx.clone().get(['r0','r3'], ['c0','c3']),
+        make([[3,9],[1,2]], 'r0,r3', 'c0,c3')
+    );
+
     try {
         mx.clone().get([8,9], [7,8])
     }
