@@ -1195,6 +1195,9 @@ export default class matrix {
             if (typeof param === 'number') 
                 param = [param];
     
+            if (g.isString(param))
+                param = [param];
+
             if (Array.isArray(param) && param.length >= 0) {
                 
                 // convert boolean form to int array form
@@ -1255,6 +1258,7 @@ export default class matrix {
         }
     
         let indexify = (array, names, direction) => {
+
             for(let i = 0; i < array.length; i++) {
                 if (!g.isString(array[i]))
                     continue;
