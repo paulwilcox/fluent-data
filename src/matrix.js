@@ -870,9 +870,10 @@ export default class matrix {
             normalized.vectors.colNames = normalized.vectors.colNames.map((n,ix) => `c${ix}`);
 
             let result = {
-                rawValues,
+                A: this,
                 values: normalized.values.diagonal(true).transpose().data[0],
                 vectors: normalized.vectors,
+                rawValues,
                 iterations
             };
 
@@ -1293,6 +1294,10 @@ export default class matrix {
         this.data = subset;
         return this;
 
+    }
+
+    getCell (row, col) {
+        return this.data[row][col];
     }
 
 }
