@@ -8,9 +8,9 @@ async function test () {
         [0.01, 0.85, 0.11, 0.79, 1.00]
     ]).eigen(1e-8);
 
-    let expected = new $$.matrix([[2.85309, 1.80633, 0.20449, 0.10241, 0.03368]]).transpose();
+    let expected = new $$.matrix([[2.85309, 1.80633, 0.20449, 0.10241, 0.03368]]);
 
-    let test = eigen.values.equals(expected, 1e-5);
+    let test = new $$.matrix([eigen.values]).equals(expected, 1e-5);
     if(!test) 
         throw 'Eigenvales for 5x5 decimal matrix did not come out as expected.'
 
