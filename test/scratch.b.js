@@ -1,13 +1,17 @@
-
 async function test () {
-
+    
     let mx = new $$.matrix([
-        [    1, 0 ],
-        [ -0.1, 1 ]
-    ])
-    .setRowNames(['theatre', 'bathroom']);
+        [1, 2, 3, 4],
+        [5, 6, 7, 8]
+    ]);
 
-    mx.get('theatre').log();
+    for(let col of mx.cols) {
+        col.log();
+    }
+
+    for(let col of mx.cols) {
+        col.log();
+    }
+
 
 }
-

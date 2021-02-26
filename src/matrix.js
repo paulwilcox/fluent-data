@@ -39,7 +39,31 @@ export default class matrix {
         this.validate();
 
     }
-    
+
+    get nRow() { return this.data.length; }
+    get nCol() { return this.data[0].length; }
+    get nCell() { return this.data.reduce((a,b) => a + b.length, 0); }    
+
+    get rows() { 
+        let _this = this; 
+        return {
+            [Symbol.iterator]: function* () {
+                for(let r = 0; r < _this.nRow; r++) 
+                    yield _this.get(r,null);
+            }
+        }
+    }
+
+    get cols() { 
+        let _this = this; 
+        return {
+            [Symbol.iterator]: function* () {
+                for(let c = 0; c < _this.nCol; c++) 
+                    yield _this.get(null,c);
+            }
+        }
+    }
+
     setColNames (colNames) {
         let mx = this.clone();
         if (g.isString(colNames))
@@ -153,7 +177,19 @@ export default class matrix {
                 return false;
         return true;
     }
+/*
+    isOrthogonal(errorThreshold = 1e-8) {
+        let pi = this.pseudoInverse(); 
+        let t = this.transpose();
+        if (!pi.equals(t,errorThreshold))
+            return false;
 
+        r0n: qr.Q.get(0,null).norm('e'),
+        r1n: qr.Q.get(1,null).norm('e'),
+        c0n: qr.Q.get(null,0).norm('e'),
+        c1n: qr.Q.get(null,1).norm('e')
+    }
+*/
     transpose() {
 
         let result = [];
