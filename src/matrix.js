@@ -530,6 +530,7 @@ export default class matrix {
     ) {
 
         let mx = this.clone();
+        other = other.clone();
 
         let leadingItem = (row) => {
             for(let c in row) 
