@@ -422,27 +422,29 @@ export default class matrix {
 
     equals(other, errorThreshold = 0, dataOnly = true) {
 
-        let arrayEq = (a,b) => {
+        let arrayEq = (a,b,isString) => {
             if (a.length != b.length)
                 return false;
             for(let i in a)
-                if (Math.abs(a[i] - b[i]) > errorThreshold)
+                if (!isString && Math.abs(a[i] - b[i]) > errorThreshold)
+                    return false;
+                else if (isString && a != b)
                     return false;
             return true;
         }
-
+    
         if (this.data.length != other.data.length)
             return false;
         if (this.data.length != 0 && this.data[0].length != other.data[0].length)
             return false;
 
         for (let r in this.data)
-            if (!arrayEq(this.data[r], other.data[r]))
+            if (!arrayEq(this.data[r], other.data[r], false))
                 return false;
 
         return dataOnly ? true
-            : !arrayEq(this.rowNames, other.rowNames) ? false 
-            : !arrayEq(this.colNames, other.colNames) ? false
+            : !arrayEq(this.rowNames, other.rowNames, true) ? false 
+            : !arrayEq(this.colNames, other.colNames, true) ? false
             : true;
 
     }
