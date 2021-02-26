@@ -58,7 +58,7 @@ async function test () {
                         A: d.A.data,
                         Q: d.Q.data,
                         R: d.R.data,
-                        QR: d.Q.clone().multiply(d.R).data,
+                        QR: d.Q.multiply(d.R).data,
                         test: d.test(4)
                     }
                 );
@@ -105,7 +105,7 @@ async function test () {
             let d;
             try {
                 d = mx.decomposeSVDcomp();
-                d.rebuilt = d.L.clone().multiply(d.D).multiply(d.R.clone().transpose());
+                d.rebuilt = d.L.multiply(d.D).multiply(d.R.transpose());
                 if (!d.rebuilt.equals(mx, 1e-8)) 
                     throw `${mxType} ${r}x${c} matrix SVD decomposition resulted in L*D*R.transpose() <> A.`;
             }
@@ -129,7 +129,7 @@ async function test () {
             [ 32.8, 7.4, -1,  10]
         ]);
 
-        result = mx.clone().pseudoInverse()
+        result = mx.pseudoInverse()
             .multiply(mx).round(8)
             .equals($$.matrix.identity(4));
 

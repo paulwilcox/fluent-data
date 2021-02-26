@@ -88,7 +88,7 @@ function runEigen (title, params, data) {
     let m = new $$.matrix(data);
 
     try {
-        let result = m.clone().eigen(params);
+        let result = m.eigen(params);
     } 
     catch (e) {
         throw `eigen() failed for '${title}'.  See console for more details.  ` + 
