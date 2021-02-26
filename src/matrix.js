@@ -177,19 +177,21 @@ export default class matrix {
                 return false;
         return true;
     }
-/*
-    isOrthogonal(errorThreshold = 1e-8) {
+
+    isOrthonormal(errorThreshold = 1e-8) {
         let pi = this.pseudoInverse(); 
         let t = this.transpose();
         if (!pi.equals(t,errorThreshold))
             return false;
-
-        r0n: qr.Q.get(0,null).norm('e'),
-        r1n: qr.Q.get(1,null).norm('e'),
-        c0n: qr.Q.get(null,0).norm('e'),
-        c1n: qr.Q.get(null,1).norm('e')
+        for (let row of this.rows) 
+            if (Math.abs(row.norm('euclidian')) - 1 > errorThreshold)
+                return false;
+        for (let col of this.cols) 
+            if (Math.abs(col.norm('euclidian')) - 1 > errorThreshold)
+                return false;
+        return true;
     }
-*/
+
     transpose() {
 
         let result = [];
@@ -796,7 +798,7 @@ export default class matrix {
                 R = R.transpose();
                 signCorrect();
                 if (test()) 
-                    return { iterations, A: this, L, D, R };
+                    return { A: this, L, D, R, iterations };
                 R = R.transpose();
             }
     
