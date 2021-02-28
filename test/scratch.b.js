@@ -1,50 +1,34 @@
 async function test () {
     
+
+
+    let data = [
+        { cases: 7, distance: 560, time: 16.68 },
+        { cases: 3, distance: 220, time: 11.50 },
+        { cases: 3, distance: 340, time: 12.03 },
+        { cases: 4, distance: 80, time: 14.88 },
+        { cases: 6, distance: 150, time: 13.75 },
+        { cases: 7, distance: 330, time: 18.11 }
+    ];
+
+    let result = 
+        $$(data)
+        .reduce({
+            covMatrix: $$.covMatrix('cases, distance, time'),
+            corMatrix: $$.corMatrix('cases, distance, time'),
+        })
+        .get();
+
+    console.log(result);
+
+
+/*
     let mx = new $$.matrix([
-        [1, 2, 3, 4],
-        [5, 6, 7, 8]
+        [ -9.916378605988822, -2.182362145674306, 1.481854840725445 ],
+        [ 8.658747898441487, -3.7252302798757375, -7.162064063929843 ]    
     ]);
 
-    let mx2 = new $$.matrix([
-        [1, 2, 3, 4],
-        [5, 6, 7, 8.01]
-    ]).setRowNames(['run','amok']);
-
-    console.log(equals(mx,mx2,0,true));
-    console.log(equals(mx,mx2,0,false));
-
-    console.log('\n');
-    console.log(mx.equals(mx2,0,true));
-    console.log(mx.equals(mx2,0,false));
-    
-
-}
-
-function equals(_this, other, errorThreshold = 0, dataOnly = true) {
-
-    let arrayEq = (a,b,isString) => {
-        if (a.length != b.length)
-            return false;
-        for(let i in a)
-            if (!isString && Math.abs(a[i] - b[i]) > errorThreshold)
-                return false;
-            else if (isString && a != b)
-                return false;
-        return true;
-    }
-
-    if (_this.data.length != other.data.length)
-        return false;
-    if (_this.data.length != 0 && _this.data[0].length != other.data[0].length)
-        return false;
-
-    for (let r in _this.data)
-        if (!arrayEq(_this.data[r], other.data[r], false))
-            return false;
-
-    return dataOnly ? true
-        : !arrayEq(_this.rowNames, other.rowNames, true) ? false 
-        : !arrayEq(_this.colNames, other.colNames, true) ? false
-        : true;
+    mx.decomposeLU();
+*/
 
 }

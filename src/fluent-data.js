@@ -179,15 +179,15 @@ _.regress = (ivSelector, dvSelector, options) =>
             let dvs = new matrix(data, row => outerDvSelector(row));
 
             let n = data.length;
-            let transposedIvs = ivs.clone().transpose();
+            let transposedIvs = ivs.transpose();
 
             // I think this translates to variances.
-            let variances = transposedIvs.clone().multiply(ivs).inverse();
+            let variances = transposedIvs.multiply(ivs).inverse();
             
         // Calcaulate the coefficients
                         
             let coefficients = 
-                variances.clone()
+                variances
                 .multiply(transposedIvs)
                 .multiply(dvs);
 
@@ -343,8 +343,8 @@ _.covMatrix = (selector, isSample = true) =>
             .multiply(asMatrix)
             .multiply(1/asMatrix.data.length); 
 
-        result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
-        result = result.clone().transpose().multiply(result); // result is squared deviations        
+        result = asMatrix.apply(result, (a,b) => a - b); // result is deviations
+        result = result.transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
 
     }
@@ -355,8 +355,8 @@ _.corMatrix = (selector) =>
     data => {
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
         let cov = _.covMatrix(selector)(data);
-        let STDs = cov.clone().diagonal().apply(x => Math.pow(x,0.5));
-        return STDs.clone().inverse().multiply(cov).multiply(STDs.clone().inverse());
+        let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
+        return STDs.inverse().multiply(cov).multiply(STDs.inverse());
     }
 
 // CorMatrix gave the same results whether sample or population.  I wasn't familiar
@@ -374,7 +374,7 @@ _.corMatrix = (selector) =>
 _.corMatrix2 = (selector, isSample = true) =>
     data => {
         let cov = _.covMatrix(selector, isSample)(data);
-        let STDs = cov.clone().diagonal(true).apply(x => Math.pow(x,0.5));
-        let SS = STDs.clone().multiply(STDs.clone().transpose());
-        return cov.clone().apply(SS, (x,y) => x / y);
+        let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
+        let SS = STDs.multiply(STDs.transpose());
+        return cov.apply(SS, (x,y) => x / y);
     }    
