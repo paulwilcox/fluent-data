@@ -82,31 +82,6 @@ async function test () {
 
         }
 
-    // lu decomposition
-
-        for (let r = 2; r < 5; r++)
-        for (let c = 2; c < 5; c++) {
-
-            mx = new $$.matrix.randomizer().setSize(r,c).setValues(-10,10).get();
-
-            let d = mx.decomposeLU();    
-
-            if (!d.test(4)) {
-                console.log(
-                    'Failed LU decomposition results follow',
-                    {
-                        A: d.A.data,
-                        L: d.L.data,
-                        U: d.U.data,
-                        LU: d.L.multiply(d.U).data,
-                        test: d.test(4)
-                    }
-                );
-                throw `${mxType} ${r}x${c} matrix LU decomposition resulted in L*U <> A.`;
-            }
-
-        }
-        
     // terminations
 
         return true;

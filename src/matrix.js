@@ -721,34 +721,6 @@ export default class matrix {
 
     }
 
-    decomposeLU() {
-
-        let m = this.data.length - 1;
-        let U = this.clone();
-        let L = matrix.identity(m + 1);
-    
-        for (let k = 0; k < m; k++)
-        for (let j = k + 1; j <= m; j++) {
-            L.data[j][k] = U.data[j][k]/U.data[k][k];
-            let term = U.clone().get(j,ix => ix >= k && ix <= m).subtract(
-                U.clone().get(k,ix => ix >= k && ix <= m).multiply(L.data[j][k])
-            ).data[0];
-            for (let i = k; i <= m; i++)
-                U.data[j][i] = term[i];
-        }
-        
-        return { 
-            A: this, 
-            L, 
-            U, 
-            test: (roundDigits = 8) => 
-                this.round(roundDigits).equals(
-                    L.multiply(U).round(roundDigits)
-                )
-        };
-        
-    }
-
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
     // pfister.ee.duke.edu/courses/ecen601/notes_ch8.pdf
     //   - p129 describes the full vs compact SVD (this and R does the compact)
