@@ -126,21 +126,138 @@ async function test () {
         catchBad('text', mx.apply(cell => 'a' + cell));
         catchBad('jagged', new $$.matrix([[1,2,3],[4,5]]))
 
-return;
+    // determinant
 
+        if($$.round(mx.determinant(), 4) != -211.9333)
+            throw `Matrix determinant is not the expected value.`;
 
+    // equals
 
+        let shifted = mx.apply(cell => cell + 0.01).setColNames(['go','run','amok']);
+        
+        if (mx.equals(shifted))
+            throw `mx.equals(shifted) is true when it should be false.`;
 
-    // structure checks
+        if (!mx.equals(shifted, 1e-2))
+            throw `mx.equals(shifted, 1e-2) is false when it should be true`;
+        
+        if (mx.equals(shifted, 1e-2, false))
+            throw `mx.equals(shifted, 1e-2, false) is true when it should be false due to col names`;
 
-        mx = new $$.matrix([[1, 0, 0], [4, 5, 0], [7, 8, 9]]);
-        if (!mx.isLowerTriangular())
-            throw `Lower trianguar matrix not identified as such`;
+    // isDiagonal
 
-        mx = new $$.matrix([[1, 2, 3], [0, 5, 6], [0, 0, 9]]);
-        if (!mx.isUpperTriangular())
-            throw `Upper trianguar matrix not identified as such`;
+        let diag = new $$.matrix([
+            [ 1, 0, 0.01  ],
+            [ 0, 2, 0.001 ],
+            [ 0, 0, 3     ]
+        ]);
+
+        if (diag.isDiagonal())
+            throw `diag.isDiagonal() returns true when it should return false`;
+
+        if (!diag.isDiagonal(1e-2))
+            throw `diag.isDiagonal(1e-2) returns false when it should return true`;
+        
+    // isLowerTriangular
+
+        let lt = new $$.matrix([
+            [ 1, 0, 0.01 ],
+            [ 2, 3, 0    ],
+            [ 3, 4, 5    ]
+        ]);
+
+        if (lt.isLowerTriangular())
+            throw `lt.isLowerTriangular() returns true when it should be false`;
+
+        if (!lt.isLowerTriangular(1e-2))
+            throw `lt.isLowerTriangular(1e-2) returns false when it should be true`;
+
+    // isOrthonormal
+
+        let ortho = new $$.matrix([
+            [ 0.70651989,  0.70769319 + 0.01 ],
+            [ 0.70769319, -0.70651989          ]
+        ]);
+
+        if (ortho.isOrthonormal())
+            throw `ortho.isOrthonormal() returns true when it should be false`;
+        
+        if (!ortho.isOrthonormal(0.1))    
+            throw `ortho.isOrthonormal(0.1) returns false hwen it should be true`;
+
+    // isSquare
+
+        if (!mx.isSquare())
+            throw `mx.isSquare returns false when it should be true`;
+
+        if (new $$.matrix([[1,2,3],[4,5,6]]).isSquare())
+            throw `new $$.matrix(...).isSquare() returns true when it should be false`;
+
+    // isUpperTriangular
+            
+        let ut = new $$.matrix([
+            [     1, 2, 3 ],
+            [     0, 4, 5 ],
+            [ 0.001, 0, 6 ]
+        ]);
     
+        if (ut.isUpperTriangular())
+            throw `ut.isUpperTriangular() returns true when it should be false`;   
+            
+        if (!ut.isUpperTriangular(1e-2))
+            throw `ut.isUpperTriangular(1e-2) returns false when it should be true`;
+
+    // norm
+
+        if ($$.round(mx.norm(),5) != 17.64885)
+            throw `euclidian/frobesnius norm not the expected value`;
+        
+        if ($$.round(mx.norm(1),3) != 17.23)
+            throw `one-norm not the expected value`;
+
+        if ($$.round(mx.norm('i'),2) != 18.23)
+            throw `infinity-norm not the expected value`;
+
+    // identity
+
+        if (!$$.matrix.identity(2).equals(new $$.matrix([[1,0],[0,1]])))
+            throw `$$.matrix.identity(2) not producing a 2x2 identity matrix`;
+
+    // ones
+
+        if (!$$.matrix.ones(2).equals(new $$.matrix([[1,1],[1,1]])))
+            throw `$$.matrix.ones(2) not producing a 2x2 matrix of ones`;
+
+    // randomizer
+
+        result = new $$.matrix.randomizer().setSize(2,3).setValues(-5,5).get();
+        let _randMsg;
+
+        if (result.nRow != 2 || result.nCol != 3)
+            _randMsg = `randomized matrix has nRow or nCol outside the bounds of .setSize()`;
+        
+        for (let row of result.rows)
+            for (let cell of row.cols)
+                if (Math.abs(cell.getCell(0,0)) > 5)
+                    _randMsg `randomized matrix has a cell outside the bounds of .setValues()`;
+
+        if (_randMsg) {
+            console.error('Randomized matrix did not produce the expected results.');
+            console.error('The randomized matrix is as follows:');
+            result.log();
+            throw _randMsg;
+        }
+
+    // repeat
+
+        if (!$$.matrix.repeat(9,2,3).equals(new $$.matrix([[9,9,9],[9,9,9]])))
+            throw `$$.matrix.repeat(9,2,3) not producing a 2x3 matrix of nines`;
+
+    // zeroes
+
+        if (!$$.matrix.zeroes(2).equals(new $$.matrix([[0,0],[0,0]])))
+            throw `$$.matrix.ones(2) not producing a 2x2 matrix of zeroes`;
+
     // terminations
 
         return true;
