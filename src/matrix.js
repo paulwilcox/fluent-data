@@ -348,6 +348,43 @@ export default class matrix {
 
     }
 
+    transform(
+        transformer, 
+        pointsAreRows = true // If [{x0,y0}{x1,y1}], then true.  If [{x0,x1},{y0,y1}], then false
+    ) {
+
+        let mx = pointsAreRows 
+            ? this.transpose()
+            : this.clone();
+
+        if (Array.isArray(transformer)) {
+            try {
+                transformer = new $$.matrix(transformer);
+            }
+            catch(err) {
+                throw `Error converting transformer array to matrix.  ` + 
+                    `Please enssure it is in valid form.`;
+            }
+        }
+
+        if(transformer.nCol != mx.nRow) 
+            throw `In order to apply the transformer ` + 
+                `with pointsAreRows = ${pointsAreRows}, ` +
+                `the transformer columns must be the same length as ` +
+                `the calling matrix ${(pointsAreRows ? 'columns' : 'rows')}.  ` + 
+                `Transformer is ${transformer.nRow}x${transformer.nCol}.  ` +
+                `Calling Matrix is ${this.nRow}x${this.nCol}`; 
+
+        mx = pointsAreRows
+            ? transformer.multiply(mx).transpose()
+            : transformer.multiply(mx);
+
+        mx.rowNames = this.rowNames;
+        mx.colNames = this.colNames;
+        return mx;
+
+    }
+
     // TODO: consider replacing this with pseudoInverse
     inverse() {
 
