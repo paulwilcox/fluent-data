@@ -25,6 +25,12 @@ async function test () {
         if (sumAllCells(result) != 52.78)
             throw `mx.add(mx2) does not have the expected property.`;
 
+    // appendCols
+
+        result = mx.appendCols(mx2);
+        if(result.nRow != 3 || result.nCol != 6 || result.getCell(0,3) != 1.52)
+            throw `mx.appendCols(mx2) does not have the expected properties`;
+
     // apply
 
         result = mx.apply(cell => cell * 10);
@@ -59,6 +65,10 @@ async function test () {
         result = mx.multiply(10);
         if(sumAllCells(result) != 47)
             throw `mx.multiply(10) does not have the expected property.`;
+
+    // transform
+
+        
 
     // pseudoInverse
 

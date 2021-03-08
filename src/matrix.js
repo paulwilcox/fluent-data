@@ -112,6 +112,17 @@ export default class matrix {
         return mx;
     }
 
+    appendCols(other) {
+        let mx = this.clone();
+        if (!(other instanceof matrix)) 
+            other = new $$.matrix(other);
+        if (other.nRow != mx.nRow)
+            throw `cannot append columns if row counts do not match`;
+        for(let r = 0; r < mx.nRow; r++) 
+            mx.data[r].push(...other.data[r]);
+        return mx;
+    }
+
     log(roundDigits) {
 
         let clone = roundDigits === undefined ? this.clone() : this.round(roundDigits);
