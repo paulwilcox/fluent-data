@@ -31,6 +31,12 @@ async function test () {
         if(result.nRow != 3 || result.nCol != 6 || result.getCell(0,3) != 1.52)
             throw `mx.appendCols(mx2) does not have the expected properties`;
 
+    // appendRows
+
+        result = mx.appendRows(mx2);
+        if(result.nRow != 6 || result.nCol != 3 || result.getCell(3,0) != 1.52)
+            throw `mx.appendRows(mx2) does not have the expected properties`;
+
     // apply
 
         result = mx.apply(cell => cell * 10);

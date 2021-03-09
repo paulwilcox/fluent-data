@@ -114,12 +114,26 @@ export default class matrix {
 
     appendCols(other) {
         let mx = this.clone();
-        if (!(other instanceof matrix)) 
-            other = new $$.matrix(other);
+        if (Array.isArray(other)) 
+            other = new matrix(other);
         if (other.nRow != mx.nRow)
             throw `cannot append columns if row counts do not match`;
         for(let r = 0; r < mx.nRow; r++) 
             mx.data[r].push(...other.data[r]);
+        mx.colNames.push(...other.colNames);
+        return mx;
+    }
+
+    appendRows(other) {
+        let mx = this.clone();
+        if (Array.isArray(other))
+            other = new matrix(other);
+        if (other.nCol != mx.nCol)
+            throw `cannot append rows if column counts do not match`;
+        for (let r = 0; r < other.nRow; r++) {
+            mx.rowNames.push(other.rowNames[r]);
+            mx.data.push(other.data[r]);
+        }
         return mx;
     }
 
