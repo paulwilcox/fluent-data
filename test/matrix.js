@@ -74,7 +74,41 @@ async function test () {
 
     // transform
 
-        
+        // TODO: break transform the shape by translator and rotator seperately.
+        // This will allow a simultaneous check on affine and non-affine transforms.
+
+        // people.cs.clemson.edu/~dhouse/courses/401/notes/affines-matrices.pdf
+
+        // square
+        let shape = new $$.matrix([
+            [ 1,  1],
+            [ 1, -1],
+            [-1, -1],
+            [-1,  1]
+        ]);         
+         
+        let translator = new $$.matrix([
+            [1,0,3],
+            [0,1,2],
+            [0,0,1]
+        ]);
+          
+        let cosSin45 = Math.pow(2,0.5) / 2; 
+        let rotator = new $$.matrix([
+            [cosSin45, -cosSin45],
+            [cosSin45,  cosSin45]
+        ]);
+          
+        result = shape.transform(rotator).transform(translator);
+        expected = new $$.matrix([
+            [3.000000, 3.4142136],
+            [4.414214, 2.0000000],
+            [3.000000, 0.5857864],
+            [1.585786, 2.0000000]           
+        ]);
+
+        if (!result.equals(expected, 1e-6))
+            throw `shape.transform(rotator).transform(translator) did not produce the expected results`;
 
     // pseudoInverse
 

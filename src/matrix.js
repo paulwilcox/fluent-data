@@ -378,32 +378,44 @@ export default class matrix {
         pointsAreRows = true // If [{x0,y0}{x1,y1}], then true.  If [{x0,x1},{y0,y1}], then false
     ) {
 
+        // For this transform, points should be represented as columns.
+        // But for most business purposes, they'll be rows.  
+        // So just correct that as necessary.
         let mx = pointsAreRows 
             ? this.transpose()
             : this.clone();
 
-        if (Array.isArray(transformer)) {
-            try {
-                transformer = new $$.matrix(transformer);
-            }
-            catch(err) {
-                throw `Error converting transformer array to matrix.  ` + 
-                    `Please enssure it is in valid form.`;
-            }
-        }
-
-        if(transformer.nCol != mx.nRow) 
+        if (transformer.nCol != mx.nRow && transformer.nCol != mx.nRow + 1) 
             throw `In order to apply the transformer ` + 
                 `with pointsAreRows = ${pointsAreRows}, ` +
                 `the transformer columns must be the same length as ` +
-                `the calling matrix ${(pointsAreRows ? 'columns' : 'rows')}.  ` + 
+                `the calling matrix ${(pointsAreRows ? 'columns' : 'rows')} ` +
+                `(or the transformer can have one extra column for affine transforms).  ` +
                 `Transformer is ${transformer.nRow}x${transformer.nCol}.  ` +
                 `Calling Matrix is ${this.nRow}x${this.nCol}`; 
 
-        mx = pointsAreRows
-            ? transformer.multiply(mx).transpose()
-            : transformer.multiply(mx);
+        // if the user passed a non-affine transformer, then convert it to an
+        // equivalent affine transformer.
+        if (transformer.nCol == mx.nRow) {
+            transformer = transformer.appendRows(matrix.zeroes(1, transformer.nCol));
+            transformer = transformer.appendCols(matrix.zeroes(transformer.nRow, 1));
+            transformer.data[transformer.nRow - 1][transformer.nCol - 1] = 1;
+        }
 
+        // append a dimension of ones to allow affine transform
+        mx = mx.appendRows(matrix.ones(1, mx.nCol));
+
+        // carry out the transformation
+        mx = transformer.multiply(mx);
+
+        // remove the extra dimension created for the affined transform
+        mx = mx.get(-(mx.nRow - 1));
+
+        // restore the original point orientation
+        if (pointsAreRows)
+            mx = mx.transpose();
+
+        // terminate
         mx.rowNames = this.rowNames;
         mx.colNames = this.colNames;
         return mx;
