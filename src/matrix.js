@@ -121,6 +121,7 @@ export default class matrix {
         for(let r = 0; r < mx.nRow; r++) 
             mx.data[r].push(...other.data[r]);
         mx.colNames.push(...other.colNames);
+        mx.validate();
         return mx;
     }
 
@@ -134,6 +135,7 @@ export default class matrix {
             mx.rowNames.push(other.rowNames[r]);
             mx.data.push(other.data[r]);
         }
+        mx.validate();
         return mx;
     }
 
