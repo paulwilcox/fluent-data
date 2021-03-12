@@ -590,27 +590,59 @@ class matrix {
             this.rowNames = isString(rowNames)
                 ? data.map(row => row[rowNames])
                 : data.map(rowNames);
+
+        if (this.colNames == null)
+            this.colNames = this.data.length == 0 ? null : this.data[0].map((v,ix) => `c${ix}`);
         
+        if (this.rowNames == null)
+            this.rowNames = this.data.map((v,ix) => `r${ix}`);
+                        
         this.validate();
 
     }
-    
+
+    get nRow() { return this.data.length; }
+    get nCol() { return this.data[0].length; }
+    get nCell() { return this.data.reduce((a,b) => a + b.length, 0); }    
+
+    get rows() { 
+        let _this = this; 
+        return {
+            [Symbol.iterator]: function* () {
+                for(let r = 0; r < _this.nRow; r++) 
+                    yield _this.get(r,null);
+            }
+        }
+    }
+
+    get cols() { 
+        let _this = this; 
+        return {
+            [Symbol.iterator]: function* () {
+                for(let c = 0; c < _this.nCol; c++) 
+                    yield _this.get(null,c);
+            }
+        }
+    }
+
     setColNames (colNames) {
+        let mx = this.clone();
         if (isString(colNames))
             colNames = colNames.split(',').map(name => name.trim());
-        if (this.data.length > 0 && this.data[0].length != colNames.length)
+        if (mx.data.length > 0 && mx.data[0].length != colNames.length)
             throw `colNames is not of the same length as a row of data.`
-        this.colNames = colNames;
-        return this;
+        mx.colNames = colNames;
+        return mx;
     }
 
     setRowNames (rowNames) {
+        let mx = this.clone();
         if (isString(rowNames))
             rowNames = rowNames.split(',').map(name => name.trim());
-        if (this.data.length > 0 && this.data.length != rowNames.length)
+        if (mx.data.length > 0 && mx.data.length != rowNames.length)
             throw `rowNames is not of the same length as the data.`
-        this.rowNames = rowNames;
-        return this;
+        mx.rowNames = rowNames;
+        return mx;
     }
 
     validate() {
@@ -641,9 +673,36 @@ class matrix {
         return mx;
     }
 
+    appendCols(other) {
+        let mx = this.clone();
+        if (Array.isArray(other)) 
+            other = new matrix(other);
+        if (other.nRow != mx.nRow)
+            throw `cannot append columns if row counts do not match`;
+        for(let r = 0; r < mx.nRow; r++) 
+            mx.data[r].push(...other.data[r]);
+        mx.colNames.push(...other.colNames);
+        mx.validate();
+        return mx;
+    }
+
+    appendRows(other) {
+        let mx = this.clone();
+        if (Array.isArray(other))
+            other = new matrix(other);
+        if (other.nCol != mx.nCol)
+            throw `cannot append rows if column counts do not match`;
+        for (let r = 0; r < other.nRow; r++) {
+            mx.rowNames.push(other.rowNames[r]);
+            mx.data.push(other.data[r]);
+        }
+        mx.validate();
+        return mx;
+    }
+
     log(roundDigits) {
 
-        let clone = roundDigits === undefined ? this.clone() : this.clone().round(roundDigits);
+        let clone = roundDigits === undefined ? this.clone() : this.round(roundDigits);
         let printable = {};
 
         // if the keyName is a repeat in keyHolder, add a ' (#)' after it.
@@ -707,6 +766,20 @@ class matrix {
         return true;
     }
 
+    isOrthonormal(errorThreshold = 1e-8) {
+        let pi = this.pseudoInverse(); 
+        let t = this.transpose();
+        if (!pi.equals(t,errorThreshold))
+            return false;
+        for (let row of this.rows) 
+            if (Math.abs(row.norm('euclidian')) - 1 > errorThreshold)
+                return false;
+        for (let col of this.cols) 
+            if (Math.abs(col.norm('euclidian')) - 1 > errorThreshold)
+                return false;
+        return true;
+    }
+
     transpose() {
 
         let result = [];
@@ -716,14 +789,14 @@ class matrix {
                     result.push([this.data[r][c]]);
                 else 
                     result[c].push(this.data[r][c]);
-        this.data = result;
         
+        let mx = new matrix(result);
         let rn = this.rowNames;
         let cn = this.colNames;
-        this.rowNames = cn;
-        this.colNames = rn;
+        mx.rowNames = cn;
+        mx.colNames = rn;
 
-        return this;
+        return mx;
 
     }
 
@@ -734,31 +807,32 @@ class matrix {
             ? (r,c) => args[0](this.data[r][c])
             : (r,c) => args[1](this.data[r][c], args[0].data[r][c]); 
 
-        for(let r in this.data)
-            for (let c in this.data[r])
-                this.data[r][c] = func(r,c);
+        let mx = this.clone();
 
-        return this;
+        for(let r in mx.data)
+            for (let c in mx.data[r])
+                mx.data[r][c] = func(r,c);
+
+        return mx;
 
     }
     //
     add(other) {
-        this.apply(other, (a,b) => a+b);
-        return this;
+        return this.apply(other, (a,b) => a+b);
     }
     //
     subtract(other) {
-        this.apply(other, (a,b) => a-b);
-        return this;
+        return this.apply(other, (a,b) => a-b);
     }
 
     reduce(direction, func, seed = undefined) {
 
         let aggregated = [];
-        
+        let mx = this.clone();
+
         if (direction == 'row' || direction == 1) {
-            this.colNames = null;
-            for (let row of this.data) 
+            mx.colNames = null;
+            for (let row of mx.data) 
                 if (seed != undefined)
                     aggregated.push([row.reduce(func, seed)]);
                 else 
@@ -766,11 +840,11 @@ class matrix {
         }
 
         else if (direction == 'col' || direction == 'column' || direction == 2) {
-            this.rowNames = null;
-            let colCount = this.data.length == 0 ? 0 : this.data[0].length;
+            mx.rowNames = null;
+            let colCount = mx.data.length == 0 ? 0 : mx.data[0].length;
             for (let c = 0; c < colCount; c++) {
                 let agg = seed || 0;
-                for(let row of this.data) 
+                for(let row of mx.data) 
                     agg = func(agg, row[c]);
                 aggregated.push(agg);
             }
@@ -778,38 +852,43 @@ class matrix {
         }
 
         else if (direction == 'all' || direction == 0) {
-            this.rowNames = null;
-            this.colNames = null;
+            mx.rowNames = null;
+            mx.colNames = null;
             let agg = seed || 0;
-            for (let row of this.data)
+            for (let row of mx.data)
                 for (let cell of row)
                     agg = func(agg, cell);
             aggregated.push([agg]);
         }
 
-        this.data = aggregated;
-        return this;
+        mx.data = aggregated;
+        return mx;
 
     }
 
     multiply(other) {
 
+        let mx = this.clone();
+
         if (!isNaN(other) && isFinite(other)) 
-            for (let r in this.data)
-                for (let c in this.data[r])
-                    this.data[r][c] *= other;
+            for (let r in mx.data)
+                for (let c in mx.data[r])
+                    mx.data[r][c] *= other;
 
         else if (Array.isArray(other))  {
-            this.colNames = null;
-            this.data = this._multiplyVector(other);
+            mx.colNames = null;
+            mx.data = mx._multiplyVector(other);
         }
 
         else if (other instanceof matrix) {
-            this.colNames = other.colNames;
-            this.data = this._multiplyMatrix(other);
+            mx.colNames = other.colNames;
+            mx.data = mx._multiplyMatrix(other);
         }
 
-        return this;
+        else // I'm not sure I'm keeping arrays, so I'm not mentioning them here.
+            throw `In 'matrix.multiply(other)', 'other' is not a scalar or matrix.`; 
+
+        return mx;
 
     }
 
@@ -857,6 +936,55 @@ class matrix {
 
     }
 
+    transform(
+        transformer, 
+        pointsAreRows = true // If [{x0,y0}{x1,y1}], then true.  If [{x0,x1},{y0,y1}], then false
+    ) {
+
+        // For this transform, points should be represented as columns.
+        // But for most business purposes, they'll be rows.  
+        // So just correct that as necessary.
+        let mx = pointsAreRows 
+            ? this.transpose()
+            : this.clone();
+
+        if (transformer.nCol != mx.nRow && transformer.nCol != mx.nRow + 1) 
+            throw `In order to apply the transformer ` + 
+                `with pointsAreRows = ${pointsAreRows}, ` +
+                `the transformer columns must be the same length as ` +
+                `the calling matrix ${(pointsAreRows ? 'columns' : 'rows')} ` +
+                `(or the transformer can have one extra column for affine transforms).  ` +
+                `Transformer is ${transformer.nRow}x${transformer.nCol}.  ` +
+                `Calling Matrix is ${this.nRow}x${this.nCol}`; 
+
+        // if the user passed a non-affine transformer, then convert it to an
+        // equivalent affine transformer.
+        if (transformer.nCol == mx.nRow) {
+            transformer = transformer.appendRows(matrix.zeroes(1, transformer.nCol));
+            transformer = transformer.appendCols(matrix.zeroes(transformer.nRow, 1));
+            transformer.data[transformer.nRow - 1][transformer.nCol - 1] = 1;
+        }
+
+        // append a dimension of ones to allow affine transform
+        mx = mx.appendRows(matrix.ones(1, mx.nCol));
+
+        // carry out the transformation
+        mx = transformer.multiply(mx);
+
+        // remove the extra dimension created for the affined transform
+        mx = mx.get(-(mx.nRow - 1));
+
+        // restore the original point orientation
+        if (pointsAreRows)
+            mx = mx.transpose();
+
+        // terminate
+        mx.rowNames = this.rowNames;
+        mx.colNames = this.colNames;
+        return mx;
+
+    }
+
     // TODO: consider replacing this with pseudoInverse
     inverse() {
 
@@ -889,7 +1017,7 @@ class matrix {
         ...args // passed to decompose('svd.compact')
     ) {
         let svd = this.decomposeSVDcomp(...args);
-        let inv = svd.D.clone().apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
+        let inv = svd.D.apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
         return svd.R.multiply(inv).multiply(svd.L.transpose());
     }
 
@@ -909,48 +1037,51 @@ class matrix {
             return new matrix(vector, x => [x]);
         }
 
-        for (let r = 0; r < this.data.length; r++)
-        for (let c = 0; c < this.data[r].length; c++)
+        let mx = this.clone();
+        for (let r = 0; r < mx.data.length; r++)
+        for (let c = 0; c < mx.data[r].length; c++)
             if (r != c) 
-                this.data[r][c] = 0;
-
-        return this;
+                mx.data[r][c] = 0;
+        return mx;
 
     }
 
     round(digits) {
-        for(let row of this.data) 
+        let mx = this.clone();
+        for(let row of mx.data) 
             for(let c in row) {
                 row[c] = parseFloat(row[c].toFixed(digits));
                 if(row[c] == -0)
                     row[c] = 0;
             }
-        return this;
+        return mx;
     }
 
     equals(other, errorThreshold = 0, dataOnly = true) {
 
-        let arrayEq = (a,b) => {
+        let arrayEq = (a,b,isString) => {
             if (a.length != b.length)
                 return false;
             for(let i in a)
-                if (Math.abs(a[i] - b[i]) > errorThreshold)
+                if (!isString && Math.abs(a[i] - b[i]) > errorThreshold)
+                    return false;
+                else if (isString && a != b)
                     return false;
             return true;
         };
-
+    
         if (this.data.length != other.data.length)
             return false;
         if (this.data.length != 0 && this.data[0].length != other.data[0].length)
             return false;
 
         for (let r in this.data)
-            if (!arrayEq(this.data[r], other.data[r]))
+            if (!arrayEq(this.data[r], other.data[r], false))
                 return false;
 
         return dataOnly ? true
-            : !arrayEq(this.rowNames, other.rowNames) ? false 
-            : !arrayEq(this.colNames, other.colNames) ? false
+            : !arrayEq(this.rowNames, other.rowNames, true) ? false 
+            : !arrayEq(this.colNames, other.colNames, true) ? false
             : true;
 
     }
@@ -1037,6 +1168,11 @@ class matrix {
         returnAllObjects = false
     ) {
 
+        let mx = this.clone();
+        other = Array.isArray(other)
+            ? new matrix(other)
+            : other.clone();
+
         let leadingItem = (row) => {
             for(let c in row) 
                 if (row[c] != 0)
@@ -1065,10 +1201,10 @@ class matrix {
 
         let sort = (onOrAfterIndex) => { 
 
-            for(let r = this.data.length - 2; r >= onOrAfterIndex; r--) {
+            for(let r = mx.data.length - 2; r >= onOrAfterIndex; r--) {
 
-                let prev = this.data[r];
-                let cur = this.data[r + 1];
+                let prev = mx.data[r];
+                let cur = mx.data[r + 1];
                 let prevLeader = leadingItem(prev);
                 let curLeader = leadingItem(cur);
                 let otherPrev = other[r];
@@ -1079,8 +1215,8 @@ class matrix {
                     (prevLeader.pos == curLeader.pos && prevLeader.val > curLeader.val);
 
                 if (needsPromote) {
-                    this.data[r + 1] = cur;
-                    this.data[r] = prev;
+                    mx.data[r + 1] = cur;
+                    mx.data[r] = prev;
                     other[r + 1] = otherCur;
                     other[r] = otherPrev;
                 }
@@ -1093,23 +1229,23 @@ class matrix {
 
         let subtractTopMultiple = (onOrAfterIndex) => {
                 
-            let topLead = leadingItem(this.data[onOrAfterIndex]);
+            let topLead = leadingItem(mx.data[onOrAfterIndex]);
 
-            rowMultiply(this.data[onOrAfterIndex], 1 / topLead.val);
+            rowMultiply(mx.data[onOrAfterIndex], 1 / topLead.val);
             rowMultiply(other[onOrAfterIndex], 1 / topLead.val);
 
-            for(let r = 0; r < this.data.length; r++) {
+            for(let r = 0; r < mx.data.length; r++) {
                 if (r == onOrAfterIndex)
                     continue;
-                let row = this.data[r];
+                let row = mx.data[r];
                 let counterpart = row[topLead.pos];
                 if (counterpart == 0)
                     continue;
                 let multipliedRow = rowMultiply(
-                    clone(this.data[onOrAfterIndex]), 
+                    clone(mx.data[onOrAfterIndex]), 
                     -counterpart
                 );
-                rowAdd(this.data[r], multipliedRow);
+                rowAdd(mx.data[r], multipliedRow);
                 let multipliedOther = rowMultiply(
                     clone(other[onOrAfterIndex]),
                     -counterpart
@@ -1132,30 +1268,30 @@ class matrix {
 
             other = clone(other);
 
-            if (this.data.length == 0 || other.length == 0) 
+            if (mx.data.length == 0 || other.length == 0) 
                 throw 'cannot solve when either input is empty';
 
-            if (this.data.length != other.length)
+            if (mx.data.length != other.length)
                 throw 'cannot solve when input lengths do not match';
 
         };
 
         initializations();
 
-        for (let i = 0; i < this.data.length; i++) {
+        for (let i = 0; i < mx.data.length; i++) {
             sort(i);
             subtractTopMultiple(i);
-            if (!fullyReduce && this.isUpperTriangular()) 
+            if (!fullyReduce && mx.isUpperTriangular()) 
                 break;
         }
 
         if (!returnAllObjects) {
-            this.data = other;
-            return this;
+            mx.data = other;
+            return mx;
         }
 
         return {
-            A: this,
+            A: mx,
             other: new matrix(other)
         }
 
@@ -1170,7 +1306,7 @@ class matrix {
         let Q;
 
         let cycle = (level = 0) => {
-                
+
             if (level >= this.data.length - 1)
                 return;
     
@@ -1181,8 +1317,10 @@ class matrix {
             let e = matrix.identity(Rsub.data.length).get(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
             let vvt = v.clone().multiply(v.clone().transpose());
-    
-            let H = v.clone().transpose().multiply(v).data[0];
+
+            let H = v.clone().transpose().multiply(v).apply(
+                cell => cell == 0 ? 1e-32 : cell == -0 ? -1e-32 : cell
+            ).data[0];
             H = 2 / H;
             H = vvt.clone().multiply(H);
             H = matrix.identity(H.data[0].length).subtract(H);
@@ -1191,7 +1329,7 @@ class matrix {
             for (let c = level; c < I.data[0].length; c++) 
                 I.data[r][c] = H.data[r-level][c-level];
             H = I;
-    
+
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
@@ -1213,40 +1351,11 @@ class matrix {
             R, 
             Q, 
             test: (roundDigits = 8) => 
-                this.clone().round(roundDigits).equals(
-                    Q.clone().multiply(R).round(roundDigits)
+                this.round(roundDigits).equals(
+                    Q.multiply(R).round(roundDigits)
                 )
         };
 
-    }
-
-    decomposeLU() {
-
-        let m = this.data.length - 1;
-        let U = this.clone();
-        let L = matrix.identity(m + 1);
-    
-        for (let k = 0; k < m; k++)
-        for (let j = k + 1; j <= m; j++) {
-            L.data[j][k] = U.data[j][k]/U.data[k][k];
-            let term = U.clone().get(j,ix => ix >= k && ix <= m).subtract(
-                U.clone().get(k,ix => ix >= k && ix <= m).multiply(L.data[j][k])
-            ).data[0];
-            console.log(JSON.stringify(term));
-            for (let i = k; i <= m; i++)
-                U.data[j][i] = term[i];
-        }
-        
-        return { 
-            A: this, 
-            L, 
-            U, 
-            test: (roundDigits = 8) => 
-                this.clone().round(roundDigits).equals(
-                    L.clone().multiply(U).round(roundDigits)
-                )
-        };
-        
     }
 
     // hal.archives-ouvertes.fr/hal-01927616/file/IEEE%20TNNLS.pdf
@@ -1264,7 +1373,7 @@ class matrix {
         let L = matrix.identity(m,r); 
         let D = matrix.identity(r);
         let R = matrix.identity(r,n);
-    
+
         // Sometimes singulars come out negative.  But compared to R
         // output, only the sign is off.  So this just corrects that.
         let signCorrect = () => {
@@ -1275,41 +1384,41 @@ class matrix {
                     Id.data[i][i] = -1;
                     Ir.data[i][i] = -1;
                 }
-            D.multiply(Id);
-            R.multiply(Ir);
+            D = D.multiply(Id);
+            R = R.multiply(Ir);
         }; 
     
         let test = () => {
             D = D.get(id => id < r, id => id < r);
-                return L.clone().multiply(D).multiply(R.clone().transpose()).equals(this, errorThreshold) 
-            && L.clone().transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
-            && R.clone().transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
+                return L.multiply(D).multiply(R.transpose()).equals(this, errorThreshold) 
+            && L.transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
+            && R.transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
             && D.isDiagonal(errorThreshold);
         };
     
         let iterations = 0;
         while (++iterations <= maxIterations) {
 
-            L = this.clone()
-                .multiply(R.clone().transpose())
+            L = this
+                .multiply(R.transpose())
                 .decomposeQR().Q
                 .get(null, ix => ix >= 0 && ix <= r - 1);
-    
-            let qr = this.clone().transpose().multiply(L).decomposeQR();
-            R = qr.Q.clone().get(null, ix => ix >= 0 && ix <= r - 1).transpose();
-            D = qr.R.clone().transpose();
-    
+
+            let qr = this.transpose().multiply(L).decomposeQR();
+            R = qr.Q.get(null, ix => ix >= 0 && ix <= r - 1).transpose();
+            D = qr.R.transpose();
+
             if (iterations % 10 == 0) {
-                R.transpose();
+                R = R.transpose();
                 signCorrect();
                 if (test()) 
-                    return { iterations, A: this, L, D, R };
-                R.transpose();
+                    return { A: this, L, D, R, iterations };
+                R = R.transpose();
             }
     
         }
     
-        R.transpose();
+        R = R.transpose();
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
@@ -1385,6 +1494,7 @@ class matrix {
 
             for(let v = 0; v < values.length; v++) {
                 let eigenVectObj; 
+            
                 try { 
                     eigenVectObj = this._eigen_getVect(
                         A, 
@@ -1394,6 +1504,8 @@ class matrix {
                     );
                 }
                 catch(err) {
+                    if (isString(err))
+                        throw err;
                     err.eigenValsObj = eigenValsObj;
                     err.eigenValsObj.about = 
                         'This eigenValsObj represents successfull iteration of eigenvalues.  ' +
@@ -1409,18 +1521,34 @@ class matrix {
 
         // terminations
 
+            // present algorithms already output eigenvalues sorted by dominance
+            // and eigenvectors normalized to unit length 1.  However, this 
+            // ensures that there is an option to guaranteed that in case there
+            // are changes to the implementation that affect this.
             let normalized = this._eigen_sortAndNormalize(values, vectors);
+            let nvr = normalized.vectors.rowNames;
+            let nvc = normalized.vectors.colNames;
+            normalized.vectors.rowNames = nvc;
+            normalized.vectors.colNames = nvr;
 
             let result = {
+                A: this,
+                values: normalized.values.diagonal(true).transpose().data[0],
+                vectors: normalized.vectors,
                 rawValues,
-                values: new matrix([values]).transpose(),
-                vectors,
-                Values: normalized.Values,
-                Vectors: normalized.Vectors,
                 iterations
             };
 
-throw JSON.stringify({values, vectors})
+            if (params.testThreshold && !this._eigen_test(A, values, vectors, params.testThreshold)) {
+                console.log({FailingObjects: result});
+                throw   `Produced eigen values and vectors did not pass test.  ` +
+                        `Failing objects precede. ` +
+                        `You may have to increase the 'maxIterationsPerVector', or, more likey, ` +
+                        `the 'threshold' or 'roundEigenValues' parameters.  ` +
+                        `This is especially true if you have repeated eigenvalues. `;                    
+            }
+
+            return result;
 
     }
 
@@ -1436,15 +1564,24 @@ throw JSON.stringify({values, vectors})
             : b.value - a.value
         );
 
-        let vectorsArray = [];
+        let values = matrix.identity(valuesArray.length);
+        for(let r in values.data)
+        for(let c in values.data[r])
+            if (r == c)
+                values.data[r][c] = sortedValues[r].value;
+
+        let columnsAsArrays = [];
         for(let sorted of sortedValues) {
-            let column = vectors.clone().get(null, sorted.ix).data;
-            vectorsArray.push(column);
+            let vector = vectors.get(null, sorted.ix);
+            let norm = vector.norm('euclidian');
+            vector = vector.multiply(1/norm);  // set to length 1
+            let columnAsArray = vector.transpose().data[0];
+            columnsAsArrays.push(columnAsArray);
         }
         
         return {
-            Values: new matrix([sortedValues.map(sv => sv.value)]),
-            Vectors: new matrix(vectorsArray)
+            values,
+            vectors: new matrix(columnsAsArrays).transpose()
         }
 
     }
@@ -1455,7 +1592,7 @@ throw JSON.stringify({values, vectors})
         stopThreshold = 1e-8, 
         maxIterations = 1000
     ) {
-    
+
         A = A.clone();
         let values = A.clone();
         let prev;
@@ -1463,7 +1600,8 @@ throw JSON.stringify({values, vectors})
     
         let iterations = 0;
         while (iterations++ <= maxIterations) {
-    
+
+
             let QR = values.clone().decomposeQR();
             values = QR.R.multiply(QR.Q);
             diag = values.diagonal(true).transpose().data[0];
@@ -1517,7 +1655,7 @@ throw JSON.stringify({values, vectors})
 
         let n = A.data.length;
         let ei = matrix.identity(n).multiply(eigenvalue);
-        let M = A.clone().subtract(ei).pseudoInverse();
+        let M = A.subtract(ei).pseudoInverse();
 
         let value = null;
         let vector = M.data.map(row => 1);
@@ -1525,7 +1663,7 @@ throw JSON.stringify({values, vectors})
 
         let iterations = 0;
         while(iterations++ <= maxIterations) {
-            
+
             let y = M.data.map(row => 
                 row
                 .map((cell,ix) => cell * prev[ix])
@@ -1567,12 +1705,22 @@ throw JSON.stringify({values, vectors})
             // modulus, or at least not an even one, because you might
             // always hit the wrong one. 
             if (Math.random() < 0.01) {
-                let test = this._eigen_test(
-                    A,
-                    [eigenvalue],
-                    new matrix([vector]),
-                    threshold
-                );
+                let test;
+                try {
+                    test = this._eigen_test(
+                        A,
+                        [eigenvalue],
+                        new matrix([vector]).transpose(),
+                        threshold
+                    );
+                }
+                catch (e) {
+                    matrix.logMany({
+                        val: [eigenvalue],
+                        vect: new matrix([vector]).transpose(),
+                    });
+                    throw e;
+                }
                 if (test)
                     return result;
             }
@@ -1674,9 +1822,9 @@ throw JSON.stringify({values, vectors})
         if(Array.isArray(vectors))
             vectors = new matrix(vectors);
 
-        for (let i = 0; i < vectors.data.length; i++) {
-            let getVect = () => vectors.clone().transpose().get(null, i);
-            let AV = origMatrix.clone().multiply(getVect());
+        for (let i = 0; i < vectors.data[0].length; i++) {
+            let getVect = () => vectors.get(null, i);
+            let AV = origMatrix.multiply(getVect());
             let VV = getVect().multiply(values[i]);
             if (!AV.equals(VV, errorThreshold, true))
                 return false;
@@ -1688,8 +1836,9 @@ throw JSON.stringify({values, vectors})
 
     get(rows, cols) {
 
-        let allRows = [...Array(this.data.length).keys()];
-        let allCols = [...Array(this.data[0].length).keys()];
+        let mx = this.clone();
+        let allRows = [...Array(mx.data.length).keys()];
+        let allCols = [...Array(mx.data[0].length).keys()];
     
         if (rows === undefined || rows === null)
             rows = allRows;
@@ -1697,7 +1846,7 @@ throw JSON.stringify({values, vectors})
             cols = allCols;
 
         if (rows === allRows && cols === allCols)
-            return this;
+            return mx;
 
         // Turn rows or cols parameters into array form
         // > 1 turns into [1],
@@ -1710,15 +1859,18 @@ throw JSON.stringify({values, vectors})
             if (typeof param === 'number') 
                 param = [param];
     
+            if (isString(param))
+                param = [param];
+
             if (Array.isArray(param) && param.length >= 0) {
                 
                 // convert boolean form to int array form
                 if (typeof param[0] === 'boolean') {
 
-                    if (direction == 'rows' && param.length != this.data.length) 
-                        throw `Bool array passed to 'rows' is length ${param.length} (${this.data.length} expected)`;
-                    else if (direction == 'cols' && param.length != this.data[0].length)
-                        throw `Bool array passed to 'cols' is length ${param.length} (${this.data[0].length} expected)`;
+                    if (direction == 'rows' && param.length != mx.data.length) 
+                        throw `Bool array passed to 'rows' is length ${param.length} (${mx.data.length} expected)`;
+                    else if (direction == 'cols' && param.length != mx.data[0].length)
+                        throw `Bool array passed to 'cols' is length ${param.length} (${mx.data[0].length} expected)`;
                     
                     param = param
                         .map((row,ix) => row === true ? ix : undefined)
@@ -1732,7 +1884,7 @@ throw JSON.stringify({values, vectors})
                     param = param.map(row => Math.round(row));
     
                     for(let x of param) 
-                        if (Math.abs(x) > (direction == 'rows' ? this.data.length : this.data[0].length) - 1) 
+                        if (Math.abs(x) > (direction == 'rows' ? mx.data.length : mx.data[0].length) - 1) 
                             throw `Index |${x}| passed to '${direction}' is outside the bounds of the matrix.`;
 
                     // deal with negative numbers
@@ -1750,15 +1902,15 @@ throw JSON.stringify({values, vectors})
             if (isFunction(param)) {
                 let _param = [];
                 if (direction == 'rows')
-                    for(let r = 0; r < this.data.length; r++)  {
-                        if (param(r, this.data[r]))
+                    for(let r = 0; r < mx.data.length; r++)  {
+                        if (param(r, mx.data[r]))
                             _param.push(r);
                     }
                 else 
-                    for(let c = 0; c < this.data[0].length; c++) {
+                    for(let c = 0; c < mx.data[0].length; c++) {
                         let transposed = [];
-                        for(let r = 0; r < this.data.length; r++)
-                            transposed.push(this.data[r][c]);
+                        for(let r = 0; r < mx.data.length; r++)
+                            transposed.push(mx.data[r][c]);
                         if(param(c, transposed))
                             _param.push(c);
                     }
@@ -1769,25 +1921,46 @@ throw JSON.stringify({values, vectors})
     
         };
     
+        let indexify = (array, names, direction) => {
+
+            for(let i = 0; i < array.length; i++) {
+                if (!isString(array[i]))
+                    continue;
+                if (!names)
+                    throw `No names for ${direction} exists in order to match '${array[i]}'`;
+                let ix = names.findIndex(item => array[i] == item);
+                if (ix == -1)
+                    throw `'${array[i]}' cannot be found in the collection of names for ${direction}.`;
+                array[i] = ix; 
+            }
+            return array;
+        };
+
         rows = arrayify(rows, 'rows');
+        rows = indexify(rows, mx.rowNames, 'rows');
         cols = arrayify(cols, 'cols');
-    
+        cols = indexify(cols, mx.colNames, 'cols');
+
         let subset = [];
         for(let r of rows) {
             let row = [];
             for (let c of cols)
-                row.push(this.data[r][c]);
+                row.push(mx.data[r][c]);
             subset.push(row);
         }
 
-        if (this.rowNames)
-            this.rowNames = rows.map(rix => this.rowNames[rix]);
-        if(this.colNames)
-            this.colNames = cols.map(cix => this.colNames[cix]);
+        if (mx.rowNames)
+            mx.rowNames = rows.map(rix => mx.rowNames[rix]);
+        if(mx.colNames)
+            mx.colNames = cols.map(cix => mx.colNames[cix]);
 
-        this.data = subset;
-        return this;
+        mx.data = subset;
+        return mx;
 
+    }
+
+    getCell (row, col) {
+        return this.data[row][col];
     }
 
 }
@@ -2633,15 +2806,15 @@ _.regress = (ivSelector, dvSelector, options) =>
             let dvs = new matrix(data, row => outerDvSelector(row));
 
             let n = data.length;
-            let transposedIvs = ivs.clone().transpose();
+            let transposedIvs = ivs.transpose();
 
             // I think this translates to variances.
-            let variances = transposedIvs.clone().multiply(ivs).inverse();
+            let variances = transposedIvs.multiply(ivs).inverse();
             
         // Calcaulate the coefficients
                         
             let coefficients = 
-                variances.clone()
+                variances
                 .multiply(transposedIvs)
                 .multiply(dvs);
 
@@ -2797,8 +2970,8 @@ _.covMatrix = (selector, isSample = true) =>
             .multiply(asMatrix)
             .multiply(1/asMatrix.data.length); 
 
-        result = asMatrix.clone().apply(result, (a,b) => a - b); // result is deviations
-        result = result.clone().transpose().multiply(result); // result is squared deviations        
+        result = asMatrix.apply(result, (a,b) => a - b); // result is deviations
+        result = result.transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
 
     };
@@ -2809,8 +2982,8 @@ _.corMatrix = (selector) =>
     data => {
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
         let cov = _.covMatrix(selector)(data);
-        let STDs = cov.clone().diagonal().apply(x => Math.pow(x,0.5));
-        return STDs.clone().inverse().multiply(cov).multiply(STDs.clone().inverse());
+        let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
+        return STDs.inverse().multiply(cov).multiply(STDs.inverse());
     };
 
 // CorMatrix gave the same results whether sample or population.  I wasn't familiar
@@ -2828,9 +3001,9 @@ _.corMatrix = (selector) =>
 _.corMatrix2 = (selector, isSample = true) =>
     data => {
         let cov = _.covMatrix(selector, isSample)(data);
-        let STDs = cov.clone().diagonal(true).apply(x => Math.pow(x,0.5));
-        let SS = STDs.clone().multiply(STDs.clone().transpose());
-        return cov.clone().apply(SS, (x,y) => x / y);
+        let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
+        let SS = STDs.multiply(STDs.transpose());
+        return cov.apply(SS, (x,y) => x / y);
     };
 
 export default _;

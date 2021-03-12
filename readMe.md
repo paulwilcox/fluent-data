@@ -1,21 +1,15 @@
+
 ## Announcement(s)
 
-Version 2.3.2 has many under-the-hood changes preparing for a new set of features.  But the reason
-It's been verioned-up and published to npm right now is that I'm testing some package.json settings
-so that certain folders are included in github but not npmjs.
+Version 3 introduces a matrix object with a lot of functionality.
 
-Version 2.2.0 allows multiple regression.  
-
-Version 2.3.0 allows covariance and correlation matricies
-
-Be on the lookout for release of a matrix object and of the capacity for factor analysis with rotation.  
+Coming soon, factor analysis.  Probable renaming of the library.  Videos.
 
 ## Summary 
 
-Manipulate datasets and perform statistics by chaining methods.  Includes capacity to map, filter, sort, group, reduce, and merge data.  
-Built in reducers includes multiple regression.  
+Manipulate datasets and matricies and perform statistics by chaining methods.  Datasets have the capacity capacity to map, filter, sort, group, reduce, and merge data.  Built in reducers includes multiple regression.  Matrices permit many operations, including matrix algebra, decompositions, eigen calculations, apply capacity, and more.
 
-`fluent-data` works like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
+Dataset methods work like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
 
 `fluent-data` syntax is similar to LINQ in C#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
@@ -36,9 +30,9 @@ Built in reducers includes multiple regression.
     // but the examples in this documentation will use
     let $$ = require('./dist/fluent-data.server.js');
 
-### Example:
+## Dataset Example:
 
-Consider these datasets:
+Consider the following arrays:
 
 [javascript]: # (id=import)
 
@@ -63,7 +57,7 @@ Consider these datasets:
 
 [--]: # ()
 
-The following exmaple uses many of the methods available to analyze the two datasets.
+The following exmaple converts the to dataset and uses many of the methods available.
 
 [javascript]: # (log=true,setup=import)
 
@@ -91,44 +85,102 @@ The following exmaple uses many of the methods available to analyze the two data
             orders: undefined // won't show in final results
         }));
 
-    console.log(result);
+    console.table(result);
 
 
 [--]: # ()
 
 This results in three rows for analysis:
 
-[--]: # (output=true)
+[javascript]: # (output=true)
 
-    [
-      {
-        customer: 'Alice',
-        store: 2,
-        speed: 1.33,
-        rating: 94.67,
-        correlation: -0.5
-      },
-      {
-        customer: 'Alice',
-        store: 1,
-        speed: 12.33,
-        rating: 60,
-        correlation: -0.8315708645692353
-      },
-      {
-        customer: 'Benny',
-        store: 1,
-        speed: 8.33,
-        rating: 75.33,
-        correlation: -0.9853292781642932
-      }
-    ]
+    ┌─────────┬──────────┬───────┬───────┬────────┬─────────────────────┐
+    │ (index) │ customer │ store │ speed │ rating │     correlation     │
+    ├─────────┼──────────┼───────┼───────┼────────┼─────────────────────┤
+    │    0    │ 'Alice'  │   2   │ 1.33  │ 94.67  │        -0.5         │
+    │    1    │ 'Alice'  │   1   │ 12.33 │   60   │ -0.8315708645692353 │
+    │    2    │ 'Benny'  │   1   │ 8.33  │ 75.33  │ -0.9853292781642932 │
+    └─────────┴──────────┴───────┴───────┴────────┴─────────────────────┘
+
+[--]: # ()
+
+## Matrix Example:
+
+Consider the following arrays, converted to matricies:
+
+[javascript]: # (id=mxImport)
+
+    let $$ = require('./dist/fluent-data.server.js');
+
+    let community = $$([
+        { marker: 'Applewood Park', x: 0, y: 0 },
+        { marker: 'Orangewood School', x: 10, y: 0},
+        { marker: 'Kiwitown Market', x: 1, y: 10 },
+        { marker: `The Millers`, x: -5, y: 0 },
+        { marker: 'The Romeros', x: 0, y: -5 },
+        { marker: 'The Lees', x: 5, y: 5 },
+        { marker: 'The Keitas', x: 5, y: 0 },
+        { marker: 'The Lebedevs', x: 15, y: 5 }
+    ]).matrix('x, y', 'marker');
+
+    let transformer = new $$.matrix([
+        [ 1, 0.4 ],
+        [ 0, Math.pow(3,0.5) / 2 ]
+    ]);
+
+
+[--]: # ()
+
+The following exmaple transforms the community data so that the new 
+positions of the park, school, and market form an equilateral triangle. 
+Then it analyzes the eigen properties of the transformer matrix.
+
+[javascript]: # (log=true,setup=mxImport)
+
+    let eigen = transformer.eigen();
+    
+    console.log('Equilateralized Community:');
+    community.transform(transformer).log(8);
+    
+    console.log('\nTransformer Eigenvalues:', eigen.values);
+        
+    console.log('\nTransformer Eigenvectors:');
+    eigen.vectors.log(8); 
+
+
+[--]: # ()
+
+[javascript]: # (output=true)
+
+    Equilateralized Community:
+    ┌───────────────────┬────┬─────────────┐
+    │      (index)      │ x  │      y      │
+    ├───────────────────┼────┼─────────────┤
+    │  Applewood Park   │ 0  │      0      │
+    │ Orangewood School │ 10 │      0      │
+    │  Kiwitown Market  │ 5  │ 8.66025404  │
+    │    The Millers    │ -5 │      0      │
+    │    The Romeros    │ -2 │ -4.33012702 │
+    │     The Lees      │ 7  │ 4.33012702  │
+    │    The Keitas     │ 5  │      0      │
+    │   The Lebedevs    │ 17 │ 4.33012702  │
+    └───────────────────┴────┴─────────────┘
+    
+    Transformer Eigenvalues: [ 1, 0.8660254 ]
+    
+    Transformer Eigenvectors:
+    ┌─────────┬────┬─────────────┐
+    │ (index) │ c0 │     c1      │
+    ├─────────┼────┼─────────────┤
+    │   r0    │ 1  │ -0.94822626 │
+    │   r1    │ 0  │ 0.31759558  │
+    └─────────┴────┴─────────────┘
 
 [--]: # ()
 
 ## Operations and Features
 
-The following operations are available on fluent-data:
+The following operations are available on a fluent-data dataset:
 
 * [get](https://github.com/paulwilcox/fluent-data/wiki/Map-and-Get#Getting): Returns the dataset as an array.
 * [map](https://github.com/paulwilcox/fluent-data/wiki/Map-and-Get#Mapping): Replaces each row in a dataset with the result of 
@@ -146,6 +198,48 @@ The following operations are available on fluent-data:
 * [with](https://github.com/paulwilcox/fluent-data/wiki/With): Work with a dataset without breaking the fluency/chaining
   syntax. 
 
+The operations available on a Matrix are perhaps too many to list here.  Best
+to visit the page dedicated to that object as a whole:
+
+* [matrix](https://github.com/paulwilcox/fluent-data/wiki/Matrix): A class representing a matrix, complete with many matrix
+  calculations.
+
 Click on the links to go to the wiki and learn more about them.
 
 To see possible directions for this library, go to [The-Future](https://github.com/paulwilcox/fluent-data/wiki/The-Future).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
