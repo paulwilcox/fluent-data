@@ -914,7 +914,7 @@ export default class matrix {
             if (params.valueMerge)
                 values = this._eigen_mergeVals(values, params.valueMerge); 
 
-                // Final rounding of eigenvals (one less precision than the stopThreshold).
+            // Final rounding of eigenvals (one less precision than the stopThreshold).
 
                 // In one case, I've noticed this helps in the vector creation and testing phases 
                 // because the rounding can bring the estimates to their exact figure, expecially
@@ -965,8 +965,10 @@ export default class matrix {
             // ensures that there is an option to guaranteed that in case there
             // are changes to the implementation that affect this.
             let normalized = this._eigen_sortAndNormalize(values, vectors);
-            normalized.vectors.rowNames = this.colNames;
-            normalized.vectors.colNames = normalized.vectors.colNames.map((n,ix) => `c${ix}`);
+            let nvr = normalized.vectors.rowNames;
+            let nvc = normalized.vectors.colNames;
+            normalized.vectors.rowNames = nvc;
+            normalized.vectors.colNames = nvr;
 
             let result = {
                 A: this,
