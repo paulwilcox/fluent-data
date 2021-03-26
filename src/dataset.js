@@ -10,6 +10,7 @@ export default class dataset {
     constructor(data, groupLevel = 1) {
         this.data = data;
         this.groupLevel = groupLevel;
+        this._appendMerges();
     }
 
     *[Symbol.iterator]() { 
@@ -131,21 +132,56 @@ export default class dataset {
 
     }
 
-    merge (incoming, matcher, options, method) {
+    merge (args) {
 
-        if (matcher == '=') 
-            matcher = (l,r) => g.eq(l,r);
-
-        let outerFunc = data => [...mrg (
-            data, 
-            incoming instanceof dataset ? incoming.data : incoming, 
+        let leftData = this.data;
+        let rightData = args.other instanceof dataset ? args.other.data : args.other;
+        let matcher = args.matcher == '=' ? (l,r) => g.eq(l,r) : args.matcher;
+        let mapper = args.mapper;
+        let leftHasher = args.leftHasher || args.hasher || args.leftHasher;
+        let rightHasher = args.rightHasher || args.hasher || args.rightHasher;  
+        let leftSingular = args.leftSingular || args.singular || false;
+        let rightSingular = args.rightSingular || args.singular || false;
+        let algo = args.algo || 'hash';    
+    
+        let outerFunc = data => [...mrg({
+            leftData, 
+            rightData, 
             matcher, 
-            options, 
-            method
-        )];
+            mapper, 
+            leftHasher,
+            rightHasher,
+            leftSingular,
+            rightSingular,
+            algo
+        })];
 
         this.data = recurse(outerFunc, this.data, this.groupLevel); 
         return this;
+
+    }
+
+    // append various convenience functions wrapping 'merge()'
+    _appendMerges () {
+
+        let appender = (funcName, mapper) => 
+            this[funcName] = (other, matcher, singular = false, algo = 'hash') => 
+                this.merge({ other, matcher, mapper, singular, algo })                 
+                
+        // TODO: add joinThob and joinStack 
+        appender('joinBoth', (l,r) => ({...r,...l}) );
+        appender('joinLeft', (l,r) => l&&r ? {...r,...l} : l );
+        appender('joinRight', (l,r) => l&&r ? {...r,...l} : r ); 
+        appender('joinInner', (l,r) => l&&r ? {...r,...l} : undefined );
+        appender('existsLeft', (l,r) => l&&r ? l : undefined );
+        appender('existsRight', (l,r) => l&&r ? r : undefined );
+        appender('updateLeft', (l,r) => l&&r ? r : l );
+        appender('updateRight', (l,r) => l&&r ? l : r );
+        appender('upsertLeft', (l,r) => l&&r ? r : l||r );
+        appender('upsertRight', (l,r) => l&&r ? l : l||r );
+        appender('notExistsBoth', (l,r) => l&&r ? undefined : l||r );
+        appender('notExistsLeft', (l,r) => l&&r ? undefined : l );
+        appender('notExistsRight', (l,r) => l&&r ? undefined : r );
 
     }
 

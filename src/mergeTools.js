@@ -1,6 +1,5 @@
-import parser from './parser.js';
 import hashBuckets from './hashBuckets.js';
-import * as g from './general.js';
+import parser from './parser.js';
 
 export let mergeMethod = {
     hash: 'hash',
@@ -8,68 +7,52 @@ export let mergeMethod = {
     hashDistinct: 'hashDistinct'
 };
 
-// Options can be a mapper function,
-// it can be a keyword representing a mapper function,
-// or it can be, as the term implies, an object 
-// of paramters for passing options 
 export function* merge (
     leftData, 
     rightData, 
     matcher, 
-    options, 
-    method
+    mapper, 
+    leftHasher,
+    rightHasher,
+    leftSingular,
+    rightSingular,
+    algo
 ) {
 
-    let leftHasher;
-    let rightHasher;
-    let mapper;
-
-    if (method && !Object.keys(mergeMethod).includes(method)) throw `
-        method '${method}' is not recognized.  Leave undefined or
-        use one of: ${Object.keys(mergeMethod).join(', ')}.
-    `;
-
-    // if options is an object with properties 
-    if (!g.isFunction(options) && !g.isString(options)) {
-        leftHasher = options.leftHasher || options.hasher;
-        rightHasher = options.rightHasher || options.hasher;
-        mapper = normalizeMapper(options.mapper, matcher);
-    }
-    // if options is a function or a string
-    else {
-
-        mapper = normalizeMapper(options, matcher);
+    if (!leftHasher || !rightHasher) {
         let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
-
-        if(!hashers) {
-            method = method || 'loop';
-            if (method != 'loop') throw ` 
-                Must loop merge, "${matcher}" could not be parsed 
-                into functions that return objects for hashing.`;
-        }
-        else {
-            leftHasher = hashers.leftFunc;
-            rightHasher = hashers.rightFunc;
-        }
-
+        if (!hashers && method != 'loop') 
+            throw   `Must loop merge, "${matcher}" could not be parsed` + 
+                    `into functions that return objects for hashing.`;
+        leftHasher = leftHasher || hashers.leftFunc;
+        rightHasher = rightHasher || hashers.rightFunc;
     }
 
-    // If no hashers are passed, then do full-on loop join
-    if (method == 'loop') {
-        yield* loopMerge(leftData, rightData, matcher, mapper);
-        return;
-    }
+    if (algo == 'loop' && (leftSingular || rightSingular || leftHasher || rightHasher || !matcher ))
+        throw `Loop merge must have a matcher parameter set, adn cannot have singular or hasher parameters set.`
 
-    if (!method || ['hash', 'hashDistinct'].includes(method))
-        yield* hashMerge(
+    if (algo == 'loop') 
+        yield* loopMerge (
             leftData, 
-            rightData,
-            matcher,
-            leftHasher, 
-            rightHasher,
-            mapper, 
-            method 
+            rightData, 
+            matcher, 
+            mapper
         );
+    else if (algo == 'hash')
+        yield* hashMerge (
+            leftData, 
+            rightData, 
+            matcher, 
+            mapper, 
+            leftHasher, 
+            rightHasher, 
+            leftSingular, 
+            rightSingular
+        )
+    else throw `
+        Algorithm '${algo}' is not recognized.  
+        Leave undefined or use 'hash' or 'loop'.
+    `;
 
 }
 
@@ -77,19 +60,15 @@ function* hashMerge (
     leftData, 
     rightData, 
     matcher,
+    mapper,
     leftHasher,
     rightHasher,
-    mapper,
-    method
+    leftSingular,
+    rightSingular
 ) {
 
-    let leftBuckets = 
-        new hashBuckets(leftHasher, method == 'hashDistinct')
-        .addItems(leftData);
-
-    let rightBuckets = 
-        new hashBuckets(rightHasher, method == 'hashDistinct')
-        .addItems(rightData);
+    let leftBuckets = new hashBuckets(leftHasher, leftSingular).addItems(leftData);
+    let rightBuckets = new hashBuckets(rightHasher, rightSingular).addItems(rightData);
 
     // convenience function for extracting a bucket
     let removeBucket = (buckets, key) => {
@@ -110,7 +89,7 @@ function* hashMerge (
     // yield right unmatched
     for(let key of rightBuckets.keys()) 
         for(let rightItem of removeBucket(rightBuckets, key)) 
-            yield* wrapper(mapper(undefined, rightItem));
+            yield* yieldMapped(mapper(undefined, rightItem));
 
 }
 
@@ -131,106 +110,26 @@ function* loopMerge (
         if (matcher(leftData[l], rightData[r])) {
             leftHits.add(l);
             rightHits.add(r);
-            yield* wrapper(mapper(leftData[l], rightData[r]));
+            yield* yieldMapped(mapper(leftData[l], rightData[r]));
         }
     }
 
     for (let l in leftData) 
         if (!leftHits.has(l))
-            yield* wrapper(mapper(leftData[l], undefined));
+            yield* yieldMapped(mapper(leftData[l], undefined));
 
     for (let r in rightData) 
         if (!rightHits.has(r))
-            yield* wrapper(mapper(undefined, rightData[r]));
+            yield* yieldMapped(mapper(undefined, rightData[r]));
 
 }
 
-function* wrapper (mapped) {
+function* yieldMapped (mapped) {
     if (!mapped)
         return;
     if (mapped[Symbol.iterator]) 
         yield* mapped;
     else 
         yield mapped;
-}
-
-export function normalizeMapper (mapFunc, matchingLogic) {
-
-    if (!mapFunc)
-        mapFunc = 'both null'; // inner join by default
-
-    if (g.isString(mapFunc)) {
-        
-        if (mapFunc.length == 2) 
-            mapFunc = inflateKeywords(mapFunc);
-
-        let keywords = mapFunc.split(' ');
-        let onMatched = keywords[0];
-        let onUnmatched = keywords[1];
-        let allowedTerms = ['both', 'thob', 'left', 'right', 'null', 'stack'];
-
-        if (!allowedTerms.includes(onMatched) || !allowedTerms.includes(onUnmatched))
-            throw `mapper must be one of: ${allowedTerms.join(',')}}`;
-
-        return (left,right) => mergeByKeywords(left, right, onMatched, onUnmatched);
-
-    }
-
-    if (!parametersAreEqual(matchingLogic, mapFunc))
-        throw 'Cannot merge.  Parameters for "mapper" and "matchingLogic" do not match"';
-
-    return mapFunc;
-
-}
-
-function mergeByKeywords (left, right, onMatched, onUnmatched) {
-
-    if(left && right)
-        switch(onMatched) {
-            case 'both': return g.noUndefined(Object.assign({}, right, left));
-            case 'thob': return g.noUndefined(Object.assign({}, left, right));
-            case 'left': return left;
-            case 'right': return right;
-            case 'null': return undefined;
-            case 'stack': return [left, right]; 
-        }
-
-    switch(onUnmatched) {
-        case 'both': return left || right;
-        case 'thob': return left || right; 
-        case 'left': return left;
-        case 'right': return right;
-        case 'null': return undefined;
-    }
-
-}
-
-function inflateKeywords (keywordString) {
-    let replacer = str => 
-          str == 'b' ? 'both'
-        : str == 't' ? 'thob' 
-        : str == 'l' ? 'left'
-        : str == 'r' ? 'right'
-        : str == 'n' ? 'null'
-        : str == 's' ? 'stack'
-        : null;
-    return replacer(keywordString.substring(0,1)) + ' ' +
-        replacer(keywordString.substring(1,2)); 
-}
-
-function parametersAreEqual (a,b) {
-
-    a = parser.parameters(a);
-    b = parser.parameters(b);
-
-    if (a.length != b.length)
-        return false;
-
-    for(let i in a)
-        if (a[i] != b[i])
-            return false;
-
-    return true;
-
 }
 
