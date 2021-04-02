@@ -3,14 +3,13 @@ import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import Matrix from './matrix.js';
 import parser from './parser.js';
-import { merge as mrg } from './mergeTools.js';
+import { hashMerge, loopMerge } from './mergeTools.js';
 
 export default class dataset {
 
     constructor(data, groupLevel = 1) {
         this.data = data;
         this.groupLevel = groupLevel;
-        this._appendMerges();
     }
 
     *[Symbol.iterator]() { 
@@ -132,58 +131,105 @@ export default class dataset {
 
     }
 
-    merge (args) {
-
-        let leftData = this.data;
-        let rightData = args.other instanceof dataset ? args.other.data : args.other;
-        let matcher = args.matcher == '=' ? (l,r) => g.eq(l,r) : args.matcher;
-        let mapper = args.mapper;
-        let leftHasher = args.leftHasher || args.hasher || args.leftHasher;
-        let rightHasher = args.rightHasher || args.hasher || args.rightHasher;  
-        let leftSingular = args.leftSingular || args.singular || false;
-        let rightSingular = args.rightSingular || args.singular || false;
-        let algo = args.algo || 'hash';    
-    
-        let outerFunc = data => [...mrg({
-            leftData, 
-            rightData, 
-            matcher, 
-            mapper, 
-            leftHasher,
-            rightHasher,
+    merge (
+        rightData, 
+        matcher, 
+        mapper, 
+        {
+            singular, 
             leftSingular,
             rightSingular,
+            hasher,
+            leftHasher,
+            rightHasher,
             algo
-        })];
+        } = {}
+    ) {
 
-        this.data = recurse(outerFunc, this.data, this.groupLevel); 
-        return this;
+        // initializations
+
+            rightData = rightData instanceof dataset ? rightData.data : rightData;
+            leftHasher = leftHasher || hasher || rightHasher;
+            rightHasher = rightHasher || hasher || leftHasher;
+            leftSingular = leftSingular || singular || false;
+            rightSingular = rightSingular || singular || false;
+            matcher = matcher == '=' ? (l,r) => g.eq(l,r) : matcher;
+
+            if (!['hash', 'loop'].includes(algo) && algo != undefined) 
+                throw `algo '${algo}' is not recognized.  Pass 'hash', 'loop', or undefined.`;
+
+        // try to parse the matcher into hashers
+
+            if (!leftHasher && !rightHasher && algo != 'loop') {
+                let parsedHashers = parser.pairEqualitiesToObjectSelectors(matcher);
+                if (parsedHashers) {
+                    leftHasher = parsedHashers.leftFunc;
+                    rightHasher = parsedHashers.rightFunc;
+                }
+            }
+
+        // final validations
+
+            if (algo == 'hash' && !leftHasher && !rightHasher)
+                throw   `Must loop merge.  "${matcher}" could not be parsed` + 
+                        `into functions that return objects for hashing.`;
+
+        // terminations
+
+            let outerFunc = leftHasher && rightHasher
+                ? data => [...hashMerge( 
+                        data, rightData, 
+                        matcher, mapper, 
+                        leftHasher, rightHasher, 
+                        leftSingular, rightSingular
+                    )]
+                : data => [...loopMerge(
+                        data, rightData, 
+                        matcher, mapper
+                    )];
+
+            this.data = recurse(outerFunc, this.data, this.groupLevel); 
+            return this;
 
     }
 
-    // append various convenience functions wrapping 'merge()'
-    _appendMerges () {
-
-        let appender = (funcName, mapper) => 
-            this[funcName] = (other, matcher, singular = false, algo = 'hash') => 
-                this.merge({ other, matcher, mapper, singular, algo })                 
-                
-        // TODO: add joinThob and joinStack 
-        appender('joinBoth', (l,r) => ({...r,...l}) );
-        appender('joinLeft', (l,r) => l&&r ? {...r,...l} : l );
-        appender('joinRight', (l,r) => l&&r ? {...r,...l} : r ); 
-        appender('joinInner', (l,r) => l&&r ? {...r,...l} : undefined );
-        appender('existsLeft', (l,r) => l&&r ? l : undefined );
-        appender('existsRight', (l,r) => l&&r ? r : undefined );
-        appender('updateLeft', (l,r) => l&&r ? r : l );
-        appender('updateRight', (l,r) => l&&r ? l : r );
-        appender('upsertLeft', (l,r) => l&&r ? r : l||r );
-        appender('upsertRight', (l,r) => l&&r ? l : l||r );
-        appender('notExistsBoth', (l,r) => l&&r ? undefined : l||r );
-        appender('notExistsLeft', (l,r) => l&&r ? undefined : l );
-        appender('notExistsRight', (l,r) => l&&r ? undefined : r );
-
+    joinBoth(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => (l&&r ? {...l, ...r} : l||r);
+        return this.merge(rightData, matcher, mapper, mergeOptions);
     }
+    joinLeft(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? {...l,...r} : l;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+    joinRight(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? {...l,...r} : r;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+    joinInner(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? {...l,...r} : undefined;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+
+    exists(rightData, matcher, mergeOptions = { leftSingular: false, rightSingular: true }) {
+        let mapper = (l,r) => l&&r ? l : undefined;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+    notExists(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? undefined : l;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+    notExistsBoth(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? undefined : l||r;
+        return this.merge(rightData, matcher, mapper, mergeOptions);
+    }
+
+    // TODO: Consider the following types:
+    //   joinThob
+    //   joinStack 
+    //   unionAll/insert
+    //   except
+    //   update
+    //   scd
 
     matrix(        
         selector, // csv of prop names or func returning array of numbers

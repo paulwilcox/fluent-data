@@ -39,13 +39,13 @@
     ],    
 
     "philosophites": [
-        { "id": "a", "name": "Andrea", "topic": "Abelard" },
-        { "id": "b", "name": "Brielle", "topic": "Bentham" }
+        { "id": "a", "name": "Andrea", "topic": "Abelard", "bias": "analytic" },
+        { "id": "b", "name": "Brielle", "topic": "Bentham", "bias": "buddhist" }
     ],
 
     "mathematicians": [
-        { "id": "b", "name": "Brielle", "topic": "bijection" },
-        { "id": "c", "name": "Chloe", "topic": "change" }
+        { "id": "b", "name": "Brielle", "topic": "bijection", "school": "Berkley" },
+        { "id": "c", "name": "Chloe", "topic": "change", "school": "Cambridge" }
     ]
 
 }

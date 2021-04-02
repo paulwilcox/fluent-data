@@ -1,62 +1,6 @@
 import hashBuckets from './hashBuckets.js';
-import parser from './parser.js';
 
-export let mergeMethod = {
-    hash: 'hash',
-    loop: 'loop',
-    hashDistinct: 'hashDistinct'
-};
-
-export function* merge (
-    leftData, 
-    rightData, 
-    matcher, 
-    mapper, 
-    leftHasher,
-    rightHasher,
-    leftSingular,
-    rightSingular,
-    algo
-) {
-
-    if (!leftHasher || !rightHasher) {
-        let hashers = parser.pairEqualitiesToObjectSelectors(matcher);
-        if (!hashers && method != 'loop') 
-            throw   `Must loop merge, "${matcher}" could not be parsed` + 
-                    `into functions that return objects for hashing.`;
-        leftHasher = leftHasher || hashers.leftFunc;
-        rightHasher = rightHasher || hashers.rightFunc;
-    }
-
-    if (algo == 'loop' && (leftSingular || rightSingular || leftHasher || rightHasher || !matcher ))
-        throw `Loop merge must have a matcher parameter set, adn cannot have singular or hasher parameters set.`
-
-    if (algo == 'loop') 
-        yield* loopMerge (
-            leftData, 
-            rightData, 
-            matcher, 
-            mapper
-        );
-    else if (algo == 'hash')
-        yield* hashMerge (
-            leftData, 
-            rightData, 
-            matcher, 
-            mapper, 
-            leftHasher, 
-            rightHasher, 
-            leftSingular, 
-            rightSingular
-        )
-    else throw `
-        Algorithm '${algo}' is not recognized.  
-        Leave undefined or use 'hash' or 'loop'.
-    `;
-
-}
-
-function* hashMerge (
+export function* hashMerge (
     leftData, 
     rightData, 
     matcher,
@@ -93,7 +37,7 @@ function* hashMerge (
 
 }
 
-function* loopMerge (
+export function* loopMerge (
     leftData, 
     rightData,
     matcher,
@@ -129,7 +73,7 @@ function* yieldMapped (mapped) {
         return;
     if (mapped[Symbol.iterator]) 
         yield* mapped;
-    else 
+    else if (mapped)
         yield mapped;
 }
 
