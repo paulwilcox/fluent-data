@@ -1,86 +1,105 @@
-async function test () {
+async function test() {
 
-    let data = await sample('philosophites, mathematicians');
-    let testIt = (mapper, expIds, expTop) => 
-        new mergeTester(data, mapper, expIds, expTop);
-
-    testIt('both both', 'a,b,c', 'Bentham'); // full join
-    testIt('both left', 'a,b', 'Bentham'); // left join
-    testIt('both right', 'b,c', 'Bentham'); // right join
-    testIt('both null', 'b', 'Bentham'); // inner join 
-
-    testIt('right both', 'a,b,c', 'bijection'); // upsert
-    testIt('right left', 'a,b', 'bijection'); // update
-    testIt('right right', 'b,c', 'bijection'); // replace
-    testIt('right null', 'b', 'bijection'); // uplete
-
-    testIt('left both', 'a,b,c', 'Bentham'); // insert
-    testIt('left left', 'a,b', 'Bentham'); // preserve
-    testIt('left right', 'b,c', 'Bentham'); // reverse update
-    testIt('left null', 'b', 'Bentham'); // exists
-
-    testIt('null both', 'a,c', undefined); // dual not exists
-    testIt('null left', 'a', undefined); // not exists
-    testIt('null right', 'c', undefined); // reverse not exists
-    testIt('null null', '', undefined); // clear
-
+    tests(undefined);
+    tests('hash');
+    tests('loop');
     return true;
 
 }
 
-class mergeTester {
+async function tests (algo) {
 
-    constructor(data, mapper, expectedIds, expectedBTopic) {
-        this.mapper = mapper;
-        this.mapperStr = (typeof mapper == 'string') 
-            ? mapper 
-            : 'custom mapper';
-        this.results = this._merge(data, mapper);
-        this._checkIds(expectedIds);
-        this._checkTopic('b', expectedBTopic)
+    let data = await sample('philosophites, mathematicians');
+    let phi = () => $$(data.philosophites);
+    let mu = () => $$(data.mathematicians);
+    let result;
+
+    result = phi().join(mu(), (p,m) => p.id == m.id, { algo }).get(); 
+    new validator(result, 'join')
+        .size(1)
+        .topics('bijection')
+        .biases('buddhist')
+        .schools('Berkley');
+
+    result = phi().joinLeft(mu(), (p,m) => p.id == m.id, { algo }).get(); 
+    new validator(result, 'joinLeft')
+        .size(2)
+        .topics('Abelard', 'bijection')
+        .biases('analytic', 'buddhist')
+        .schools('Berkley');
+
+    result = phi().joinRight(mu(), (p,m) => p.id == m.id, { algo }).get();
+    new validator(result, 'joinRight')
+        .size(2)
+        .topics('bijection', 'change')
+        .biases('buddhist')
+        .schools('Berkley', 'Cambridge');
+
+    result = phi().joinFull(mu(), (p,m) => p.id == m.id, { algo }).get();
+    new validator(result ,'joinFull')
+        .size(3)
+        .topics('Abelard', 'bijection', 'change')
+        .biases('analytic', 'buddhist')
+        .schools('Berkley', 'Cambridge');
+
+    result = phi().exists(mu(), (p,m) => p.id == m.id, { algo }).get();
+    new validator(result, 'exists')
+        .size(1)
+        .topics('Bentham')
+        .biases('buddhist')
+        .schools();
+
+    result = phi().notExists(mu(), (p,m) => p.id == m.id, { algo }).get();
+    new validator(result, 'notExists')
+        .size(1)
+        .topics('Abelard')
+        .biases('analytic')
+        .schools();
+
+    result = phi().notExistsFull(mu(), (p,m) => p.id == m.id, { algo }).get();
+    new validator(result, 'notExistsFull')
+        .size(2)
+        .topics('Abelard', 'change')
+        .biases('analytic')
+        .schools('Cambridge');
+
+}
+
+class validator {
+
+    constructor(data, name) {
+        this.name = name;
+        this.data = data;
     }
 
-    _checkIds(expectedIds) {
-        expectedIds = expectedIds == '' ? [] : expectedIds.split(',');
-        let resultIds = this.results.map(r => r.id);
-        let rExcess = resultIds.some(r => !expectedIds.includes(r));
-        let eExcess = expectedIds.some(e => !resultIds.includes(e));
-        if(rExcess || eExcess) {
-            console.log(this.results);
-            throw `Expected id's for '${this.mapperStr}' ` +
-              `are '${expectedIds.join(',')}'; but actual ` + 
-              `is '${resultIds.join(',')}'.`;
-        }
+    size(expectedSize) {
+        if (this.data.length != expectedSize)
+            throw `'${this.name}' did not result in ${expectedSize} records.`;
+        return this;
     }
 
-    _checkTopic(rowId, topic) {
+    topics(...expectedValues) { this._validateProps('topic', expectedValues); return this; }
+    biases(...expectedValues) { this._validateProps('bias', expectedValues); return this; }
+    schools(...expectedValues) { this._validateProps('school', expectedValues); return this; }
 
-        let row = this.results.find(row => row.id == rowId);
-        let isEqual = (a,b) => a == b || (!a && !b);
+    _validateProps(propName, expectedValues) {
 
-        if (!topic && !row)
-            return;
+        if (expectedValues.length == 0) 
+            if (this.data.some(row => row[propName] !== undefined))
+                throw `'${this.name}' has at least one row with '${propName}' defined.  ` +
+                    `The expectation is that no rows have this property defined.`;
 
-        if(!isEqual(row.topic, topic))
-            throw `Expected topic for '${this.mapperStr}' ` +
-                `at row.id == '${rowId}' is '${topic}' ` +
-                `but '${row.topic}' was found.`
+        else 
+            for (let expectedValue of expectedValues) 
+                this._validateProp(propName, expectedValue);
 
     }
 
-    _merge(data, mapper) {
-
-        let results = 
-            $$(data.philosophites)
-            .merge(
-                data.mathematicians, 
-                (p,m) => p.id == m.id, 
-                mapper
-            )
-            .get();
-
-        return results;
-
+    _validateProp(propName, expectedValue) {
+        let rowsFound = this.data.filter(row => row[propName] == expectedValue).length;
+        if (rowsFound != 1)
+            throw `'${this.name}' did not result in 1 rows ` + 
+                `having ${propName} = '${expectedValue}'.`
     }
 
 }

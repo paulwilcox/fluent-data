@@ -193,8 +193,8 @@ export default class dataset {
 
     }
 
-    joinBoth(rightData, matcher, mergeOptions = {}) {
-        let mapper = (l,r) => (l&&r ? {...l, ...r} : l||r);
+    join(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => l&&r ? {...l,...r} : undefined;
         return this.merge(rightData, matcher, mapper, mergeOptions);
     }
     joinLeft(rightData, matcher, mergeOptions = {}) {
@@ -205,8 +205,8 @@ export default class dataset {
         let mapper = (l,r) => l&&r ? {...l,...r} : r;
         return this.merge(rightData, matcher, mapper, mergeOptions);
     }
-    joinInner(rightData, matcher, mergeOptions = {}) {
-        let mapper = (l,r) => l&&r ? {...l,...r} : undefined;
+    joinFull(rightData, matcher, mergeOptions = {}) {
+        let mapper = (l,r) => (l&&r ? {...l, ...r} : l||r);
         return this.merge(rightData, matcher, mapper, mergeOptions);
     }
 
@@ -218,13 +218,13 @@ export default class dataset {
         let mapper = (l,r) => l&&r ? undefined : l;
         return this.merge(rightData, matcher, mapper, mergeOptions);
     }
-    notExistsBoth(rightData, matcher, mergeOptions = {}) {
+    notExistsFull(rightData, matcher, mergeOptions = {}) {
         let mapper = (l,r) => l&&r ? undefined : l||r;
         return this.merge(rightData, matcher, mapper, mergeOptions);
     }
 
     // TODO: Consider the following types:
-    //   joinThob
+    //   noij[left|right|both|inner]
     //   joinStack 
     //   unionAll/insert
     //   except
