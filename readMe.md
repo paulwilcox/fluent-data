@@ -1,18 +1,3 @@
-## Commit during work hours:
-
-The last commit was during work hours.  I closed the computer without even thinking 
-about it.  But in hindsight this may need an explanation in case it comes up in 
-the future.
-
-Due to need for some family errands, I had asked my boss'es boss (Director of IT at my
-district) if I could take an expanded lunch in exchange for working late.  There was
-some time between the errands.  I took that as personal time.  It is not included
-in the time I'm flexing.    
-
-I have no other place to put this note, so I'm putting it here.  I'll commit, the delete.
-
-
-
 ## Announcement(s)
 
 Version 3 introduces a matrix object with a lot of functionality.

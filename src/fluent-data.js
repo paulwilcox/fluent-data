@@ -1,6 +1,5 @@
 import dataset from './dataset.js';
 import matrix from './matrix.js';
-import { mergeMethod } from './mergeTools.js';
 import * as g from './general.js';
 
 export default function _(obj) { 
@@ -28,7 +27,6 @@ _.fromJson = function(json) {
 
 }
 
-_.mergeMethod = mergeMethod;
 _.matrix = matrix;
 
 _.round = g.round;
