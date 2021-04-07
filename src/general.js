@@ -210,7 +210,7 @@ export let PromiseAllObjectEntries = obj =>
         return obj;
     });
 
-export function logTabular (data, mapper) {
+export function logTabular (data, mapper, limit = 50) {
 
     mapper = mapper || (x => x);
     let props = [];
@@ -223,8 +223,12 @@ export function logTabular (data, mapper) {
             ? nextVal.toString().length 
             : lengths[propIx];  
 
-    for(let row of data.map(row => noUndefined(mapper(row)))) {
+    for(let r = 0; r < data.length; r++) {
+        
+        if (r >= limit)
+            break;
 
+        let row = noUndefined(mapper(data[r]));
         let rowVals = [];
         let rowProps = Object.getOwnPropertyNames(row);
 

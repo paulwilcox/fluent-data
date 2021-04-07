@@ -245,6 +245,13 @@ export default class dataset {
         return this;
     }
 
+    log (func, limit = 50) {
+        let arr = recurseToArray(x => x, this.data, this.groupLevel);
+        this.data = arr;
+        g.logTabular(arr, func, limit);
+        return this;
+    }
+
     get (func) {
         if (!g.isIterable(this.data)) {
             if (func)

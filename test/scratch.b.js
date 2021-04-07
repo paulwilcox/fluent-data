@@ -1,4 +1,3 @@
-import * as g from '../src/general.js';
 
 async function test() {
 
@@ -13,6 +12,6 @@ async function test() {
         { customerId: 'b', books: 5, time: 23.77, price: 589, rating: 31 }
     ];
 
-    g.logTabular(data, row => ({...row, price: undefined }));
+    $$(data).log(row => ({...row, price: undefined }));
 
 }
