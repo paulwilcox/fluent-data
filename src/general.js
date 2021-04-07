@@ -210,6 +210,80 @@ export let PromiseAllObjectEntries = obj =>
         return obj;
     });
 
+export function logTabular (data, mapper) {
+
+    mapper = mapper || (x => x);
+    let props = [];
+    let vals = [];
+    let lengths = [];
+
+    let aggLength = (propIx, nextVal) => 
+        lengths[propIx] = 
+              nextVal.toString().length > (lengths[propIx] || 0) 
+            ? nextVal.toString().length 
+            : lengths[propIx];  
+
+    for(let row of data.map(row => noUndefined(mapper(row)))) {
+
+        let rowVals = [];
+        let rowProps = Object.getOwnPropertyNames(row);
+
+        // force the order of props in previous rows
+        for(let i = 0; i < props.length; i++) {
+            let prop = props[i];
+            rowVals.push(row[prop]);
+            aggLength(i, row[prop]);
+        }
+
+        // add new props if not previously known
+        for(let i = 0; i < rowProps.length; i++) {
+            let prop = rowProps[i];
+            if (!props.includes(prop)) {
+                props.push(prop);
+                rowVals.push(row[prop]);
+                aggLength(i, prop);
+                aggLength(i, row[prop]);
+            }
+        }
+
+        vals.push(rowVals);
+
+    }    
+
+    for(let i = 0; i < props.length; i++)
+        props[i] = props[i].padStart(lengths[i]);
+
+    for(let row of vals)
+        for(let i = 0; i < row.length; i++) 
+            row[i] = row[i].toString().padStart(lengths[i]);
+
+    let tl = '\u250c';
+    let tm = '\u252c';
+    let tr = '\u2510';
+    let ml = '\u251c';
+    let mm = '\u253c';
+    let mr = '\u2524';
+    let bl = '\u2514';
+    let bm = '\u2534';
+    let br = '\u2518';
+    let hz = '\u2500';
+    let vt = '\u2502';
+    let nl = '\r\n';
+    let sp = ' ';
+
+    console.log(
+        nl + 
+        tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl +
+        vt+sp + props.join(sp+vt+sp) + sp+vt+sp+nl + 
+        ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl +
+        vals   
+            .map(row => vt+sp + row.join(sp+vt+sp) + sp+vt)
+            .join(nl) + nl +
+        bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br+nl
+    );
+
+}
+
 
 // vassarstats.net/tabs_r.html
 export function studentsTfromCor (cor, n) {
