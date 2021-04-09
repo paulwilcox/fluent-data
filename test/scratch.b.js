@@ -11,7 +11,7 @@ async function test() {
         { customerId: 'b', books: 2, ml: multiline }
     ];
 
-    let result = g.tableToString(data).replace(/\r\n/g, '<br/>').replace(/\s/g, '&nbsp;');
+    let result = g.tableToString(data, x => x, 50, false).replace(/\r\n/g, '<br/>').replace(/\s/g, '&nbsp;');
 
     document.body.innerHTML += `<div style='font-family:consolas'>${result}</div>`
 

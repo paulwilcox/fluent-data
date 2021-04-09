@@ -210,7 +210,12 @@ export let PromiseAllObjectEntries = obj =>
         return obj;
     });
 
-export function tableToString (data, mapper, limit = 50) {
+export function tableToString (
+    data, 
+    mapper, 
+    limit = 50, 
+    headers = true
+) {
 
     mapper = mapper || (x => x);
     let props = [];
@@ -288,14 +293,18 @@ export function tableToString (data, mapper, limit = 50) {
     let nl = '\r\n';
     let sp = ' ';
 
+    let topBorder = tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl;
+    let headerRow = vt+sp + props.join(sp+vt+sp) + sp+vt+sp+nl;
+    let headerDivider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
+    let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl
+    let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br+nl;
+
     return nl + 
-        tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl +
-        vt+sp + props.join(sp+vt+sp) + sp+vt+sp+nl + 
-        ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl +
-        vals   
-            .map(row => vt+sp + row.join(sp+vt+sp) + sp+vt)
-            .join(nl) + nl +
-        bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br+nl;
+        topBorder +
+        (headers ? headerRow : '') + 
+        (headers ? headerDivider : '') +
+        dataRows +
+        botBorder;
 
 }
 
