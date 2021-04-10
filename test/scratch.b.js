@@ -15,7 +15,7 @@ async function test() {
 
     $$(data).log() //.log('#printer');
 
-    $$(data).group(row => row.customerId).log('#printer');
+    $$(data).group(row => row.customerId).group(row => row.books).log('#printer');
 
 
 }
