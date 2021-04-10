@@ -269,7 +269,7 @@ export function tableToString (
     for (let i = 0; i < props.length; i++) 
         lengths[i] = Math.max(
             ...vals.map(row => row[i].length), 
-            props[i].length
+            headers ? props[i].length : 0
         );
 
     for(let i = 0; i < props.length; i++)

@@ -11,9 +11,11 @@ async function test() {
         { customerId: 'b', books: 2, ml: multiline }
     ];
 
-    let result = g.tableToString(data, x => x, 50, false).replace(/\r\n/g, '<br/>').replace(/\s/g, '&nbsp;');
+    document.body.innerHTML += `<div id='printer' style='font-family:consolas'></div>`;
 
-    document.body.innerHTML += `<div style='font-family:consolas'>${result}</div>`
+    $$(data).log() //.log('#printer');
+
+    $$(data).group(row => row.customerId).log('#printer');
 
 
 }

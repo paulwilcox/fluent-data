@@ -245,11 +245,36 @@ export default class dataset {
         return this;
     }
 
-    log (func, limit = 50) {
-        let arr = recurseToArray(x => x, this.data, this.groupLevel);
+    log (
+        element = null, 
+        func = x => x, 
+        limit = 50
+    ) {
+
+        let arr = recurseToArray(x => x, this.data, this.groupLevel);        
+
+        let recurForGroup = (data, levelCountdown) => {
+            
+            if (levelCountdown == 1) 
+                return g.tableToString(data, func, limit);
+
+            let list = [];
+            for(let group of data) 
+                list.push({ group: recurForGroup(group, levelCountdown - 1) });
+            return g.tableToString(list, x => x, limit, false); 
+        }
+        
+        let groupedOutput = recurForGroup(arr, this.groupLevel);        
+        
+        if (element) 
+            document.querySelector(element).innerHTML += 
+                groupedOutput.replace(/\r\n/g,'<br/>').replace(/\s/g, '&nbsp;');
+        else
+            console.log(groupedOutput);
+
         this.data = arr;
-        g.logTabular(arr, func, limit);
         return this;
+
     }
 
     get (func) {
@@ -301,6 +326,7 @@ function recurseToArray (func, data, levelCountdown) {
             ? recurseToArray(func, item, levelCountdown - 1)
             : g.noUndefined(func(item))
         );
+
     return list;    
 
 }
