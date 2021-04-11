@@ -51,15 +51,6 @@ export default class extends Map {
         return Array.from(this.values());
     }
 
-    getKeyedBuckets() {
-        let buckets = [];
-        for(let [key,bucket] of this) {
-            bucket.key = key;
-            buckets.push(bucket)
-        }
-        return buckets;
-    }
-
     * crossMapRow(incomingRow, hashKeySelector, mapper) {
 
         let existingRows = this.getBucket(incomingRow, hashKeySelector);                

@@ -42,23 +42,12 @@ export default class dataset {
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     } 
-/*
-    group (func) {
-        let outerFunc = data => 
-            new hashBuckets(func)
-            .addItems(data)
-            .getBuckets();
-        this.data = recurse(outerFunc, this.data, this.groupLevel);
-        this.groupLevel++;
-        return this;
-    }
-*/
 
     group (func) {
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
-            .getKeyedBuckets();
+            .getBuckets();
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         this.groupLevel++;
         return this;
@@ -313,9 +302,6 @@ export default class dataset {
 
 function* recurse (func, data, levelCountdown) {
 
-    if (levelCountdown === 0)
-        return func([data])[0];
-
     if (levelCountdown > 1) { // data is nested groups
         for (let item of data) 
             yield recurse(func, item, levelCountdown - 1);
@@ -327,9 +313,6 @@ function* recurse (func, data, levelCountdown) {
 }
 
 function recurseToArray (func, data, levelCountdown) {
-
-    if (levelCountdown === 0)
-        return func([data])[0];
 
     let list = [];
 
