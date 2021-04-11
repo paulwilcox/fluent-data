@@ -128,6 +128,108 @@ let eq = (obj1, obj2) => {
 
 };
 
+function tableToString (
+    data, 
+    mapper, 
+    limit = 50, 
+    headers = true
+) {
+
+    mapper = mapper || (x => x);
+    let props = [];
+    let vals = [];
+
+    if (data.length == 0) {
+        data = [{ empty: '' }];
+        headers = false;
+    }
+
+    // Initially, values are multi-line.  Even if just 
+    // one line they're represented as an array.
+    let toStringArray = (val) => val.toString().split(`\r\n`);
+
+    for(let r = 0; r < data.length; r++) {
+        
+        if (r >= limit)
+            break;
+
+        let row = noUndefined(mapper(data[r]));
+        let rowVals = [];
+        let rowProps = Object.getOwnPropertyNames(row);
+
+        // force the order of props in previous rows
+        for(let i = 0; i < props.length; i++) {
+            let prop = props[i];
+            let arrayVal = toStringArray(row[prop]);
+            rowVals.push(arrayVal);
+        }
+
+        // add new props if not previously known
+        for(let i = 0; i < rowProps.length; i++) {
+            let prop = rowProps[i];
+            let arrayVal = toStringArray(row[prop]);
+            if (!props.includes(prop)) {
+                props.push(prop);
+                rowVals.push(arrayVal);
+            }
+        }
+
+        // spread out the arrayVals into different lines
+        // [['one line'],['two','lines']] becomes 
+        // [['one line', 'two'], ['', 'lines']]
+        let maxLen = Math.max(...rowVals.map(arrayVal => arrayVal.length));
+        for(let i = 0; i < maxLen; i++) {
+            let flattened = [];
+            for (let arrayVal of rowVals) 
+                flattened.push(arrayVal[i] || '');
+            vals.push(flattened);
+        }
+
+    }    
+
+    let lengths = [];
+
+    for (let i = 0; i < props.length; i++) 
+        lengths[i] = Math.max(
+            ...vals.map(row => row[i].length), 
+            headers ? props[i].length : 0
+        );
+
+    for(let i = 0; i < props.length; i++)
+        props[i] = props[i].padEnd(lengths[i]);
+
+    for(let row of vals)
+        for(let i = 0; i < row.length; i++) 
+            row[i] = row[i].padEnd(lengths[i]);
+
+    let tl = '\u250c';
+    let tm = '\u252c';
+    let tr = '\u2510';
+    let ml = '\u251c';
+    let mm = '\u253c';
+    let mr = '\u2524';
+    let bl = '\u2514';
+    let bm = '\u2534';
+    let br = '\u2518';
+    let hz = '\u2500';
+    let vt = '\u2502';
+    let nl = '\r\n';
+    let sp = ' ';
+
+    let topBorder = tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl;
+    let headerRow = vt+sp + props.join(sp+vt+sp) + sp+vt+nl;
+    let headerDivider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
+    let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl;
+    let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
+
+    return topBorder +
+        (headers ? headerRow : '') + 
+        (headers ? headerDivider : '') +
+        dataRows +
+        botBorder;
+
+}
+
 
 // vassarstats.net/tabs_r.html
 function studentsTfromCor (cor, n) {
@@ -455,6 +557,15 @@ class hashBuckets extends Map {
 
     getBuckets() {
         return Array.from(this.values());
+    }
+
+    getKeyedBuckets() {
+        let buckets = [];
+        for(let [key,bucket] of this) {
+            bucket.key = key;
+            buckets.push(bucket);
+        }
+        return buckets;
     }
 
     * crossMapRow(incomingRow, hashKeySelector, mapper) {
@@ -2301,12 +2412,23 @@ class dataset {
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     } 
-
+/*
     group (func) {
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        this.groupLevel++;
+        return this;
+    }
+*/
+
+    group (func) {
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
+            .getKeyedBuckets();
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         this.groupLevel++;
         return this;
@@ -2504,7 +2626,40 @@ class dataset {
         return this;
     }
 
+    log (
+        element = null, 
+        func = x => x, 
+        limit = 50
+    ) {
+
+        let arr = recurseToArray(x => x, this.data, this.groupLevel);        
+
+        let recurForGroup = (data, levelCountdown) => {
+            
+            if (levelCountdown == 1) 
+                return tableToString(data, func, limit);
+
+            let list = [];
+            for(let group of data) 
+                list.push({ group: recurForGroup(group, levelCountdown - 1) });
+            return tableToString(list, x => x, limit, false); 
+        };
+        
+        let groupedOutput = recurForGroup(arr, this.groupLevel);        
+        
+        if (element) 
+            document.querySelector(element).innerHTML += 
+                groupedOutput.replace(/\r\n/g,'<br/>').replace(/\s/g, '&nbsp;');
+        else
+            console.log(groupedOutput);
+
+        this.data = arr;
+        return this;
+
+    }
+
     get (func) {
+
         if (!isIterable(this.data)) {
             if (func)
                 this.data = func(this.data);
@@ -2547,12 +2702,17 @@ function recurseToArray (func, data, levelCountdown) {
         return func([data])[0];
 
     let list = [];
+
     for(let item of data)
         list.push(
             levelCountdown > 1          
             ? recurseToArray(func, item, levelCountdown - 1)
             : noUndefined(func(item))
         );
+
+    if (data.key) 
+        list.key = data.key;
+    
     return list;    
 
 }

@@ -1,8 +1,15 @@
-import * as g from '../src/general.js';
 
 async function test() {
 
-    let multiline = `this is more \r\n than one line`;
+    let grp = new grouping({ x: 'the key', y: 0 });
+    grp.push(1, 2, 3, 4, 5);
+
+    for(let row of grp)
+        console.log(row);
+
+    return;
+
+    let multiline = `this is more\r\nthan one line`;
 
     let data = [
         { customerId: 'b', books: 4, ml: multiline },
@@ -13,9 +20,19 @@ async function test() {
 
     document.body.innerHTML += `<div id='printer' style='font-family:consolas'></div>`;
 
-    $$(data).log() //.log('#printer');
+    let results = $$(data)
+        .group(row => row.customerId)
+        .map(row => ({...row, books2: row.books}))
+        .get();
 
-    $$(data).group(row => row.customerId).group(row => row.books).log('#printer');
+    console.log(results);
+
+}
 
 
+class grouping extends Array {
+    constructor(key, ...rows) {
+        super();
+        this.key = key;
+    }
 }

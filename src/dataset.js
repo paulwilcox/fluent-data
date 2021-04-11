@@ -42,12 +42,23 @@ export default class dataset {
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
     } 
-
+/*
     group (func) {
         let outerFunc = data => 
             new hashBuckets(func)
             .addItems(data)
             .getBuckets();
+        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        this.groupLevel++;
+        return this;
+    }
+*/
+
+    group (func) {
+        let outerFunc = data => 
+            new hashBuckets(func)
+            .addItems(data)
+            .getKeyedBuckets();
         this.data = recurse(outerFunc, this.data, this.groupLevel);
         this.groupLevel++;
         return this;
@@ -278,6 +289,7 @@ export default class dataset {
     }
 
     get (func) {
+
         if (!g.isIterable(this.data)) {
             if (func)
                 this.data = func(this.data);
@@ -320,6 +332,7 @@ function recurseToArray (func, data, levelCountdown) {
         return func([data])[0];
 
     let list = [];
+
     for(let item of data)
         list.push(
             levelCountdown > 1          
@@ -327,6 +340,9 @@ function recurseToArray (func, data, levelCountdown) {
             : g.noUndefined(func(item))
         );
 
+    if (data.key) 
+        list.key = data.key;
+    
     return list;    
 
 }
