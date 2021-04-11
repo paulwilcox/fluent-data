@@ -221,6 +221,11 @@ export function tableToString (
     let props = [];
     let vals = [];
 
+    if (data.length == 0) {
+        data = [{ empty: '' }];
+        headers = false;
+    }
+
     // Initially, values are multi-line.  Even if just 
     // one line they're represented as an array.
     let toStringArray = (val) => val.toString().split(`\r\n`);
@@ -273,11 +278,11 @@ export function tableToString (
         );
 
     for(let i = 0; i < props.length; i++)
-        props[i] = props[i].padStart(lengths[i]);
+        props[i] = props[i].padEnd(lengths[i]);
 
     for(let row of vals)
         for(let i = 0; i < row.length; i++) 
-            row[i] = row[i].padStart(lengths[i]);
+            row[i] = row[i].padEnd(lengths[i]);
 
     let tl = '\u250c';
     let tm = '\u252c';
@@ -297,10 +302,9 @@ export function tableToString (
     let headerRow = vt+sp + props.join(sp+vt+sp) + sp+vt+nl;
     let headerDivider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
     let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl
-    let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br+nl;
+    let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
 
-    return nl + 
-        topBorder +
+    return topBorder +
         (headers ? headerRow : '') + 
         (headers ? headerDivider : '') +
         dataRows +
