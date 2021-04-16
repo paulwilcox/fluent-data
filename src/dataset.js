@@ -4,12 +4,13 @@ import { quickSort } from './sorts.js';
 import Matrix from './matrix.js';
 import parser from './parser.js';
 import { hashMerge, loopMerge } from './mergeTools.js';
+import grouping from './grouping.js';
 
 export default class dataset {
 
-    constructor(data, groupLevel = 1) {
-        this.data = data;
-        this.groupLevel = groupLevel;
+    constructor(data) {
+        function* grouped() { yield new grouping(null,true); yield* data; }
+        this.data = grouped();
     }
 
     *[Symbol.iterator]() { 
@@ -21,7 +22,7 @@ export default class dataset {
             for(let row of data)
                 yield g.noUndefined(func(row));
         }
-        this.data = recurse(_map, this.data, this.groupLevel);
+        this.data = recurse(_map, this.data);
         return this;
     }
 
@@ -44,12 +45,7 @@ export default class dataset {
     } 
 
     group (func) {
-        let outerFunc = data => 
-            new hashBuckets(func)
-            .addItems(data)
-            .getBuckets();
-        this.data = recurse(outerFunc, this.data, this.groupLevel);
-        this.groupLevel++;
+        this.data = recurseGroup(func, this.data)
         return this;
     }
 
@@ -279,13 +275,13 @@ export default class dataset {
 
     get (func) {
 
-        if (!g.isIterable(this.data)) {
+        /*if (!g.isIterable(this.data)) {
             if (func)
                 this.data = func(this.data);
             return this.data;
-        }
+        }*/
         let arr = recurseToArray(
-            func || function(x) { return x }, 
+            func || (x => x), 
             this.data,
             this.groupLevel
         );
@@ -300,32 +296,56 @@ export default class dataset {
 
 }
 
-function* recurse (func, data, levelCountdown) {
+function* recurse (tableLevelFunc, data) {
 
-    if (levelCountdown > 1) { // data is nested groups
+    // I'm not sure why it's not always coming back as 
+    // an iterable.  But when calling recurseToArray,
+    // it can come back as an array. 
+    let group =  data[0] ? data[0] : data.next().value;
+    yield group;
+
+    if (group.isBase)
+        yield* tableLevelFunc(data);
+    else 
         for (let item of data) 
-            yield recurse(func, item, levelCountdown - 1);
-        return;
-    }
-
-    yield* func(data); // data is base records
+            yield recurse(tableLevelFunc, item);
 
 }
 
-function recurseToArray (func, data, levelCountdown) {
+function* recurseGroup (hashFunc, data) {
+
+    function* baseTableFunc (data) {
+        for(let [key,bucket] of new hashBuckets(hashFunc).addItems([...data])) 
+            yield [new grouping(key, true), ...bucket]; // yield as single element
+    }
+    
+    let group = data.next().value;
+    let isBase = group.isBase;
+    group.isBase = false;
+    yield group;
+
+    if (isBase) 
+        yield* baseTableFunc(data);
+    else 
+        for (let item of data) 
+            yield recurse(tableLevelFunc, item);    
+
+}
+
+function recurseToArray (func, data) {
 
     let list = [];
+    let group;
 
-    for(let item of data)
-        list.push(
-            levelCountdown > 1          
-            ? recurseToArray(func, item, levelCountdown - 1)
-            : g.noUndefined(func(item))
-        );
+    for(let item of data)  
+        if (item.constructor == grouping) 
+            group = item;
+        else if (!group.isBase) 
+            list.push(recurseToArray(func, item));
+        else 
+            list.push(func(g.noUndefined(item)));
 
-    if (data.key) 
-        list.key = data.key;
-    
+    list.key = group.key;
     return list;    
 
 }
