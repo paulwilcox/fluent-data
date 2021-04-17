@@ -14,9 +14,9 @@ async function test() {
 
     let results = $$(data)
         .group(row => row.customerId)
-        .map(row => ({...row, books2: -row.books}))
-        .ungroup()
-        .map(row => ({...row, flag: row.books >= 3 }))
+        //.map(row => ({...row, books2: -row.books}))
+        //.ungroup()
+        //.map(row => ({...row, flag: row.books >= 3 }))
         .group(row => [row.customerId, row.sound])
         .get();
 

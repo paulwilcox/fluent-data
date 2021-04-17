@@ -24,21 +24,20 @@ export default class dataset extends grouping {
         return this;
     }
 
-    filter (func) {    
-        let _filter = function* (data) {
+    filter (func) { 
+        this.apply(function* (data) {
             for(let row of data)
-            if(func(row))
-                yield row;
-        }
-        this.data = recurse(_filter, this.data, this.groupLevel);
+                if(func(row))
+                    yield row;
+        })
         return this;
     }
 
-    sort (func) {
-        let outerFunc = parser.parameters(func).length > 1 
-            ? data => quickSort(data, func, false)
-            : data => quickSort(data, func, true);
-        this.data = recurse(outerFunc, this.data, this.groupLevel);
+    sort (sorter) {
+        let _sorter = parser.parameters(sorter).length > 1 
+            ? data => quickSort(data, sorter, false)
+            : data => quickSort(data, sorter, true);
+        this.apply(_sorter);
         return this;
     } 
 
@@ -59,7 +58,7 @@ export default class dataset extends grouping {
         let isNaked = Object.keys(obj).length == 0;
 
         // wrap result in array to bring back to original nesting level
-        let outerFunc = data => {
+        this.apply(data => {
             let agg = {};
             if (isNaked)
                 return [obj(data)];
@@ -67,9 +66,7 @@ export default class dataset extends grouping {
                 agg[key] = reducer(data);
             }
             return [agg]; 
-        }
-
-        this.data = recurse(outerFunc, this.data, this.groupLevel);
+        })
 
         if (ungroup)
             this.ungroup();
@@ -78,26 +75,20 @@ export default class dataset extends grouping {
 
     }
 
-    distinct (func, sorter) {
+    distinct (hashKeySelector, sorter) {
 
-        func = func || (x => x);
+        hashKeySelector = hashKeySelector || (x => x);
         
-        if (sorter) sorter = 
-            parser.parameters(sorter).length > 1 
-            ? data => quickSort(data, func, false)
-            : data => quickSort(data, func, true);
-        else 
-            sorter = data => data;
+        if (sorter) 
+            this.sort(sorter);
 
-        let outerFunc = data => 
-            new hashBuckets(func)
-            .addItems(data)
-            .getBuckets()
-            .map(bucket => {
-                return [...sorter(bucket)][0]
-            });
+        this.apply(data => 
+            new hashBuckets(hashKeySelector)
+                .addItems(data)
+                .getBuckets()
+                .map(bucket => [...sorter(bucket)][0])
+        );
 
-        this.data = recurse(outerFunc, this.data, this.groupLevel);
         return this;
 
     }
@@ -147,7 +138,7 @@ export default class dataset extends grouping {
 
         // terminations
 
-            let outerFunc = leftHasher && rightHasher
+            let mergeFunc = leftHasher && rightHasher
                 ? data => [...hashMerge( 
                         data, rightData, 
                         matcher, mapper, 
@@ -159,7 +150,7 @@ export default class dataset extends grouping {
                         matcher, mapper
                     )];
 
-            this.data = recurse(outerFunc, this.data, this.groupLevel); 
+            this.apply(mergeFunc); 
             return this;
 
     }
