@@ -1,16 +1,15 @@
 import * as g from './general.js';
-import hashBuckets from './hashBuckets.js';
 import { quickSort } from './sorts.js';
 import Matrix from './matrix.js';
 import parser from './parser.js';
 import { hashMerge, loopMerge } from './mergeTools.js';
 import grouping from './grouping.js';
 
-export default class dataset {
+export default class dataset extends grouping {
 
     constructor(data) {
-        function* grouped() { yield new grouping(null,true); yield* data; }
-        this.data = grouped();
+        super(null);
+        this.data = data;
     }
 
     *[Symbol.iterator]() { 
@@ -18,11 +17,10 @@ export default class dataset {
     }
 
     map (func) {    
-        let _map = function* (data) {
+        this.apply(function* (data) {
             for(let row of data)
                 yield g.noUndefined(func(row));
-        }
-        this.data = recurse(_map, this.data);
+        });
         return this;
     }
 
@@ -45,38 +43,15 @@ export default class dataset {
     } 
 
     group (func) {
-        this.data = recurseGroup(func, this.data)
+        super.group(func);
         return this;
     }
 
-    ungroup (func) {
-
-        if (!func) 
-            func = x => x;
-
-        if (this.groupLevel == 1) {
-            let counter = 0;
-            for (let item of this.data) {
-                if (++counter > 1)
-                    throw   'Ungrouping to level 0 is possible, but ' +
-                            'there can only be one item in the dataset.';
-                this.data = item;
-            }
-            this.groupLevel--;
-            return this;
-        }
-
-        let outerFunc = function* (data) {
-            for (let item of data)
-            for (let nested of item)
-                yield func(nested);
-        }
-
-        // stop early becuase you want one level above base records
-        this.data = recurse(outerFunc, this.data, this.groupLevel - 1);
-        this.groupLevel--;
+    ungroup (mapper) {
+        if (mapper)
+            this.map(mapper);
+        super.ungroup();
         return this;
-
     }
 
     reduce (obj, ungroup = true) {
@@ -273,80 +248,16 @@ export default class dataset {
 
     }
 
-    get (func) {
-
-        /*if (!g.isIterable(this.data)) {
-            if (func)
-                this.data = func(this.data);
-            return this.data;
-        }*/
-        let arr = recurseToArray(
-            func || (x => x), 
-            this.data,
-            this.groupLevel
-        );
-        this.data = arr;
-        return arr;
+    get (mapper = null) {
+        if (mapper)
+            this.map(mapper);
+        return this.arrayify();
     }
 
     toJsonString(func) {
         let dataJson = JSON.stringify(this.get(func));
         return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
     }
-
-}
-
-function* recurse (tableLevelFunc, data) {
-
-    // I'm not sure why it's not always coming back as 
-    // an iterable.  But when calling recurseToArray,
-    // it can come back as an array. 
-    let group =  data[0] ? data[0] : data.next().value;
-    yield group;
-
-    if (group.isBase)
-        yield* tableLevelFunc(data);
-    else 
-        for (let item of data) 
-            yield recurse(tableLevelFunc, item);
-
-}
-
-function* recurseGroup (hashFunc, data) {
-
-    function* baseTableFunc (data) {
-        for(let [key,bucket] of new hashBuckets(hashFunc).addItems([...data])) 
-            yield [new grouping(key, true), ...bucket]; // yield as single element
-    }
-    
-    let group = data.next().value;
-    let isBase = group.isBase;
-    group.isBase = false;
-    yield group;
-
-    if (isBase) 
-        yield* baseTableFunc(data);
-    else 
-        for (let item of data) 
-            yield recurse(tableLevelFunc, item);    
-
-}
-
-function recurseToArray (func, data) {
-
-    let list = [];
-    let group;
-
-    for(let item of data)  
-        if (item.constructor == grouping) 
-            group = item;
-        else if (!group.isBase) 
-            list.push(recurseToArray(func, item));
-        else 
-            list.push(func(g.noUndefined(item)));
-
-    list.key = group.key;
-    return list;    
 
 }
 
