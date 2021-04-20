@@ -4,6 +4,7 @@ import Matrix from './matrix.js';
 import parser from './parser.js';
 import { hashMerge, loopMerge } from './mergeTools.js';
 import grouping from './grouping.js';
+import hashBuckets from './hashBuckets.js';
 
 export default class dataset extends grouping {
 
@@ -78,14 +79,16 @@ export default class dataset extends grouping {
 
         hashKeySelector = hashKeySelector || (x => x);
         
-        if (sorter) 
-            this.sort(sorter);
+        let getFirstBucketItem = sorter
+            ? (bucket) => new dataset(bucket).sort(sorter)[0]
+            : (bucket) => bucket[0];
+            
 
         this.apply(data => 
             new hashBuckets(hashKeySelector)
                 .addItems(data)
                 .getBuckets()
-                .map(bucket => [...sorter(bucket)][0])
+                .map(getFirstBucketItem)
         );
 
         return this;

@@ -1,30 +1,17 @@
-let orders = [
-    { "id": 901, "customer": 1, "product": 123456, "speed": 1, "rating": 2 },
-    { "id": 902, "customer": 1, "product": 123457, "speed": 2, "rating": 7 },
-    { "id": 903, "customer": 2, "product": 123456, "speed": 3, "rating": 43 },
-    { "id": 904, "customer": 2, "product": 123457, "speed": 4, "rating": 52 },
-    { "id": 905, "customer": 1, "product": 123459, "speed": 5, "rating": 93 },
-    { "id": 906, "customer": 1, "product": 123459, "speed": 6, "rating": 74 },
-    { "id": 907, "customer": 2, "product": 123458, "speed": 7, "rating": 3 },
-    { "id": 908, "customer": 2, "product": 123458, "speed": 8, "rating": 80 },
-    { "id": 909, "customer": 1, "product": 123459, "speed": 7, "rating": 23 },
-    { "id": 910, "customer": 1, "product": 123459, "speed": 8, "rating": 205 },
-    { "id": 911, "customer": 1, "product": 123459, "speed": 3, "rating": 4 },
-    { "id": 912, "customer": 7, "product": 123457, "speed": 2, "rating": 6 } 
-];
 
 async function test() {
 
+    let numbers =  [
+        { id: 0, label: 'zero' },
+        { id: 1, label: 'one' },
+        { id: 1, label: '??' },
+        { id: 2, label: '??' },
+        { id: 2, label: '??' }  
+    ];
+
     let results = 
-        $$(orders)
-        .group(o => o.customer) 
-        .reduce({
-            customer: $$.first(o => o.customer), 
-            speed: $$.avg(o => o.speed),
-            rating: $$.avg(o => o.rating),
-            speed_cor: $$.cor(o => [o.speed, o.rating])
-        })
-        .sort(o => o.customer)
+        $$(numbers)
+        .distinct(n => n.label)
         .get();
 
     console.log(results);
