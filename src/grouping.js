@@ -78,11 +78,12 @@ export default class grouping {
     ungroup () {
 
         if (this.children.length == 0 && this.parent == null) {
-            this.data = data.next().value;
-            this.dataIsNaked = true;
-            if (!data.next().done) 
+            let nextVal = this.data.next().value;
+            if (!this.data.next().done) 
                 throw `calling ungroup on a grouping with no parent ` +
                     `and more than one item in data is not permitted.`
+            this.data = nextVal;
+            this.dataIsNaked = true;
             return 'there is no parent so you should never see this';
         }
   

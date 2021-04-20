@@ -17,19 +17,16 @@ async function test() {
 
     let results = 
         $$(orders)
-        .group(o => o.customer)
-        .group(o => o.rating >= 10)
-        .ungroup(o => o)
-        .get();    
+        .reduce({
+            firstCustomer: $$.first(o => o.customer), 
+            speed: $$.avg(o => o.speed),
+            rating: $$.avg(o => o.rating),
+            speed_cor: $$.cor(o => [o.speed, o.rating]),
+            n: $$.count(o => o.id)
+        })
+        .get();
 
     console.log(results);
-
-    for(let group of results)
-    for(let item of group) 
-        if (Array.isArray(item)) throw `
-            Results seems to be nested more than one level deep.
-            Ungroup should have made this not be the case.
-        `;
 
 /*
 
