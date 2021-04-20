@@ -67,7 +67,6 @@ export default class dataset extends grouping {
             return [agg]; 
         });
 
-
         if (ungroup) 
             this.ungroup();
 

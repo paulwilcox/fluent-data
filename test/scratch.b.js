@@ -17,13 +17,14 @@ async function test() {
 
     let results = 
         $$(orders)
+        .group(o => o.customer) 
         .reduce({
-            firstCustomer: $$.first(o => o.customer), 
+            customer: $$.first(o => o.customer), 
             speed: $$.avg(o => o.speed),
             rating: $$.avg(o => o.rating),
-            speed_cor: $$.cor(o => [o.speed, o.rating]),
-            n: $$.count(o => o.id)
+            speed_cor: $$.cor(o => [o.speed, o.rating])
         })
+        .sort(o => o.customer)
         .get();
 
     console.log(results);

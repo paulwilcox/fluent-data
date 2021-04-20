@@ -87,8 +87,9 @@ export default class grouping {
             return 'there is no parent so you should never see this';
         }
   
-        if (this.children.length == 0 /*&& this.parent.data == null*/) {
-            this.parent.data = [];
+        if (this.children.length == 0) {
+            if (this.parent.data == null)
+                this.parent.data = [];
             this.parent.data.push(...this.data);
             return 'removeFromParent';
         }

@@ -41,6 +41,7 @@ async function test () {
             rating: $$.avg(o => o.rating),
             speed_cor: $$.cor(o => [o.speed, o.rating])
         })
+        .sort(o => o.customer)
         .get();
 
     let row0 = prop => Math.round(results[0][prop] * 100) / 100;
