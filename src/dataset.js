@@ -62,13 +62,13 @@ export default class dataset extends grouping {
             let agg = {};
             if (isNaked)
                 return [obj(data)];
-            for(let [key,reducer] of Object.entries(obj)) {
+            for(let [key,reducer] of Object.entries(obj)) 
                 agg[key] = reducer(data);
-            }
             return [agg]; 
-        })
+        });
 
-        if (ungroup)
+
+        if (ungroup) 
             this.ungroup();
 
         return this;
