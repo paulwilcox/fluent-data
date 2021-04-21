@@ -248,8 +248,8 @@ export default class dataset extends grouping {
     }
 
     toJsonString(func) {
-        let dataJson = JSON.stringify(this.get(func));
-        return `{"data":${dataJson},"groupLevel":${this.groupLevel}}`;
+        let getted = this.get(func);
+        return JSON.stringify(getted);
     }
 
 }

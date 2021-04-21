@@ -53,7 +53,7 @@ async function runServerTests (json, prefix) {
 function checkJson(json, prefix) {
     try {
         let parsed = JSON.parse(json);
-        let test = parsed.data.sort(c => c.id)[0].id == 1;
+        let test = parsed.sort(c => c.id)[0].id == 1;
         if (!test)
             throw `${prefix}: parsed json sorted by customer id ` +
                 `did not produce a first record with id == 1`;

@@ -1,4 +1,5 @@
 import dataset from './dataset.js';
+import grouping from './grouping.js';
 import matrix from './matrix.js';
 import * as g from './general.js';
 
@@ -10,20 +11,19 @@ export default function _(obj) {
 
 _.fromJson = function(json) {
 
-    let ds = new dataset();
+    let groupify = (arrayified) => {
+        let parsed = g.isString(arrayified) 
+            ? JSON.parse(arrayified) 
+            : arrayified;
+        let groupified = grouping.groupify(parsed);
+        let ds = new dataset();
+        ds.data = groupified.data;
+        return ds;
+    }
 
-    if (json.constructor.name == 'Response') 
-        return json.json().then(parsed => {
-            ds.data = parsed.data;
-            ds.groupLevel = parsed.groupLevel;
-            return ds;
-        });
-
-    let parsed = g.isString(json) ? JSON.parse(json) : json;
-    ds.data = parsed.data;
-    ds.groupLevel = parsed.groupLevel;
-
-    return ds;
+    return json.constructor.name == 'Response' 
+        ? json.json().then(groupify)
+        : groupify(json);
 
 }
 

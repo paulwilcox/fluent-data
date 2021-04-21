@@ -1,22 +1,14 @@
+import dataset from '../src/dataset.js';
+import grouping from '../src/grouping.js';
 
 async function test() {
-
-    let numbers =  [
-        { id: 0, label: 'zero' },
-        { id: 1, label: 'one' },
-        { id: 1, label: '??' },
-        { id: 2, label: '??' },
-        { id: 2, label: '??' }  
-    ];
-
-    let results = 
-        $$(numbers)
-        .distinct(n => n.label)
-        .get();
-
-    console.log(results);
-
 /*
+    let db = await
+        fetch('./_jsonSender.r.js')
+        .then(resp => $$.fromJson(resp))
+        .then(obj => console.log(
+            'obj', obj));
+*/
 
     let multiline = `this is more\r\nthan one line`;
 
@@ -29,15 +21,15 @@ async function test() {
 
     document.body.innerHTML += `<div id='printer' style='font-family:consolas'></div>`;
 
-    let results = $$(data)
+    let arrayified = $$(data)
         .group(row => row.customerId)
-        //.map(row => ({...row, books2: -row.books}))
-        //.ungroup()
-        //.map(row => ({...row, flag: row.books >= 3 }))
         .group(row => [row.customerId, row.sound])
-        .ungroup()
         .get();
-*/
+
+    console.log(arrayified);
+
+    let groupified = grouping.groupify(arrayified);
+    console.log(dataset.prototype.get.call(groupified));
 
 }
 

@@ -106,3 +106,21 @@ export default class grouping {
     }
 
 }
+
+grouping.groupify = (arrayified, _parent) => {
+
+    let grp = new grouping();
+    grp.parent = _parent || null;
+    grp.key = arrayified.key || null;
+
+    for(let row of arrayified) 
+        if (Array.isArray(row)) {
+            grp.children == grp.children || [];
+            grp.children.push(grouping.groupify(row, grp))
+        }
+        else 
+            grp.data = (function*() { yield* arrayified; })()
+
+    return grp;
+
+}
