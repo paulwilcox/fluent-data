@@ -1,14 +1,4 @@
-import dataset from '../src/dataset.js';
-import grouping from '../src/grouping.js';
-
 async function test() {
-/*
-    let db = await
-        fetch('./_jsonSender.r.js')
-        .then(resp => $$.fromJson(resp))
-        .then(obj => console.log(
-            'obj', obj));
-*/
 
     let multiline = `this is more\r\nthan one line`;
 
@@ -21,15 +11,13 @@ async function test() {
 
     document.body.innerHTML += `<div id='printer' style='font-family:consolas'></div>`;
 
-    let arrayified = $$(data)
+    let ds = $$(data)
         .group(row => row.customerId)
-        .group(row => [row.customerId, row.sound])
-        .get();
+        .group(row => [row.customerId, row.sound]);
 
-    console.log(arrayified);
+    let contents = ds.log(null, 'data');
 
-    let groupified = grouping.groupify(arrayified);
-    console.log(dataset.prototype.get.call(groupified));
+    console.log(contents);
 
 }
 

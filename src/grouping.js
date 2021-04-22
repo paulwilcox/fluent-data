@@ -1,4 +1,5 @@
 import hashBuckets from './hashBuckets.js';
+import * as g from './general.js';
 
 export default class grouping {
 
@@ -26,23 +27,6 @@ export default class grouping {
 
         for(let child of this.children)
             child.apply(tableLevelFunc);
-
-    }
-
-    arrayify () {
-
-        let list = [];
-        list.key = this.key;
-
-        if (this.dataIsNaked)
-            return this.data;
-        else if (this.data != null) 
-            list.push(...this.data);
-
-        for(let child of this.children)
-            list.push(child.arrayify());
-
-        return list;
 
     }
 
@@ -102,6 +86,65 @@ export default class grouping {
         }
 
         return 'doNotRemoveFromParent';
+
+    }
+
+    log (
+        element = null, 
+        caption = null,
+        func = x => x, 
+        limit = 50
+    ) {
+
+        caption = 
+            this.parent === null && caption ? `${caption}\r\n`
+            : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
+            : ``;
+
+        if (this.children.length == 0) {
+            let stringified = 
+                caption +
+                g.tableToString([...this.data], func, limit, false);
+            return { stringified };
+        }
+
+        else {
+            let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
+            let stringified = 
+                caption +
+                g.tableToString(stringifieds, x => x, limit, false)
+            return (this.parent !== null) ? { stringified } : stringified;
+        }
+
+
+
+        /*
+        if (element) 
+            document.querySelector(element).innerHTML += 
+                groupedOutput.replace(/\r\n/g,'<br/>').replace(/\s/g, '&nbsp;');
+        else
+            console.log(groupedOutput);
+
+        this.data = arr;
+        return this;
+        */
+
+    }    
+
+    arrayify () {
+
+        let list = [];
+        list.key = this.key;
+
+        if (this.dataIsNaked)
+            return this.data;
+        else if (this.data != null) 
+            list.push(...this.data);
+
+        for(let child of this.children)
+            list.push(child.arrayify());
+
+        return list;
 
     }
 
