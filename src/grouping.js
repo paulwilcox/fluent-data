@@ -44,7 +44,7 @@ export default class grouping {
 
         if (this.data != null) {
             for(let [key,bucket] of new hashBuckets(hashFunc).addItems([...this.data])) {
-                let g = new grouping(key);
+                let g = new grouping(JSON.parse(key));
                 g.parent = this;
                 g.data = bucket;
                 this.data = null;
@@ -55,7 +55,6 @@ export default class grouping {
 
         for(let child of this.children)
             child.group(hashFunc);
-
 
     }
 
@@ -121,7 +120,7 @@ export default class grouping {
     arrayify () {
 
         let list = [];
-        list.key = this.key;
+        list.key = JSON.stringify(this.key);
 
         if (this.dataIsNaked)
             return this.data;
@@ -139,9 +138,8 @@ export default class grouping {
 
 grouping.groupify = (arrayified, _parent) => {
 
-    let grp = new grouping();
+    let grp = new grouping(arrayified.key ? JSON.parse(arrayified.key) : null);
     grp.parent = _parent || null;
-    grp.key = arrayified.key || null;
 
     for(let row of arrayified) 
         if (Array.isArray(row)) {

@@ -1,6 +1,6 @@
-import * as g from "./general.js";
+import * as g from './general.js';
 
-export default class extends Map {
+export default class hashBuckets extends Map {
     
     constructor (
         hashKeySelector,
@@ -20,18 +20,17 @@ export default class extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        if (!g.isString(key))
-            key = g.stringifyObject(key);
+        key = g.isString(key) ? key : JSON.stringify(key);
 
         if (this.distinct) {
             this.set(key, [item]);
             return this;
         }
 
-        if(!this.has(key))
+        if(!this.has(key)) 
             this.set(key, []);
 
-        this.get(key).push(item);
+        this.get(key).bucket.push(item);
 
         return this;
 
@@ -42,8 +41,7 @@ export default class extends Map {
         hashKeySelector
     ) {
         let key = hashKeySelector(objectToHash);
-        if (!g.isString(key))
-            key = g.stringifyObject(key);
+        key = g.isString(key) ? key : JSON.stringify(key);
         return this.get(key);
     }
 

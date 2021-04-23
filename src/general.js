@@ -62,6 +62,8 @@ export let setEquals = (a, b) =>
 export let isPromise = obj => 
     Promise.resolve(obj) == obj;
 
+// this is obsolete but I don't have the
+// heart to get rid of it right now.
 export let stringifyObject = obj => {
 
     if (obj === undefined) 

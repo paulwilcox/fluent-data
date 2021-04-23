@@ -41,33 +41,6 @@ let random = (min, max, integers = false) => {
         : Math.random() * (max - min) + min;
 };
 
-let stringifyObject = obj => {
-
-    if (obj === undefined) 
-        return '';
-
-    let isObject = variable => 
-           variable 
-        && typeof variable === 'object' 
-        && variable.constructor === Object;
-
-    if (!isObject(obj))
-        return obj.toString();
-
-    let stringified = '[';
-
-    let keys = Object.keys(obj).sort();
-
-    for (let key of keys) {
-        let val = obj[key];
-        let valToStringify = isObject(val) ? stringifyObject(val) : val;
-        stringified += `[${key},${valToStringify}]`;
-    }
-
-    return stringified + ']';
-
-};
-
 let isString = input =>
     typeof input === 'string' 
     || input instanceof String;
@@ -2234,18 +2207,17 @@ class hashBuckets extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        if (!isString(key))
-            key = stringifyObject(key);
+        key = isString(key) ? key : JSON.stringify(key);
 
         if (this.distinct) {
             this.set(key, [item]);
             return this;
         }
 
-        if(!this.has(key))
+        if(!this.has(key)) 
             this.set(key, []);
 
-        this.get(key).push(item);
+        this.get(key).bucket.push(item);
 
         return this;
 
@@ -2256,8 +2228,7 @@ class hashBuckets extends Map {
         hashKeySelector
     ) {
         let key = hashKeySelector(objectToHash);
-        if (!isString(key))
-            key = stringifyObject(key);
+        key = isString(key) ? key : JSON.stringify(key);
         return this.get(key);
     }
 
@@ -2397,23 +2368,6 @@ class grouping {
 
     }
 
-    arrayify () {
-
-        let list = [];
-        list.key = this.key;
-
-        if (this.dataIsNaked)
-            return this.data;
-        else if (this.data != null) 
-            list.push(...this.data);
-
-        for(let child of this.children)
-            list.push(child.arrayify());
-
-        return list;
-
-    }
-
     group (hashFunc) {
 
         if (this.dataIsNaked) {
@@ -2428,7 +2382,7 @@ class grouping {
 
         if (this.data != null) {
             for(let [key,bucket] of new hashBuckets(hashFunc).addItems([...this.data])) {
-                let g = new grouping(key);
+                let g = new grouping(JSON.parse(key));
                 g.parent = this;
                 g.data = bucket;
                 this.data = null;
@@ -2439,7 +2393,6 @@ class grouping {
 
         for(let child of this.children)
             child.group(hashFunc);
-
 
     }
 
@@ -2473,13 +2426,58 @@ class grouping {
 
     }
 
+    log (
+        element = null, 
+        caption = null,
+        func = x => x, 
+        limit = 50
+    ) {
+
+        caption = 
+            this.parent === null && caption ? `${caption}\r\n`
+            : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
+            : ``;
+
+        if (this.children.length == 0) {
+            let stringified = 
+                caption +
+                tableToString([...this.data], func, limit, false);
+            return { stringified };
+        }
+
+        else {
+            let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
+            let stringified = 
+                caption +
+                tableToString(stringifieds, x => x, limit, false);
+            return (this.parent !== null) ? { stringified } : stringified;
+        }
+
+    }    
+
+    arrayify () {
+
+        let list = [];
+        list.key = JSON.stringify(this.key);
+
+        if (this.dataIsNaked)
+            return this.data;
+        else if (this.data != null) 
+            list.push(...this.data);
+
+        for(let child of this.children)
+            list.push(child.arrayify());
+
+        return list;
+
+    }
+
 }
 
 grouping.groupify = (arrayified, _parent) => {
 
-    let grp = new grouping();
+    let grp = new grouping(arrayified.key ? JSON.parse(arrayified.key) : null);
     grp.parent = _parent || null;
-    grp.key = arrayified.key || null;
 
     for(let row of arrayified) 
         if (Array.isArray(row)) {
@@ -2693,38 +2691,6 @@ class dataset extends grouping {
         func(arr);
         this.data = arr;
         return this;
-    }
-
-    log (
-        element = null, 
-        func = x => x, 
-        limit = 50
-    ) {
-
-        let arr = recurseToArray(x => x, this.data, this.groupLevel);        
-
-        let recurForGroup = (data, levelCountdown) => {
-            
-            if (levelCountdown == 1) 
-                return tableToString(data, func, limit);
-
-            let list = [];
-            for(let group of data) 
-                list.push({ group: recurForGroup(group, levelCountdown - 1) });
-            return tableToString(list, x => x, limit, false); 
-        };
-        
-        let groupedOutput = recurForGroup(arr, this.groupLevel);        
-        
-        if (element) 
-            document.querySelector(element).innerHTML += 
-                groupedOutput.replace(/\r\n/g,'<br/>').replace(/\s/g, '&nbsp;');
-        else
-            console.log(groupedOutput);
-
-        this.data = arr;
-        return this;
-
     }
 
     get (mapper = null) {
