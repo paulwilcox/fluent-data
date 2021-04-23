@@ -116,19 +116,6 @@ export default class grouping {
             return (this.parent !== null) ? { stringified } : stringified;
         }
 
-
-
-        /*
-        if (element) 
-            document.querySelector(element).innerHTML += 
-                groupedOutput.replace(/\r\n/g,'<br/>').replace(/\s/g, '&nbsp;');
-        else
-            console.log(groupedOutput);
-
-        this.data = arr;
-        return this;
-        */
-
     }    
 
     arrayify () {
