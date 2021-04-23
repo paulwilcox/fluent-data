@@ -17,10 +17,7 @@ async function test() {
             row => [row.customerId, -row.books]
         );
 
-    let contents = ds.log(null, 'data');
-
-    console.log(contents);
-    console.log(ds);
+    ds.log(null, 'data');
 
 }
 

@@ -88,6 +88,8 @@ export default class grouping {
 
     }
 
+    // TODO: Work with html (element != null), and 
+    // with grouping.data = non-iterable-object
     log (
         element = null, 
         caption = null,
@@ -99,21 +101,20 @@ export default class grouping {
             this.parent === null && caption ? `${caption}\r\n`
             : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
             : ``;
+        let stringified = caption;
 
-        if (this.children.length == 0) {
-            let stringified = 
-                caption +
-                g.tableToString([...this.data], func, limit, false);
-            return { stringified };
-        }
+        if (this.children.length == 0) 
+            stringified += g.tableToString([...this.data], func, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
-            let stringified = 
-                caption +
-                g.tableToString(stringifieds, x => x, limit, false)
-            return (this.parent !== null) ? { stringified } : stringified;
+            stringified += g.tableToString(stringifieds, x => x, limit, false)
         }
+
+        if (this.parent !== null) 
+            return { stringified };
+        else if (element == null) 
+            console.log(stringified);
 
     }    
 
