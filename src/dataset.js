@@ -80,7 +80,7 @@ export default class dataset extends grouping {
         hashKeySelector = hashKeySelector || (x => x);
         
         let getFirstBucketItem = sorter
-            ? (bucket) => new dataset(bucket).sort(sorter)[0]
+            ? (bucket) => new dataset(bucket).sort(sorter).data.next().value
             : (bucket) => bucket[0];
             
 

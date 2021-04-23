@@ -12,8 +12,10 @@ async function test() {
     document.body.innerHTML += `<div id='printer' style='font-family:consolas'></div>`;
 
     let ds = $$(data)
-        .group(row => row.customerId)
-        .group(row => [row.customerId, row.sound]);
+        .distinct(
+            row => row.customerId,
+            row => [row.customerId, -row.books]
+        );
 
     let contents = ds.log(null, 'data');
 
