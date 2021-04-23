@@ -2215,7 +2215,7 @@ class hashBuckets extends Map {
         if(!this.has(key)) 
             this.set(key, []);
 
-        this.get(key).bucket.push(item);
+        this.get(key).push(item);
 
         return this;
 

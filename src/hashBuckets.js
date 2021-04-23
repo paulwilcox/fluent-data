@@ -20,7 +20,7 @@ export default class hashBuckets extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        key = g.isString(key) ? key : JSON.stringify(key);
+        key = JSON.stringify(key);
 
         if (this.distinct) {
             this.set(key, [item]);
@@ -41,7 +41,7 @@ export default class hashBuckets extends Map {
         hashKeySelector
     ) {
         let key = hashKeySelector(objectToHash);
-        key = g.isString(key) ? key : JSON.stringify(key);
+        key =JSON.stringify(key);
         return this.get(key);
     }
 

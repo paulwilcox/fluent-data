@@ -18,6 +18,7 @@ async function test() {
     let contents = ds.log(null, 'data');
 
     console.log(contents);
+    console.log(ds);
 
 }
 
