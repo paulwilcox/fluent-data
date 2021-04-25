@@ -208,9 +208,9 @@ export default class dataset extends grouping {
         return this.arrayify();
     }
 
-    toJsonString(func) {
-        let getted = this.get(func);
-        return JSON.stringify(getted);
+    toJsonString(replacer, space) {
+        let getted = this.get();
+        return JSON.stringify(getted, replacer, space);
     }
 
 }
