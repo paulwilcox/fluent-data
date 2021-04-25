@@ -228,9 +228,14 @@ export function tableToString (
         headers = false;
     }
 
+    let safeToString = (val) =>  
+          val === null ? '<null>' 
+        : val === undefined ? '<undefined>'
+        : val.toString();
+
     // Initially, values are multi-line.  Even if just 
     // one line they're represented as an array.
-    let toStringArray = (val) => val.toString().split(`\r\n`);
+    let toStringArray = (val) => safeToString(val).split(`\r\n`);
 
     for(let r = 0; r < data.length; r++) {
         
@@ -275,7 +280,7 @@ export function tableToString (
 
     for (let i = 0; i < props.length; i++) 
         lengths[i] = Math.max(
-            ...vals.map(row => row[i].length), 
+            ...vals.map(row => safeToString(row[i]).length), 
             headers ? props[i].length : 0
         );
 
@@ -283,8 +288,8 @@ export function tableToString (
         props[i] = props[i].padEnd(lengths[i]);
 
     for(let row of vals)
-        for(let i = 0; i < row.length; i++) 
-            row[i] = row[i].padEnd(lengths[i]);
+        for(let i = 0; i < props.length; i++) 
+            row[i] = safeToString(row[i]).padEnd(lengths[i]);
 
     let tl = '\u250c';
     let tm = '\u252c';
