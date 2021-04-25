@@ -1,5 +1,4 @@
 import dataset from './dataset.js';
-import grouping from './grouping.js';
 import matrix from './matrix.js';
 import * as g from './general.js';
 
@@ -9,31 +8,14 @@ export default function _(obj) {
     return obj instanceof dataset ? obj : new dataset(obj);
 }
 
-_.fromJson = function(json) {
-
-    let groupify = (arrayified) => {
-        let parsed = g.isString(arrayified) 
-            ? JSON.parse(arrayified) 
-            : arrayified;
-        let groupified = grouping.groupify(parsed);
-        let ds = new dataset();
-        ds.data = groupified.data;
-        return ds;
-    }
-
-    return json.constructor.name == 'Response' 
-        ? json.json().then(groupify)
-        : groupify(json);
-
-}
-
+_.dataset = dataset;
 _.matrix = matrix;
 
 _.round = g.round;
 
 _.first = rowFunc =>
     data => {
-        for (let row of data )
+        for (let row of data)
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
                 return rowFunc(row);
         return null;
@@ -41,10 +23,13 @@ _.first = rowFunc =>
 
 _.last = rowFunc => 
     data => {
-        for (let i = data.length - 1; i >= 0; i++)
-            if (rowFunc(data[i]) !== undefined && rowFunc(data[i]) !== null)
-                return rowFunc(data[i]);
-        return null;
+        let last = null;
+        for (let row of data) {
+            let val = rowFunc(row);
+            if (val !== undefined && val !== null)
+                last = val;
+        }
+        return last;
     }
 
 _.sum = (rowFunc, options) => 
@@ -329,7 +314,7 @@ _.regress = (ivSelector, dvSelector, options) =>
 
     }
 
-_.covMatrix = (selector, isSample = true) =>
+_.covMatrix = (selector, isSample = false) =>
     data => {
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx

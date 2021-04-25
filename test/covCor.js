@@ -12,7 +12,7 @@ async function test () {
     let result = 
         $$(data)
         .reduce({
-            covMatrix: $$.covMatrix('cases, distance, time'),
+            covMatrix: $$.covMatrix('cases, distance, time', true),
             corMatrix: $$.corMatrix('cases, distance, time'),
         })
         .get();

@@ -4,7 +4,7 @@ async function test () {
         
         let db = await
             fetch('./_jsonSender.r.js')
-            .then(resp => $$.fromJson(resp));
+            .then(resp => $$.dataset.fromJson(resp));
 
         let json = db.toJsonString();
 
@@ -15,7 +15,7 @@ async function test () {
         db = await
             fetch('./_jsonSender.r.js')
             .then(resp => resp.json())
-            .then(protoDb => $$.fromJson(protoDb));
+            .then(protoDb => $$.dataset.fromJson(protoDb));
 
         json = db.toJsonString();
 
@@ -26,7 +26,7 @@ async function test () {
         db = await
             fetch('./_jsonSender.r.js')
             .then(resp => resp.text())
-            .then(protoDb => $$.fromJson(protoDb));
+            .then(protoDb => $$.dataset.fromJson(protoDb));
 
         json = db.toJsonString();
 

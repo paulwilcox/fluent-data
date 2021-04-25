@@ -4,7 +4,7 @@ async function serve(req, res) {
     req.on('data', chunk => json += chunk);
 
     req.on('end', () => {
-        let ds = $$.fromJson(json);
+        let ds = $$.dataset.fromJson(json);
         let c = ds.sort(c => c.id).get();
         let result = c.length > 0 && c[0].id == 1;
         res.writeHead(200, 'ok');

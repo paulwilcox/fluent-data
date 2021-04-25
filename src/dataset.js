@@ -42,18 +42,6 @@ export default class dataset extends grouping {
         return this;
     } 
 
-    group (func) {
-        super.group(func);
-        return this;
-    }
-
-    ungroup (mapper) {
-        if (mapper)
-            this.map(mapper);
-        super.ungroup();
-        return this;
-    }
-
     reduce (obj, ungroup = true) {
 
         let isNaked = Object.keys(obj).length == 0;
@@ -202,10 +190,15 @@ export default class dataset extends grouping {
         return new Matrix(this.data, selector, rowNames);
     }
 
-    with (func) {
-        let arr = recurseToArray(x => x, this.data, this.groupLevel);
-        func(arr);
-        this.data = arr;
+    group (func) {
+        super.group(func);
+        return this;
+    }
+
+    ungroup (mapper) {
+        if (mapper)
+            this.map(mapper);
+        super.ungroup();
         return this;
     }
 
@@ -222,3 +215,20 @@ export default class dataset extends grouping {
 
 }
 
+dataset.fromJson = function(json) {
+
+    let groupify = (arrayified) => {
+        let parsed = g.isString(arrayified) 
+            ? JSON.parse(arrayified) 
+            : arrayified;
+        let groupified = grouping.groupify(parsed);
+        let ds = new dataset();
+        ds.data = groupified.data;
+        return ds;
+    }
+
+    return json.constructor.name == 'Response' 
+        ? json.json().then(groupify)
+        : groupify(json);
+
+}

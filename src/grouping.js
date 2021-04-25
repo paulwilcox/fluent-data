@@ -104,7 +104,9 @@ export default class grouping {
         let stringified = caption;
 
         if (this.children.length == 0) 
-            stringified += g.tableToString([...this.data], func, limit, true);
+            stringified += !g.isIterable(this.data)
+                ? JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : g.tableToString([...this.data], func, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
