@@ -105,7 +105,7 @@ export default class dataset extends grouping {
             rightHasher = rightHasher || hasher || leftHasher;
             leftSingular = leftSingular || singular || false;
             rightSingular = rightSingular || singular || false;
-            matcher = matcher == '=' ? (l,r) => g.eq(l,r) : matcher;
+            matcher = matcher == '=' ? (l,r) => g.eq(l,r) : matcher || ((l,r) => true);
 
             if (!['hash', 'loop'].includes(algo) && algo != undefined) 
                 throw `algo '${algo}' is not recognized.  Pass 'hash', 'loop', or undefined.`;
