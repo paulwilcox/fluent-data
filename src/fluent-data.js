@@ -300,8 +300,8 @@ _.regress = (ivSelector, dvSelector, options) =>
                 Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
             if (options.maxDigits) {
-                g.RoundObjectNumbers(results.coefficients, options.maxDigits);
-                g.RoundObjectNumbers(results.model, options.maxDigits);
+                results.coefficients = g.round(results.coefficients, options.maxDigits);
+                results.model = g.round(results.model, options.maxDigits);
                 for(let row of results.data) {
                     row.actual = g.round(row.actual, options.maxDigits);
                     row.estimate = g.round(row.estimate, options.maxDigits);
