@@ -1,5 +1,23 @@
 // e.g. round(5.239, 2) is 5.24
-export let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+export let round = (term, digits) => {
+
+    let val = Math.round(term * 10 ** digits) / 10 ** digits;
+
+    if (!isNaN(val))
+        return val;
+    if (typeof(term) != 'object')
+        return val;
+
+    for(let key of Object.keys(term)) {
+        let type = typeof(term[key]);
+        term[key] = (type === 'number' || type == 'object') 
+            ? round(term[key], digits)
+            : term[key];
+    }
+
+    return term;
+
+}
 
 // e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
 export let roundToMultiple = (term, multiple) => {
@@ -113,16 +131,6 @@ export let flattenArray = array => {
         else 
             result.push(element);
     return result;
-}
-
-export function RoundObjectNumbers (obj, precision) {
-    for(let key of Object.keys(obj)) {
-        let type = typeof(obj[key]);
-        if (type === 'number') 
-            obj[key] = round(obj[key], precision);
-        else if (type === 'object') 
-            RoundObjectNumbers(obj[key], precision);
-    }
 }
 
 // thanks shlang (8382469) at stackoverflow.com/questions/61164230

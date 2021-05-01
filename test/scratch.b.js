@@ -1,3 +1,4 @@
+import * as g from '../src/general.js';
 async function test() {
 
     let students = $$([
@@ -21,17 +22,15 @@ async function test() {
         { customerId: 'b', books: 5, time: 23.77, price: 589, rating: 31 }
     ]);
     
-    let result = 
-        students  
-        .merge(
-            teachers, 
-            (s,t) => s.id == t.id, 
-            (s,t) => (s&&t) ? s : (s||t)
-        )
-        //.get(); console.log(result);
-        .log(null, 'x');
-
-    
+console.log($$.round({ five: 5.5555 }, 3))
+return;
+    purchases
+        .matrix('books, price, time', 'customerId')
+        .log(
+            null,
+            'matrix',
+            row => g.round(row,0) 
+        );    
 
 }
 
