@@ -93,7 +93,7 @@ export default class grouping {
     log (
         element = null, 
         caption = null,
-        func = x => x, 
+        mapper = x => x, 
         limit = 50
     ) {
 
@@ -106,17 +106,23 @@ export default class grouping {
         if (this.children.length == 0) 
             stringified = !g.isIterable(this.data)
                 ? caption + JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : g.tableToString([...this.data], caption, func, limit, true);
+                : g.tableToString([...this.data], caption, mapper, limit, true);
 
         else {
-            let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
+            let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
             stringified = g.tableToString(stringifieds, caption, x => x, limit, false)
         }
 
         if (this.parent !== null) 
             return { stringified };
-        else if (element == null) 
+        else if (!element) 
             console.log(stringified);
+        else {
+            let div = document.createElement('div');
+            div.style = 'white-space:pre; font-family:consolas; font-size:x-small'
+            div.innerHTML = stringified
+            document.querySelector(element).appendChild(div);
+        }
 
     }    
 

@@ -117,9 +117,14 @@ function tableToString (
         headers = false;
     }
 
+    let safeToString = (val) =>  
+          val === null ? '<null>' 
+        : val === undefined ? '<undefined>'
+        : val.toString();
+
     // Initially, values are multi-line.  Even if just 
     // one line they're represented as an array.
-    let toStringArray = (val) => val.toString().split(`\r\n`);
+    let toStringArray = (val) => safeToString(val).split(`\r\n`);
 
     for(let r = 0; r < data.length; r++) {
         
@@ -164,7 +169,7 @@ function tableToString (
 
     for (let i = 0; i < props.length; i++) 
         lengths[i] = Math.max(
-            ...vals.map(row => row[i].length), 
+            ...vals.map(row => safeToString(row[i]).length), 
             headers ? props[i].length : 0
         );
 
@@ -172,8 +177,8 @@ function tableToString (
         props[i] = props[i].padEnd(lengths[i]);
 
     for(let row of vals)
-        for(let i = 0; i < row.length; i++) 
-            row[i] = row[i].padEnd(lengths[i]);
+        for(let i = 0; i < props.length; i++) 
+            row[i] = safeToString(row[i]).padEnd(lengths[i]);
 
     let tl = '\u250c';
     let tm = '\u252c';
@@ -698,34 +703,26 @@ class matrix {
         return mx;
     }
 
-    log(roundDigits) {
+    // TODO: make this work with g.tableToString, as console.table sucks
+    log (
+        element = null, 
+        caption = null, 
+        func = x => x, 
+        limit = 50
+    ) {
 
-        let clone = roundDigits === undefined ? this.clone() : this.round(roundDigits);
-        let printable = {};
-
-        // if the keyName is a repeat in keyHolder, add a ' (#)' after it.
-        let addNumSuffix = (keyHolder, keyName) => {
-            if(!Object.keys(keyHolder).includes(keyName))
-                return keyName;
-            let num = parseInt(keyName.match(/(?<= \()\d+(?=\)$)/));
-            if (isNaN(num)) 
-                num = 1;
-            return keyName.replace(/ \(\d+\)$/, '') + ` (${num + 1})`;
-        };
+        let clone = this.clone();
+        let printable = [];
         
         for (let r in clone.data) {
-            let obj = {};
-            for (let c in clone.data[r]) {
-                let colName = clone.colNames ? clone.colNames[c] : c;
-                colName = addNumSuffix(obj, colName);
-                obj[colName] = clone.data[r][c];
-            }
-            let rowName = clone.rowNames ? clone.rowNames[r] : r;
-            rowName = addNumSuffix(printable, rowName);    
-            printable[rowName] = obj;
+            let row = {};
+            row[''] = [clone.rowNames[r] || r]; 
+            for (let c in clone.data[r]) 
+                row[clone.colNames[c] || c] = clone.data[r][c];
+            printable.push(row);
         }
 
-        console.table(printable);
+        console.log(tableToString(printable));
         return this;
 
     }
@@ -2205,7 +2202,7 @@ class hashBuckets extends Map {
     addItem(item) {
 
         let key = this.hashKeySelector(item);
-        key = isString(key) ? key : JSON.stringify(key);
+        key = JSON.stringify(key);
 
         if (this.distinct) {
             this.set(key, [item]);
@@ -2226,7 +2223,7 @@ class hashBuckets extends Map {
         hashKeySelector
     ) {
         let key = hashKeySelector(objectToHash);
-        key = isString(key) ? key : JSON.stringify(key);
+        key =JSON.stringify(key);
         return this.get(key);
     }
 
@@ -2424,6 +2421,8 @@ class grouping {
 
     }
 
+    // TODO: Work with html (element != null), and 
+    // with grouping.data = non-iterable-object
     log (
         element = null, 
         caption = null,
@@ -2435,21 +2434,22 @@ class grouping {
             this.parent === null && caption ? `${caption}\r\n`
             : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
             : ``;
+        let stringified = caption;
 
-        if (this.children.length == 0) {
-            let stringified = 
-                caption +
-                tableToString([...this.data], func, limit, false);
-            return { stringified };
-        }
+        if (this.children.length == 0) 
+            stringified += !isIterable(this.data)
+                ? JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : tableToString([...this.data], func, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
-            let stringified = 
-                caption +
-                tableToString(stringifieds, x => x, limit, false);
-            return (this.parent !== null) ? { stringified } : stringified;
+            stringified += tableToString(stringifieds, x => x, limit, false);
         }
+
+        if (this.parent !== null) 
+            return { stringified };
+        else if (element == null) 
+            console.log(stringified);
 
     }    
 
@@ -2524,18 +2524,6 @@ class dataset extends grouping {
         return this;
     } 
 
-    group (func) {
-        super.group(func);
-        return this;
-    }
-
-    ungroup (mapper) {
-        if (mapper)
-            this.map(mapper);
-        super.ungroup();
-        return this;
-    }
-
     reduce (obj, ungroup = true) {
 
         let isNaked = Object.keys(obj).length == 0;
@@ -2562,7 +2550,7 @@ class dataset extends grouping {
         hashKeySelector = hashKeySelector || (x => x);
         
         let getFirstBucketItem = sorter
-            ? (bucket) => new dataset(bucket).sort(sorter)[0]
+            ? (bucket) => new dataset(bucket).sort(sorter).data.next().value
             : (bucket) => bucket[0];
             
 
@@ -2599,7 +2587,7 @@ class dataset extends grouping {
             rightHasher = rightHasher || hasher || leftHasher;
             leftSingular = leftSingular || singular || false;
             rightSingular = rightSingular || singular || false;
-            matcher = matcher == '=' ? (l,r) => eq(l,r) : matcher;
+            matcher = matcher == '=' ? (l,r) => eq(l,r) : matcher || ((l,r) => true);
 
             if (!['hash', 'loop'].includes(algo) && algo != undefined) 
                 throw `algo '${algo}' is not recognized.  Pass 'hash', 'loop', or undefined.`;
@@ -2684,10 +2672,15 @@ class dataset extends grouping {
         return new matrix(this.data, selector, rowNames);
     }
 
-    with (func) {
-        let arr = recurseToArray(x => x, this.data, this.groupLevel);
-        func(arr);
-        this.data = arr;
+    group (func) {
+        super.group(func);
+        return this;
+    }
+
+    ungroup (mapper) {
+        if (mapper)
+            this.map(mapper);
+        super.ungroup();
         return this;
     }
 
@@ -2697,20 +2690,14 @@ class dataset extends grouping {
         return this.arrayify();
     }
 
-    toJsonString(func) {
-        let getted = this.get(func);
-        return JSON.stringify(getted);
+    toJsonString(replacer, space) {
+        let getted = this.get();
+        return JSON.stringify(getted, replacer, space);
     }
 
 }
 
-function _(obj) { 
-    if (!isIterable(obj))
-        throw 'Object instantiating fluent_data must be iterable';
-    return obj instanceof dataset ? obj : new dataset(obj);
-}
-
-_.fromJson = function(json) {
+dataset.fromJson = function(json) {
 
     let groupify = (arrayified) => {
         let parsed = isString(arrayified) 
@@ -2728,13 +2715,20 @@ _.fromJson = function(json) {
 
 };
 
+function _(obj) { 
+    if (!isIterable(obj))
+        throw 'Object instantiating fluent_data must be iterable';
+    return obj instanceof dataset ? obj : new dataset(obj);
+}
+
+_.dataset = dataset;
 _.matrix = matrix;
 
 _.round = round;
 
 _.first = rowFunc =>
     data => {
-        for (let row of data )
+        for (let row of data)
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
                 return rowFunc(row);
         return null;
@@ -2742,10 +2736,13 @@ _.first = rowFunc =>
 
 _.last = rowFunc => 
     data => {
-        for (let i = data.length - 1; i >= 0; i++)
-            if (rowFunc(data[i]) !== undefined && rowFunc(data[i]) !== null)
-                return rowFunc(data[i]);
-        return null;
+        let last = null;
+        for (let row of data) {
+            let val = rowFunc(row);
+            if (val !== undefined && val !== null)
+                last = val;
+        }
+        return last;
     };
 
 _.sum = (rowFunc, options) => 
@@ -3030,7 +3027,7 @@ _.regress = (ivSelector, dvSelector, options) =>
 
     };
 
-_.covMatrix = (selector, isSample = true) =>
+_.covMatrix = (selector, isSample = false) =>
     data => {
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx

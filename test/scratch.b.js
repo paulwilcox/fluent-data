@@ -1,15 +1,5 @@
 async function test() {
 
-    let students = $$([
-        { id: 'a', name: 'Andrea',  topic: 'Abelard',   bias: 'analytic'    },
-        { id: 'b', name: 'Brielle', topic: 'Bentham',   bias: 'buddhist'    }
-    ]);
-
-    let teachers = $$([
-        { id: 'b', name: 'Brielle', topic: 'bijection', school: 'Berkley'   },
-        { id: 'c', name: 'Chloe',   topic: 'change',    school: 'Cambridge' }
-    ]);
-
     let purchases = $$([
         { customerId: 'b', books: 4, time: 16.68, price: 560, rating: 73 },
         { customerId: 'a', books: 1, time: 11.50, price:  80, rating: 95 },
@@ -21,17 +11,14 @@ async function test() {
         { customerId: 'b', books: 5, time: 23.77, price: 589, rating: 31 }
     ]);
     
+    let div = document.createElement('div');
+    div.id = 'printer';
+    document.body.appendChild(div);
+
     purchases
-        .group(p => p.customerId)
-        .group(p => [p.customerId, p.books > 4])
-        .log(
-            null,
-            'dataset',
-            row => $$.round(row,0) 
-        );    
+        .matrix('books, time, price, rating', 'cutomerId')
+        .log('#printer', 'matrix');
 
 }
-
-
 
 

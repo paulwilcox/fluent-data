@@ -142,7 +142,7 @@ export default class matrix {
     log (
         element = null, 
         caption = null, 
-        func = x => x, 
+        mapper = x => x, 
         limit = 50
     ) {
 
@@ -157,8 +157,16 @@ export default class matrix {
             printable.push(row);
         }
 
-        let printed = g.tableToString(printable, caption, func, limit);
-        console.log(printed);
+        let printed = g.tableToString(printable, caption, mapper, limit);
+        
+        if (!element)
+            console.log(printed);
+        else {
+            let div = document.createElement('div');
+            div.style = 'white-space:pre; font-family:consolas; font-size:x-small'
+            div.innerHTML = printed;
+            document.querySelector(element).appendChild(div);            
+        }
 
         return this;
 
