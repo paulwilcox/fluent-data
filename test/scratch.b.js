@@ -1,4 +1,3 @@
-import * as g from '../src/general.js';
 async function test() {
 
     let students = $$([
@@ -22,14 +21,13 @@ async function test() {
         { customerId: 'b', books: 5, time: 23.77, price: 589, rating: 31 }
     ]);
     
-console.log($$.round({ five: 5.5555 }, 3))
-return;
     purchases
-        .matrix('books, price, time', 'customerId')
+        .group(p => p.customerId)
+        .group(p => [p.customerId, p.books > 4])
         .log(
             null,
-            'matrix',
-            row => g.round(row,0) 
+            'dataset',
+            row => $$.round(row,0) 
         );    
 
 }

@@ -139,34 +139,27 @@ export default class matrix {
         return mx;
     }
 
-    log(roundDigits) {
+    log (
+        element = null, 
+        caption = null, 
+        func = x => x, 
+        limit = 50
+    ) {
 
-        let clone = roundDigits === undefined ? this.clone() : this.round(roundDigits);
-        let printable = {};
-
-        // if the keyName is a repeat in keyHolder, add a ' (#)' after it.
-        let addNumSuffix = (keyHolder, keyName) => {
-            if(!Object.keys(keyHolder).includes(keyName))
-                return keyName;
-            let num = parseInt(keyName.match(/(?<= \()\d+(?=\)$)/));
-            if (isNaN(num)) 
-                num = 1;
-            return keyName.replace(/ \(\d+\)$/, '') + ` (${num + 1})`;
-        }
+        let clone = this.clone();
+        let printable = [];
         
         for (let r in clone.data) {
-            let obj = {};
-            for (let c in clone.data[r]) {
-                let colName = clone.colNames ? clone.colNames[c] : c;
-                colName = addNumSuffix(obj, colName);
-                obj[colName] = clone.data[r][c];
-            }
-            let rowName = clone.rowNames ? clone.rowNames[r] : r;
-            rowName = addNumSuffix(printable, rowName);    
-            printable[rowName] = obj;
+            let row = {};
+            row[''] = [clone.rowNames[r] || r]; 
+            for (let c in clone.data[r]) 
+                row[clone.colNames[c] || c] = clone.data[r][c];
+            printable.push(row);
         }
 
-        console.table(printable);
+        let printed = g.tableToString(printable, caption, func, limit);
+        console.log(printed);
+
         return this;
 
     }

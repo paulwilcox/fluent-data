@@ -222,6 +222,7 @@ export let PromiseAllObjectEntries = obj =>
 
 export function tableToString (
     data, 
+    caption,
     mapper, 
     limit = 50, 
     headers = true
@@ -319,7 +320,8 @@ export function tableToString (
     let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl
     let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
 
-    return topBorder +
+    return (caption ? (caption+nl) : '') +
+        topBorder +
         (headers ? headerRow : '') + 
         (headers ? headerDivider : '') +
         dataRows +

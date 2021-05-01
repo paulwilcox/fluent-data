@@ -10,7 +10,6 @@ export default function _(obj) {
 
 _.dataset = dataset;
 _.matrix = matrix;
-
 _.round = g.round;
 
 _.first = rowFunc =>

@@ -97,20 +97,20 @@ export default class grouping {
         limit = 50
     ) {
 
+        let stringified;
         caption = 
-            this.parent === null && caption ? `${caption}\r\n`
-            : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
+            this.parent === null && caption ? `${caption}`
+            : this.parent !== null ? `key: ${JSON.stringify(this.key)}`
             : ``;
-        let stringified = caption;
 
         if (this.children.length == 0) 
-            stringified += !g.isIterable(this.data)
-                ? JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : g.tableToString([...this.data], func, limit, true);
+            stringified = !g.isIterable(this.data)
+                ? caption + JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : g.tableToString([...this.data], caption, func, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
-            stringified += g.tableToString(stringifieds, x => x, limit, false)
+            stringified = g.tableToString(stringifieds, caption, x => x, limit, false)
         }
 
         if (this.parent !== null) 
