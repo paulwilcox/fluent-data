@@ -151,9 +151,12 @@ export default class matrix {
         
         for (let r in clone.data) {
             let row = {};
-            row[''] = [clone.rowNames[r] || r]; 
-            for (let c in clone.data[r]) 
-                row[clone.colNames[c] || c] = clone.data[r][c];
+            let rowName = clone.rowNames ? (clone.rowNames[r] || `r${r}`) : `r${r}`;
+            row[''] = [rowName]; 
+            for (let c in clone.data[r]) {
+                let colName = clone.colNames ? (clone.colNames[c] || `c${c}`) : `c${c}`;
+                row[colName] = clone.data[r][c];
+            }
             printable.push(row);
         }
 
@@ -1458,53 +1461,4 @@ matrix.randomizer = class {
         }
         return new matrix(result);
     }
-}
-
-matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
-
-    if (objectTitle)
-        console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
-
-    let nonTables = {};
-    let tables = [];
-
-    if (g.isString(obj)) 
-        obj = { objectIsAString: obj };
-
-    for (let key of Object.keys(obj)) 
-        if(obj[key] == null || obj[key] == undefined) {
-            // do nothing
-        }
-        else if(obj[key] instanceof matrix) {
-            tables.push({
-                titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
-                tableFunc: () => obj[key].log(roundDigits) 
-            })
-        }
-        else if (Array.isArray(obj[key]) || typeof obj[key] === 'object') {
-            tables.push({
-                titleFunc: () => console.log('%c Array/Object For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
-                tableFunc: () => console.table(obj[key])
-            })
-        } 
-        else if (typeof obj[key] !== 'function') {
-            nonTables[key] = obj[key];
-        }
-    
-    if (Object.keys(nonTables).length == 1 && nonTables.objectIsAString != undefined) {
-        console.log(nonTables.objectIsAString);
-    }
-    else if (Object.keys(nonTables).length > 0) {
-        console.log('%c Primitives:', 'color:green;font-weight:bold;margin-top:10px');
-        console.table(nonTables);
-    }
-
-    for(let table of tables) {
-        table.titleFunc();
-        table.tableFunc();
-    }
-
-    if (objectTitle)
-        console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
-
 }
