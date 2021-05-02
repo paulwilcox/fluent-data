@@ -1,6 +1,6 @@
 {
   "name": "fluent-data",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, mergings, reducings (aggregations), and similar operations on datast style objects.  Do matrix operations.  Friendly fluent/chain syntax.",
   "main": "./dist/fluent-data.server.js",
   "files": [
