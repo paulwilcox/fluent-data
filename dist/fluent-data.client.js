@@ -8,7 +8,25 @@
  */
 
 // e.g. round(5.239, 2) is 5.24
-let round = (term, digits) => Math.round(term * 10 ** digits) / 10 ** digits;
+let round = (term, digits) => {
+
+    let val = Math.round(term * 10 ** digits) / 10 ** digits;
+
+    if (!isNaN(val))
+        return val;
+    if (typeof(term) != 'object')
+        return val;
+
+    for(let key of Object.keys(term)) {
+        let type = typeof(term[key]);
+        term[key] = (type === 'number' || type == 'object') 
+            ? round(term[key], digits)
+            : term[key];
+    }
+
+    return term;
+
+};
 
 // e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
 let roundToMultiple = (term, multiple) => {
@@ -50,16 +68,6 @@ let isFunction = input =>
 let isIterable = (input, includeStrings = false) => 
     !includeStrings && isString(includeStrings) ? false
     : Symbol.iterator in Object(input);
-
-function RoundObjectNumbers (obj, precision) {
-    for(let key of Object.keys(obj)) {
-        let type = typeof(obj[key]);
-        if (type === 'number') 
-            obj[key] = round(obj[key], precision);
-        else if (type === 'object') 
-            RoundObjectNumbers(obj[key], precision);
-    }
-}
 
 let noUndefined = obj => {
     
@@ -103,6 +111,7 @@ let eq = (obj1, obj2) => {
 
 function tableToString (
     data, 
+    caption,
     mapper, 
     limit = 50, 
     headers = true
@@ -200,7 +209,8 @@ function tableToString (
     let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl;
     let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
 
-    return topBorder +
+    return (caption ? (caption+nl) : '') +
+        topBorder +
         (headers ? headerRow : '') + 
         (headers ? headerDivider : '') +
         dataRows +
@@ -703,11 +713,10 @@ class matrix {
         return mx;
     }
 
-    // TODO: make this work with g.tableToString, as console.table sucks
     log (
         element = null, 
         caption = null, 
-        func = x => x, 
+        mapper = x => x, 
         limit = 50
     ) {
 
@@ -716,13 +725,26 @@ class matrix {
         
         for (let r in clone.data) {
             let row = {};
-            row[''] = [clone.rowNames[r] || r]; 
-            for (let c in clone.data[r]) 
-                row[clone.colNames[c] || c] = clone.data[r][c];
+            let rowName = clone.rowNames ? (clone.rowNames[r] || `r${r}`) : `r${r}`;
+            row[''] = [rowName]; 
+            for (let c in clone.data[r]) {
+                let colName = clone.colNames ? (clone.colNames[c] || `c${c}`) : `c${c}`;
+                row[colName] = clone.data[r][c];
+            }
             printable.push(row);
         }
 
-        console.log(tableToString(printable));
+        let printed = tableToString(printable, caption, mapper, limit);
+        
+        if (!element)
+            console.log(printed);
+        else {
+            let div = document.createElement('div');
+            div.style = 'white-space:pre; font-family:consolas; font-size:x-small';
+            div.innerHTML = printed;
+            document.querySelector(element).appendChild(div);            
+        }
+
         return this;
 
     }
@@ -2015,53 +2037,6 @@ matrix.randomizer = class {
     }
 };
 
-matrix.logMany = (obj, objectTitle = 'object', roundDigits) => {
-
-    if (objectTitle)
-        console.log(`%c ---------- printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
-
-    let nonTables = {};
-    let tables = [];
-
-    if (isString(obj)) 
-        obj = { objectIsAString: obj };
-
-    for (let key of Object.keys(obj)) 
-        if(obj[key] == null || obj[key] == undefined) ;
-        else if(obj[key] instanceof matrix) {
-            tables.push({
-                titleFunc: () => console.log('%c Matrix For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
-                tableFunc: () => obj[key].log(roundDigits) 
-            });
-        }
-        else if (Array.isArray(obj[key]) || typeof obj[key] === 'object') {
-            tables.push({
-                titleFunc: () => console.log('%c Array/Object For: ' + key, 'color:orange;font-weight:bold;margin-top:10px'),
-                tableFunc: () => console.table(obj[key])
-            });
-        } 
-        else if (typeof obj[key] !== 'function') {
-            nonTables[key] = obj[key];
-        }
-    
-    if (Object.keys(nonTables).length == 1 && nonTables.objectIsAString != undefined) {
-        console.log(nonTables.objectIsAString);
-    }
-    else if (Object.keys(nonTables).length > 0) {
-        console.log('%c Primitives:', 'color:green;font-weight:bold;margin-top:10px');
-        console.table(nonTables);
-    }
-
-    for(let table of tables) {
-        table.titleFunc();
-        table.tableFunc();
-    }
-
-    if (objectTitle)
-        console.log(`%c ---------- done printing ${objectTitle} ----------`, 'color:red;margin-top:10px');
-
-};
-
 class parser {
 
     // Parse function into argument names and body
@@ -2421,35 +2396,42 @@ class grouping {
 
     }
 
-    // TODO: Work with html (element != null), and 
-    // with grouping.data = non-iterable-object
+    // TODO: work with grouping.data = non-iterable-object
     log (
         element = null, 
         caption = null,
-        func = x => x, 
+        mapper = x => x, 
         limit = 50
     ) {
 
+        let stringified;
         caption = 
-            this.parent === null && caption ? `${caption}\r\n`
-            : this.parent !== null ? `key: ${JSON.stringify(this.key)}\r\n`
+            this.parent === null && caption ? `${caption}`
+            : this.parent !== null ? `key: ${JSON.stringify(this.key)}`
             : ``;
-        let stringified = caption;
 
         if (this.children.length == 0) 
-            stringified += !isIterable(this.data)
-                ? JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : tableToString([...this.data], func, limit, true);
+            stringified = !isIterable(this.data)
+                ? caption + JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : tableToString([...this.data], caption, mapper, limit, true);
 
         else {
-            let stringifieds = this.children.map(child => child.log(element, caption, func, limit)); 
-            stringified += tableToString(stringifieds, x => x, limit, false);
+            let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
+            stringified = tableToString(stringifieds, caption, x => x, limit, false);
         }
 
         if (this.parent !== null) 
             return { stringified };
-        else if (element == null) 
+        else if (!element) 
             console.log(stringified);
+        else {
+            let div = document.createElement('div');
+            div.style = 'white-space:pre; font-family:consolas; font-size:x-small';
+            div.innerHTML = stringified;
+            document.querySelector(element).appendChild(div);
+        }
+
+        return this;
 
     }    
 
@@ -2723,7 +2705,6 @@ function _(obj) {
 
 _.dataset = dataset;
 _.matrix = matrix;
-
 _.round = round;
 
 _.first = rowFunc =>
@@ -3014,8 +2995,8 @@ _.regress = (ivSelector, dvSelector, options) =>
                 Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
             if (options.maxDigits) {
-                RoundObjectNumbers(results.coefficients, options.maxDigits);
-                RoundObjectNumbers(results.model, options.maxDigits);
+                results.coefficients = round(results.coefficients, options.maxDigits);
+                results.model = round(results.model, options.maxDigits);
                 for(let row of results.data) {
                     row.actual = round(row.actual, options.maxDigits);
                     row.estimate = round(row.estimate, options.maxDigits);

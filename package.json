@@ -23,6 +23,8 @@
     "filter",
     "merge",
     "join",
+    "left-join",
+    "joinLeft",
     "fold",
     "reduce",
     "aggregate",

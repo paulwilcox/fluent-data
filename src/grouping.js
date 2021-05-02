@@ -88,8 +88,7 @@ export default class grouping {
 
     }
 
-    // TODO: Work with html (element != null), and 
-    // with grouping.data = non-iterable-object
+    // TODO: work with grouping.data = non-iterable-object
     log (
         element = null, 
         caption = null,
@@ -123,6 +122,8 @@ export default class grouping {
             div.innerHTML = stringified
             document.querySelector(element).appendChild(div);
         }
+
+        return this;
 
     }    
 
