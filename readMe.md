@@ -1,16 +1,26 @@
-## Announcement(s)
-
-Version 3 introduces a matrix object with a lot of functionality.
-
-Coming soon, factor analysis.  Probable renaming of the library.  Videos.
 
 ## Summary 
 
-Manipulate datasets and matricies and perform statistics by chaining methods.  Datasets have the capacity capacity to map, filter, sort, group, reduce, and merge data.  Built in reducers includes multiple regression.  Matrices permit many operations, including matrix algebra, decompositions, eigen calculations, apply capacity, and more.
+This library allows you to work with data structured as a table or as a matrix and provides 
+you with many of the methods you would expect when working with such things.
 
-Dataset methods work like many of the methods on `Array.prototype`.  However, fluent-data makes it much easier to work with arrays when their elements are objects.  It also includes methods simply not available on `Array.prototype`.   
+A `dataset` represents a collection of object-rows.  Among other capacities, here you have the
+ability to map, filter, sort, group, reduce, and join.  These methods can seem similar to 
+those found on `Array`.  However, they are designed to work with objects as rows.  Furthermore,
+some SQL-like capacity (e.g. left join, exists) and deeper statistics (e.g. multiple regression) 
+are available that you just cannot get in vanilla javacript.
 
-`fluent-data` syntax is similar to LINQ in C#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
+A `matrix` is a rectangular collection of numbers on which particular mathematical operations 
+are defined.  This library offers many of the expected operations of matrix algebra.  This 
+includes matrix multiplication, addition, various methods of 'apply' functionality, varous 
+decompositions, pseudoinvering, and production of eigen values and vectors.   
+
+Click on the links below to see more information in each area:
+
+- [dataset](https://github.com/paulwilcox/fluent-data/wiki/Dataset) methods and examples
+- [matrix](https://github.com/paulwilcox/fluent-data/wiki/Matrix) methods and examples
+- [changelog](https://github.com/paulwilcox/fluent-data/wiki/changelog)
+
 
 ## Getting Started
 
@@ -53,19 +63,17 @@ Consider the following arrays:
         { customer: 1, speed: 1, rating: 94, storeId: 2 }
     ];
 
-
 [--]: # ()
 
-The following exmaple converts the to dataset and uses many of the methods available.
+The following example converts the to dataset and uses many of the methods available.
 
 [javascript]: # (log=true,setup=import)
 
     let $$ = require('./dist/fluent-data.server.js');
 
-    let result = 
-        $$(purchases)
+    $$(purchases)
         .filter(p => !p.closed)
-        .merge(customers, (p,c) => p.customer == c.id, 'both null') // inner join
+        .joinLeft(customers, (p,c) => p.customer == c.id) 
         .group(p => [p.customer, p.storeId]) 
         .reduce({
             customer: $$.first(p => p.name),
@@ -76,16 +84,12 @@ The following exmaple converts the to dataset and uses many of the methods avail
             correlation: $$.cor(p => [p.speed, p.rating]) 
             // other reducers, such as multiple regression, are built in!
         })
-        .sort(p => [p.customer, -p.rating])
-        .get(p => ({
-            ...p, 
-            speed: $$.round(p.speed, 2),
-            rating: $$.round(p.rating, 2),
-            orders: undefined // won't show in final results
-        }));
+        .sort(p => [p.customer, -p.rating]) 
+        .log(null, 'purchases:', 
+            p => $$.round({ ...p, orders: undefined}, 3)
+        );
 
-    console.table(result);
-
+    // use 'get' as opposed to 'log' to assign to a variable
 
 [--]: # ()
 
@@ -93,13 +97,14 @@ This results in three rows for analysis:
 
 [javascript]: # (output=true)
 
-    ┌─────────┬──────────┬───────┬───────┬────────┬─────────────────────┐
-    │ (index) │ customer │ store │ speed │ rating │     correlation     │
-    ├─────────┼──────────┼───────┼───────┼────────┼─────────────────────┤
-    │    0    │ 'Alice'  │   2   │ 1.33  │ 94.67  │        -0.5         │
-    │    1    │ 'Alice'  │   1   │ 12.33 │   60   │ -0.8315708645692353 │
-    │    2    │ 'Benny'  │   1   │ 8.33  │ 75.33  │ -0.9853292781642932 │
-    └─────────┴──────────┴───────┴───────┴────────┴─────────────────────┘
+    purchases:
+    ┌──────────┬───────┬────────┬────────┬─────────────┐
+    │ customer │ store │ speed  │ rating │ correlation │
+    ├──────────┼───────┼────────┼────────┼─────────────┤
+    │ Alice    │ 2     │ 1.333  │ 94.667 │ -0.5        │
+    │ Alice    │ 1     │ 12.333 │ 60     │ -0.832      │
+    │ Benny    │ 1     │ 8.333  │ 75.333 │ -0.985      │
+    └──────────┴───────┴────────┴────────┴─────────────┘
 
 [--]: # ()
 
@@ -127,7 +132,6 @@ Consider the following arrays, converted to matricies:
         [ 0, Math.pow(3,0.5) / 2 ]
     ]);
 
-
 [--]: # ()
 
 The following exmaple transforms the community data so that the new 
@@ -138,14 +142,13 @@ Then it analyzes the eigen properties of the transformer matrix.
 
     let eigen = transformer.eigen();
     
-    console.log('Equilateralized Community:');
-    community.transform(transformer).log(8);
+    community
+        .transform(transformer)
+        .log(null, 'Equilateralized Community:', row => $$.round(row,8));
     
     console.log('\nTransformer Eigenvalues:', eigen.values);
         
-    console.log('\nTransformer Eigenvectors:');
-    eigen.vectors.log(8); 
-
+    eigen.vectors.log(null, '\nTransformer Eigenvectors:', row => $$.round(row,8)); 
 
 [--]: # ()
 
@@ -153,59 +156,65 @@ Then it analyzes the eigen properties of the transformer matrix.
 
     Equilateralized Community:
     ┌───────────────────┬────┬─────────────┐
-    │      (index)      │ x  │      y      │
+    │                   │ x  │ y           │
     ├───────────────────┼────┼─────────────┤
-    │  Applewood Park   │ 0  │      0      │
-    │ Orangewood School │ 10 │      0      │
-    │  Kiwitown Market  │ 5  │ 8.66025404  │
-    │    The Millers    │ -5 │      0      │
-    │    The Romeros    │ -2 │ -4.33012702 │
-    │     The Lees      │ 7  │ 4.33012702  │
-    │    The Keitas     │ 5  │      0      │
-    │   The Lebedevs    │ 17 │ 4.33012702  │
+    │ Applewood Park    │ 0  │ 0           │
+    │ Orangewood School │ 10 │ 0           │
+    │ Kiwitown Market   │ 5  │ 8.66025404  │
+    │ The Millers       │ -5 │ 0           │
+    │ The Romeros       │ -2 │ -4.33012702 │
+    │ The Lees          │ 7  │ 4.33012702  │
+    │ The Keitas        │ 5  │ 0           │
+    │ The Lebedevs      │ 17 │ 4.33012702  │
     └───────────────────┴────┴─────────────┘
     
     Transformer Eigenvalues: [ 1, 0.8660254 ]
     
     Transformer Eigenvectors:
-    ┌─────────┬────┬─────────────┐
-    │ (index) │ c0 │     c1      │
-    ├─────────┼────┼─────────────┤
-    │   r0    │ 1  │ -0.94822626 │
-    │   r1    │ 0  │ 0.31759558  │
-    └─────────┴────┴─────────────┘
+    ┌────┬────┬─────────────┐
+    │    │ c0 │ c1          │
+    ├────┼────┼─────────────┤
+    │ r0 │ 1  │ -0.94822626 │
+    │ r1 │ 0  │ 0.31759558  │
+    └────┴────┴─────────────┘
 
 [--]: # ()
 
-## Operations and Features
+<!--
 
-The following operations are available on a fluent-data dataset:
+`fluent-data` syntax is similar to LINQ in C#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
-* [get](https://github.com/paulwilcox/fluent-data/wiki/Map-and-Get#Getting): Returns the dataset as an array.
-* [map](https://github.com/paulwilcox/fluent-data/wiki/Map-and-Get#Mapping): Replaces each row in a dataset with the result of 
-  a function called on each row. 
-* [filter](https://github.com/paulwilcox/fluent-data/wiki/Filtering): Chooses particular rows from a dataset. 
-* [sort](https://github.com/paulwilcox/fluent-data/wiki/Sorting): Sorts a dataset.  
-* [distinct](https://github.com/paulwilcox/fluent-data/wiki/Distinct): Eliminates duplicates in a dataset.
-* [merge](https://github.com/paulwilcox/fluent-data/wiki/Merging): Brings in values from another set of data.  Can be done 
-  horizontally (such as with a join) or vertically (such as with an insert).
-* [group](https://github.com/paulwilcox/fluent-data/wiki/Grouping): Group rows of a dataset into nested datasets.  Or reverse 
-  this with [ungroup](https://github.com/paulwilcox/fluent-data/wiki/Grouping#Ungrouping-Rows)
-* [reduce](https://github.com/paulwilcox/fluent-data/wiki/Reducing): Aggregate a dataset.  Create custom aggregators as well. 
-  Built in reducers allow some deeper [statistics](https://github.com/paulwilcox/fluent-data/wiki/Statistics), such as multiple 
-  regression.
-* [with](https://github.com/paulwilcox/fluent-data/wiki/With): Work with a dataset without breaking the fluency/chaining
-  syntax. 
 
-The operations available on a Matrix are perhaps too many to list here.  Best
-to visit the page dedicated to that object as a whole:
+## Contrasts
 
-* [matrix](https://github.com/paulwilcox/fluent-data/wiki/Matrix): A class representing a matrix, complete with many matrix
-  calculations.
+<details>
+<summary>Comparison to LINQ in C#</summary>:
 
-Click on the links to go to the wiki and learn more about them.
+`group()` is similar to C#'s `IEnumerable.GroupBy`, but has significant differences.  
+The following code is how you would do something similar with LINQ.  Notice the need
+for a `ThenBy()` because of the lack of any easy way to compare arrays for equality
+in c#.  Also notice the need for a nesting of LINQ functions to produce the filtering
+in each group.  Fluent-data doses this automatically, with any level of groupings.
 
-To see possible directions for this library, go to [The-Future](https://github.com/paulwilcox/fluent-data/wiki/The-Future).
+    purchases
+        .Select(p => new {
+            p.customerId,
+            p.books,
+            p.time,
+            p.price,
+            p.rating,
+            flag: p.rating < 60 ? 'bad' : p.rating < 90 ? 'okay' : 'good'
+        })    
+        .GroupBy(p => p.CustomerId)
+        .ThenBy(p => p.flag)
+        .Select(grp => grp.Where(p => p.rating > 50))
+        .ToArray();
+
+</details>
+
+-->
+
+
 
 
 
