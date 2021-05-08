@@ -865,13 +865,15 @@ export default class matrix {
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
-            showObjects: (round) => matrix.logMany({ 
-                iterations, 
-                A: this, 
-                L, 
-                D, 
-                R
-            }, 'unconverged', round)
+            showObjects: (round) => {
+                let logMx = (mx, name) => mx.log(null, name, row => g.round(row, 8));
+                console.log('unconverged');
+                console.log('iterations:', iterations); 
+                logMx(this, 'A'); 
+                logMx(L, 'L');
+                logMx(D, 'D'); 
+                logMx(R, 'R');
+            }
         };
 
     }
@@ -1098,7 +1100,7 @@ export default class matrix {
 
         let n = A.data.length;
         let ei = matrix.identity(n).multiply(eigenvalue);
-        let M = A.subtract(ei).pseudoInverse();
+        let M = A.subtract(ei).pseudoInverse(threshold, maxIterations);
 
         let value = null;
         let vector = M.data.map(row => 1);
@@ -1461,4 +1463,81 @@ matrix.randomizer = class {
         }
         return new matrix(result);
     }
+}
+
+class convergenceTracker {
+
+    constructor (
+        errorMin,
+        convergenceFunc = null 
+    ) {
+
+        this.errorMin = errorMin;
+        this.convergenceFunc = convergenceFunc || ((a,b) => Math.abs(a-b) <= this.errorMin);
+        this.previousValue; 
+
+        this.timeStart = Date.now();
+        this.timeEnd;
+        this.timeMax;
+
+        this.iterations = [0];
+        this.iterationsMax;
+        this.iterationsPerRunMax;
+
+    }
+
+    get currentIterations () {
+        return this.iterations[this.iterations.length - 1];
+    }
+
+    set currentIterations (val) {
+        this.iterations[this.iterations.length - 1] = val;
+    }
+
+    setMaxTime(seconds) {
+        this.timeMax = seconds;
+        return this;
+    }
+
+    setMaxIterations(max,maxPerRun) {
+        this.iterationsMax = max;
+        this.iterationsPerRunMax = maxPerRun
+        return this;
+    }
+
+    iterate (newRun = false) {
+
+        if (newRun)
+            this.iterations.push(0);
+
+        this.currentIterations = this.currentIterations + 1;
+        this.timeEnd = Date.now();
+
+        if (this.iterationsMax !== undefined && Math.sum(this.iterations) > this.iterationsMax)
+            throw `'iterationsMax' limit of ${this.iterationsMax} reached without convergence.`;
+        if (this.iterationsPerRunMax !== undefined && this.currentIterations > this.iterationsPerRunMax)
+            throw `'iterationPerRunMax' limit of ${this.iterationsPerRunMax} reached without convergence.`;
+        if (this.timeMax !== undefined && (this.timeEnd - this.timeStart) / 1000 > this.timeMax)
+            throw `'timeMax' limit of ${this.timeMax} seconds reached without convergence.`;
+
+        return true;
+
+    }
+
+    // If one value is passed, a system of checking a current value 
+    // to a stored previous value is made.
+    // If two values are passed, they're compared directly.
+    checkConvergence(...args) {
+
+        if (args.length == 2)
+            return this.convergenceFunc(args[0], args[1]);
+        else if (args.length == 1) {
+            let result = this.convergenceFunc(this.previousValue, this.args[0]);
+            this.previousValue = args[0];
+            return result;
+        }
+        else throw 'Invalid number of arguments passed to checkConvergence().';
+
+    }
+
 }

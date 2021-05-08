@@ -1441,13 +1441,15 @@ class matrix {
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
-            showObjects: (round) => matrix.logMany({ 
-                iterations, 
-                A: this, 
-                L, 
-                D, 
-                R
-            }, 'unconverged', round)
+            showObjects: (round$1) => {
+                let logMx = (mx, name) => mx.log(null, name, row => round(row, 8));
+                console.log('unconverged');
+                console.log('iterations:', iterations); 
+                logMx(this, 'A'); 
+                logMx(L, 'L');
+                logMx(D, 'D'); 
+                logMx(R, 'R');
+            }
         };
 
     }
@@ -1674,7 +1676,7 @@ class matrix {
 
         let n = A.data.length;
         let ei = matrix.identity(n).multiply(eigenvalue);
-        let M = A.subtract(ei).pseudoInverse();
+        let M = A.subtract(ei).pseudoInverse(threshold, maxIterations);
 
         let value = null;
         let vector = M.data.map(row => 1);
