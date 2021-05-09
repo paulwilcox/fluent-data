@@ -6,7 +6,7 @@ export default class matrix {
         data, 
         selector = arrayRow => arrayRow, // csv of prop names or func returning array of numbers
         rowNames // string of a prop name or func identifiying the property representing the name
-    ) {
+    ) {                
 
         this.colNames = null;
         this.rowNames = null;
@@ -16,7 +16,9 @@ export default class matrix {
             this.data = [];
             return;
         }
+
         
+    
         // if selector is csv, split and turn it into a property selecctor
         if (g.isString(selector)) {
             this.colNames = selector.split(',').map(name => name.trim());
@@ -34,8 +36,8 @@ export default class matrix {
             this.colNames = this.data.length == 0 ? null : this.data[0].map((v,ix) => `c${ix}`);
         
         if (this.rowNames == null)
-            this.rowNames = this.data.map((v,ix) => `r${ix}`);
-                        
+            this.rowNames = this.data.map((v,ix) => `r${ix}`);                        
+
         this.validate();
 
     }

@@ -1,6 +1,9 @@
 // e.g. round(5.239, 2) is 5.24
 export let round = (term, digits) => {
 
+    if (term === null || term === undefined)
+        return term;
+
     let val = Math.round(term * 10 ** digits) / 10 ** digits;
 
     if (!isNaN(val))
@@ -225,7 +228,8 @@ export function tableToString (
     caption,
     mapper, 
     limit = 50, 
-    headers = true
+    headers = true,
+    preferEmptyString = true // if false, '<null>' and '<undefined>' can show
 ) {
 
     mapper = mapper || (x => x);
@@ -238,8 +242,8 @@ export function tableToString (
     }
 
     let safeToString = (val) =>  
-          val === null ? '<null>' 
-        : val === undefined ? '<undefined>'
+          val === null ? (preferEmptyString ? '' : '<null>') 
+        : val === undefined ? (preferEmptyString ? '' : '<undefined>')
         : val.toString();
 
     // Initially, values are multi-line.  Even if just 
@@ -266,6 +270,7 @@ export function tableToString (
         for(let i = 0; i < rowProps.length; i++) {
             let prop = rowProps[i];
             let arrayVal = toStringArray(row[prop]);
+
             if (!props.includes(prop)) {
                 props.push(prop);
                 rowVals.push(arrayVal);
