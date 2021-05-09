@@ -11,6 +11,7 @@
         - archive.org/details/ModernFactorAnalysis/page/n323/mode/1up?q=varimax (p304)
 */
 
+const { matrix } = require('../dist/fluent-data.server.js');
 let $$ = require('../dist/fluent-data.server.js')
 test();
 
@@ -61,6 +62,46 @@ function factorize (dataset, explicitVars) {
     let rotationMaxIterations = 1000;
     let rotationAngleThreshold = 1e-8;
 
+    let wrapLoadings = (loads) => {
+
+        let communalities = loads
+            .apply(cell => cell*cell)
+            .reduce('row', (a,b) => a + b)
+            .setColNames('communality');
+        
+        let specificVars = communalities
+            .apply(cell => 1-cell)
+            .setColNames('specificVar');
+        
+        let factorSumSqs = loads
+            .apply(cell => cell*cell)
+            .reduce('col', (a,b) => a + b)
+            .setRowNames('_sumSq');
+
+        factorSumSqs = factorSumSqs
+            .appendCols(
+                factorSumSqs
+                .reduce('all', (a,b) => a + b)
+                .setColNames('communality')
+            )
+            .appendCols(
+                new $$.matrix([['']])
+                .setColNames('specificVar')
+            );
+
+        let printable = loads
+            .appendCols(communalities)
+            .appendCols(specificVars)
+            .appendRows(factorSumSqs);
+
+        return {
+            loadings: loads,
+            communalities,
+            printable
+        };
+
+    }
+
     // Calculate the correlations and get the factors
 
         let correlations = 
@@ -71,8 +112,8 @@ function factorize (dataset, explicitVars) {
         let eigen = correlations.eigen(eigenArgs);    
 
     // Produce the loadings
-        
-        let loadings = [];
+  
+        let loadings = [] ;
         for (let i = 0; i < eigen.values.length; i++) {
             if (maxFactors && i > maxFactors) 
                 continue;
@@ -88,24 +129,18 @@ function factorize (dataset, explicitVars) {
         }
         loadings = new $$.matrix(loadings).transpose();
         loadings.rowNames = correlations.rowNames;
-        loadings.colNames = 
-            loadings.colNames
-            .map((cn,ix) => `factor ${ix}`);
-        
-    // Calculate loading communalities and specific variances
+        loadings.colNames = loadings.colNames.map((cn,ix) => `factor ${ix}`);
 
-        let communalities = loadings
-            .apply(cell => cell*cell)
-            .reduce('row', (a,b) => a + b);
+        let unrotated = wrapLoadings(loadings);
 
     // 'Normalize' the loadings in preparation for rotation
         
-        let comRoots = communalities.apply(cell => Math.pow(cell, 0.5));
-        let rotated = loadings.clone();
+        let comRoots = unrotated.communalities.apply(cell => Math.pow(cell, 0.5));
+        loadings = loadings.clone();
 
-        for(let c = 0; c < rotated.nCol; c++)
-        for(let r = 0; r < rotated.nRow; r++) 
-            rotated.data[r][c] = rotated.data[r][c] / comRoots.data[r][0];    
+        for(let c = 0; c < loadings.nCol; c++)
+        for(let r = 0; r < loadings.nRow; r++) 
+            loadings.data[r][c] = loadings.data[r][c] / comRoots.data[r][0];    
 
     // Rotate 
         
@@ -126,15 +161,15 @@ function factorize (dataset, explicitVars) {
             for(let rightCol = 1; rightCol < loadings.nCol; rightCol++) {
         
                 let subset = 
-                    rotated.get(null,leftCol)
-                    .appendCols(rotated.get(null,rightCol));
+                    loadings.get(null,leftCol)
+                    .appendCols(loadings.get(null,rightCol));
                         
                 let U = mxSquare(subset.get(null,0)).subtract(mxSquare(subset.get(null,1)));
                 let V = mxCellMult(subset.get(null,0), subset.get(null,1)).multiply(2);
 
                 let num = 2 * (loadings.nRow * mxSum(mxCellMult(U,V)) - mxSum(U) * mxSum(V));
-                let den = 
-                    loadings.nRow * mxSum(mxSquare(U).subtract(mxSquare(V))) 
+                let den = loadings.nRow 
+                    * mxSum(mxSquare(U).subtract(mxSquare(V))) 
                     - (Math.pow(mxSum(U),2) - Math.pow(mxSum(V),2));
                 let angle = 0.25 * Math.atan(num/den);
                 
@@ -147,9 +182,9 @@ function factorize (dataset, explicitVars) {
                 ]);
                 subset = subset.multiply(rotator);
 
-                for(let r = 0; r < rotated.nRow; r++) {
-                    rotated.data[r][leftCol] = subset.data[r][0];
-                    rotated.data[r][rightCol] = subset.data[r][1];
+                for(let r = 0; r < loadings.nRow; r++) {
+                    loadings.data[r][leftCol] = subset.data[r][0];
+                    loadings.data[r][rightCol] = subset.data[r][1];
                 }
 
             }
@@ -158,36 +193,19 @@ function factorize (dataset, explicitVars) {
 
     // undo the normalization 
 
-        for(let c = 0; c < rotated.nCol; c++)
-        for(let r = 0; r < rotated.nRow; r++) 
-            rotated.data[r][c] = rotated.data[r][c] * comRoots.data[r][0];        
+        for(let c = 0; c < loadings.nCol; c++)
+        for(let r = 0; r < loadings.nRow; r++) 
+            loadings.data[r][c] = loadings.data[r][c] * comRoots.data[r][0];        
 
-    // append communality info to loadings and rotated matricies
-
-        let comApplier = (loadingMx, coms) => {
-            let specificVars = coms.apply(cell => 1-cell);
-            coms.colNames = ['communality']
-            specificVars.colNames = ['specificVar']
-            loadingMx = loadingMx.appendCols(coms);
-            loadingMx = loadingMx.appendCols(specificVars);   
-            return loadingMx; 
-        }
+        let rotated = wrapLoadings(loadings);
 
     // terminations
-
-        loadings = comApplier(loadings, communalities);
-
-        communalities = rotated
-            .apply(cell => cell*cell)
-            .reduce('row', (a,b) => a + b);
-
-        rotated = comApplier(rotated, communalities);
 
         let log = (data, title) => data.log(null, title, r => $$.round(r,4)); 
         log(correlations, 'correlations');
         console.log('eigenValues:', eigen.values)
-        log(loadings, 'loadings');
-        log(rotated, 'rotated');
+        log(unrotated.printable, 'loadings');
+        log(rotated.printable, 'rotated');
           
 }
 
