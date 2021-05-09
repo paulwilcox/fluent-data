@@ -100,17 +100,14 @@ export default class matrix {
     }
 
     clone() {
-        let result = [];
-        for(let row of this.data) {
-            let newRow = [];
-            for (let cell of row) 
-                newRow.push(cell);
-            result.push(newRow);
-        }
         let mx = new matrix();
-        mx.data = result;
-        mx.colNames = this.colNames;
-        mx.rowNames = this.rowNames;
+        mx.data = [];
+        for(let row of this.data) 
+            mx.data.push([...row]);
+        if (this.colNames)
+            mx.colNames = [...this.colNames];
+        if (this.rowNames)
+            mx.rowNames = [...this.rowNames];
         return mx;
     }
 
@@ -122,7 +119,8 @@ export default class matrix {
             throw `cannot append columns if row counts do not match`;
         for(let r = 0; r < mx.nRow; r++) 
             mx.data[r].push(...other.data[r]);
-        mx.colNames.push(...other.colNames);
+        if (other.colNames)
+            mx.colNames.push(...other.colNames);
         mx.validate();
         return mx;
     }
@@ -134,7 +132,8 @@ export default class matrix {
         if (other.nCol != mx.nCol)
             throw `cannot append rows if column counts do not match`;
         for (let r = 0; r < other.nRow; r++) {
-            mx.rowNames.push(other.rowNames[r]);
+            if (other.rowNames)
+                mx.rowNames.push(other.rowNames[r]);
             mx.data.push(other.data[r]);
         }
         mx.validate();
