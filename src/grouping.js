@@ -109,7 +109,7 @@ export default class grouping {
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
-            stringified = g.tableToString(stringifieds, caption, x => x, limit, false)
+            stringified = g.tableToString(stringifieds, caption, x => x, limit, false);
         }
 
         if (this.parent !== null) 

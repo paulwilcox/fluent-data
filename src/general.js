@@ -229,7 +229,8 @@ export function tableToString (
     mapper, 
     limit = 50, 
     headers = true,
-    preferEmptyString = true // if false, '<null>' and '<undefined>' can show
+    preferEmptyString = true, // if false, '<null>' and '<undefined>' can show
+    bordersBefore = null // [[a,b,c],[x,y,z]], borders before resp. row and col ix posits
 ) {
 
     mapper = mapper || (x => x);
@@ -305,32 +306,72 @@ export function tableToString (
         for(let i = 0; i < props.length; i++) 
             row[i] = safeToString(row[i]).padEnd(lengths[i]);
 
-    let tl = '\u250c';
-    let tm = '\u252c';
-    let tr = '\u2510';
-    let ml = '\u251c';
-    let mm = '\u253c';
-    let mr = '\u2524';
-    let bl = '\u2514';
-    let bm = '\u2534';
-    let br = '\u2518';
-    let hz = '\u2500';
-    let vt = '\u2502';
+    let chr = (notBb,bb) => bordersBefore ? bb : notBb;
+    let tl = chr('\u250c', '\u2554');
+    let tm = chr('\u252c', '\u2564');
+    let tr = chr('\u2510', '\u2557');
+    let ml = chr('\u251c', '\u2560');
+    let mm = chr('\u253c', '\u256a');
+    let mr = chr('\u2524', '\u2563');
+    let bl = chr('\u2514', '\u255a');
+    let bm = chr('\u2534', '\u2567');
+    let br = chr('\u2518', '\u255d');
+    let hz = chr('\u2500', '\u2550');
+    let vl = chr('\u2502', '\u2551');
+    let vm = '\u2502';
+    let vr = chr('\u2502', '\u2551');
     let nl = '\r\n';
     let sp = ' ';
 
     let topBorder = tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl;
-    let headerRow = vt+sp + props.join(sp+vt+sp) + sp+vt+nl;
-    let headerDivider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
-    let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl
+    let headerRow = vl+sp + props.join(sp+vm+sp) + sp+vr+nl;
+    let divider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
+    let dataRows = vals.map(row => vl+sp + row.join(sp+vm+sp) + sp+vr).join(nl) + nl;
     let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
 
-    return (caption ? (caption+nl) : '') +
+    // add special row borders
+    if (bordersBefore && bordersBefore[0]) {
+        dataRows = dataRows.split(nl)
+        let bbRev = [...bordersBefore[0]];
+        bbRev.reverse();
+        for (let bb of bbRev)
+            dataRows.splice(bb, 0, 
+                divider
+                    .replace(new RegExp(hz,'g'), '\u2550')
+                    .replace(nl,'')
+            );
+        dataRows = dataRows.join(nl);
+    }
+
+    let result = 
         topBorder +
         (headers ? headerRow : '') + 
-        (headers ? headerDivider : '') +
+        (headers ? divider : '') +
         dataRows +
         botBorder;
+
+    // add special column borders
+    if (bordersBefore && bordersBefore[1]) {
+
+        bordersBefore[1] = // convert col posit to char posit
+            [...topBorder]
+            .map((chr,ix) => chr == tm ? ix : null)
+            .filter(ix => ix !== null)
+            .filter((x,ix) => bordersBefore[1].includes(ix));
+
+        for(let bb of bordersBefore[1]) {
+            let replacer = (val,rep) => 
+                result.replace(new RegExp(`(?<=^.{${bb}})${val}`,'gm'), rep);
+            result = replacer(vm,vl);
+            result = replacer(tm, '\u2566');
+            result = replacer(mm, '\u256c');
+            result = replacer(bm, '\u2569');
+        }
+
+    }
+
+    result = (caption ? (caption+nl) : '') + result;
+    return result;
 
 }
 

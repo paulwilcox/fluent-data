@@ -11,7 +11,7 @@
         - archive.org/details/ModernFactorAnalysis/page/n323/mode/1up?q=varimax (p304)
 */
 
-const { matrix } = require('../dist/fluent-data.server.js');
+let { matrix } = require('../dist/fluent-data.server.js');
 let $$ = require('../dist/fluent-data.server.js')
 test();
 
@@ -76,28 +76,44 @@ function factorize (dataset, explicitVars) {
         let factorSumSqs = loads
             .apply(cell => cell*cell)
             .reduce('col', (a,b) => a + b)
-            .setRowNames('_sumSq');
+            .setRowNames('sumSqs');
 
-        factorSumSqs = factorSumSqs
-            .appendCols(
-                factorSumSqs
-                .reduce('all', (a,b) => a + b)
-                .setColNames('communality')
-            )
-            .appendCols(
-                new $$.matrix([['']])
-                .setColNames('specificVar')
-            );
+        let sumCom = communalities.reduce('all', (a,b) => a + b).getCell(0,0);
+
+        let sums = Array(loads.nCol).fill(null);
+        sums.push(...[
+            communalities.reduce('all', (a,b) => a + b).getCell(0,0),
+            specificVars.reduce('all', (a,b) => a + b).getCell(0,0)
+        ]);
+        sums = new $$.matrix([sums]).setRowNames('sums');
+        
+        let props = factorSumSqs
+            .apply(sumSq => sumSq / sumCom)
+            .setRowNames('propVars');
 
         let printable = loads
             .appendCols(communalities)
             .appendCols(specificVars)
-            .appendRows(factorSumSqs);
+            .appendRows(sums)
+            .appendRows(factorSumSqs)
+            .appendRows(props);
+
+        let log = (title, roundDigits) => printable.log(
+            null, 
+            title, 
+            r => $$.round(r,roundDigits),
+            50,
+            {
+                headers: true,
+                preferEmptyStrings: true,
+                bordersBefore: [[4],[2]]
+            }
+        ); 
 
         return {
             loadings: loads,
             communalities,
-            printable
+            log
         };
 
     }
@@ -201,11 +217,10 @@ function factorize (dataset, explicitVars) {
 
     // terminations
 
-        let log = (data, title) => data.log(null, title, r => $$.round(r,4)); 
-        log(correlations, 'correlations');
-        console.log('eigenValues:', eigen.values)
-        log(unrotated.printable, 'loadings');
-        log(rotated.printable, 'rotated');
+        //log(correlations, 'correlations');
+        //console.log('eigenValues:', $$.round(eigen.values,4))
+        unrotated.log('loadings', 4);
+        //log(rotated.printable, 'rotated');
           
 }
 

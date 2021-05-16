@@ -115,8 +115,8 @@ export default class matrix {
         let mx = this.clone();
         if (Array.isArray(other)) 
             other = new matrix(other);
-        if (other.nRow != mx.nRow)
-            throw `cannot append columns if row counts do not match`;
+        if (other.nRow > mx.nRow)
+            throw `incoming data has more rows than existing data`;
         for(let r = 0; r < mx.nRow; r++) 
             mx.data[r].push(...other.data[r]);
         if (other.colNames)
@@ -129,8 +129,8 @@ export default class matrix {
         let mx = this.clone();
         if (Array.isArray(other))
             other = new matrix(other);
-        if (other.nCol != mx.nCol)
-            throw `cannot append rows if column counts do not match`;
+        if (other.nCol > mx.nCol)
+            throw `incoming data has more columns than existing data`;
         for (let r = 0; r < other.nRow; r++) {
             if (other.rowNames)
                 mx.rowNames.push(other.rowNames[r]);
@@ -144,7 +144,12 @@ export default class matrix {
         element = null, 
         caption = null, 
         mapper = x => x, 
-        limit = 50
+        limit = 50, 
+        {
+            headers = true,
+            preferEmptyString = true,
+            bordersBefore = null
+        }
     ) {
 
         let clone = this.clone();
@@ -161,7 +166,10 @@ export default class matrix {
             printable.push(row);
         }
 
-        let printed = g.tableToString(printable, caption, mapper, limit);
+        let printed = g.tableToString(
+            printable, caption, mapper, 
+            limit, headers, preferEmptyString, bordersBefore
+        );
         
         if (!element)
             console.log(printed);
