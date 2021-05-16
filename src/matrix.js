@@ -149,7 +149,7 @@ export default class matrix {
             headers = true,
             preferEmptyString = true,
             bordersBefore = null
-        }
+        } = {}
     ) {
 
         let clone = this.clone();

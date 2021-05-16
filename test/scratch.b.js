@@ -106,7 +106,7 @@ function factorize (dataset, explicitVars) {
             {
                 headers: true,
                 preferEmptyStrings: true,
-                bordersBefore: [[4],[2]]
+                bordersBefore: [[loads.nRow],[loads.nCol]]
             }
         ); 
 
@@ -217,10 +217,10 @@ function factorize (dataset, explicitVars) {
 
     // terminations
 
-        //log(correlations, 'correlations');
-        //console.log('eigenValues:', $$.round(eigen.values,4))
+        correlations.log(null, 'correlations', row => $$.round(row,4));
+        console.log('eigenValues:', $$.round(eigen.values,4))
         unrotated.log('loadings', 4);
-        //log(rotated.printable, 'rotated');
+        rotated.log('rotated', 4);
           
 }
 
