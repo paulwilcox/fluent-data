@@ -318,7 +318,7 @@ export function tableToString (
     let br = chr('\u2518', '\u255d');
     let hz = chr('\u2500', '\u2550');
     let vl = chr('\u2502', '\u2551');
-    let vm = '\u2502';
+    let vm = chr('\u2502', '\u250a');
     let vr = chr('\u2502', '\u2551');
     let nl = '\r\n';
     let sp = ' ';
