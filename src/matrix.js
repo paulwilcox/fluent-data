@@ -470,7 +470,10 @@ export default class matrix {
     ) {
         let svd = this.decomposeSVDcomp(...args);
         let inv = svd.D.apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
-        return svd.R.multiply(inv).multiply(svd.L.transpose());
+        let result = svd.R.multiply(inv).multiply(svd.L.transpose());
+        result.colNames = [...this.rowNames];
+        result.rowNames = [...this.colNames];
+        return result;
     }
 
     diagonal(
