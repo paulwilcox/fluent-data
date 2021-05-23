@@ -13,10 +13,6 @@ export default class dataset extends grouping {
         this.data = data;
     }
 
-    *[Symbol.iterator]() { 
-        yield* this.data;
-    }
-
     map (func) {    
         this.apply(function* (data) {
             for(let row of data)
@@ -45,18 +41,66 @@ export default class dataset extends grouping {
     reduce (obj, ungroup = true) {
 
         let isNaked = Object.keys(obj).length == 0;
+        obj = g.dotsToProps(obj);
 
         // wrap result in array to bring back to original nesting level
         this.apply(data => {
-            let agg = {};
+
+            // initializations
+            let aggs = {};
+            let _data = [...data];
             if (isNaked)
-                return [obj(data)];
-            for(let [key,reducer] of Object.entries(obj)) 
-                agg[key] = reducer(data);
-            return [agg]; 
+                obj = { naked: obj };
+
+            // perform the aggregations
+            for(let [key,reducer] of Object.entries(obj)) {
+
+                let nparams = parser.parameters(reducer).length;
+                let seed = reducer.seed === undefined ? 0 : reducer.seed;
+
+                // reducer is meant to apply to entire set of data
+                if (nparams == 1)
+                    aggs[key] = reducer(_data);
+
+                // reducer is meant to apply to 'accum' and 'next'
+                else if (nparams == 2) {
+                    let agg = seed;
+                    for (let row of _data)
+                        agg = reducer(agg, row)
+                    aggs[key] = agg;
+                }
+
+            }
+
+            // terminations
+            if (isNaked)
+                aggs = aggs.naked;
+            return [aggs]; 
+
         });
 
         if (ungroup) 
+            this.ungroup();
+
+        return this;
+
+    }
+
+    // TODO: if func(accum,val,ix) then it's a run,
+    // if func(accum,val) then it's a normal window
+    window (obj, group, sort) {
+        
+        if (group)  this.group(group);
+        if (sort)   this.sort(sort);
+
+        this.apply(function*(data) {
+            let _data = [...data];
+            let aggs = new dataset(_data).reduce(obj).get();
+            for(let row of _data) 
+                yield Object.assign(row, aggs);
+        });
+
+        if (group)  
             this.ungroup();
 
         return this;

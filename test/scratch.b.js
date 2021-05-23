@@ -11,28 +11,16 @@
         - archive.org/details/ModernFactorAnalysis/page/n323/mode/1up?q=varimax (p304)
 */
 
-let { matrix } = require('../dist/fluent-data.server.js');
+const { dataset } = require('../dist/fluent-data.server.js');
 let $$ = require('../dist/fluent-data.server.js')
 test();
-
 
 function test() {
 
     let _math = (ar,al) => ({ arithmetic: ar, algebra: al });
     let _lang = (r,w) => ({ reading: r, writing: w });
 
-    let data = new $$([/*
-        { name: 'Pat', ..._math(65, 63), ..._lang(95, 97) },
-        { name: 'Kelly', ..._math(62, 65), ..._lang(94, 96) },
-        { name: 'Jessie', ..._math(96, 98), ..._lang(64, 61) },
-        { name: 'Chris', ..._math(93, 95), ..._lang(61, 64) },
-        { name: 'Alex', ..._math(5, 3), ..._lang(45, 47) },
-        { name: 'Drew', ..._math(2, 5), ..._lang(44, 46) },
-        { name: 'Jordan', ..._math(46, 48), ..._lang(4, 1) },
-        { name: 'Cam', ..._math(43, 45), ..._lang(1, 4) },
-        { name: 'Noisy', ..._math(75, 25), ..._lang(75, 25) },
-        { name: 'Hazy', ..._math(25, 75), ..._lang(25, 75) },*/
-        
+    let data = new $$([
         { name: 'Pat', ..._math(65, 63), ..._lang(95, 10) },
         { name: 'Kelly', ..._math(62, 65), ..._lang(94, 10) },
         { name: 'Jessie', ..._math(96, 98), ..._lang(64, 10) },
@@ -45,80 +33,39 @@ function test() {
         { name: 'Hazy', ..._math(25, 75), ..._lang(25, 11) }
     ]);
 
-    let factorized = factorize(
+
+data
+    .map(row => ({ name: row.name}))
+    //.window({ n: $$.count(row => row.name)})
+    .reduce({ 
+        s: $$.sum(row => 10),
+        n: $$.count(row => row.name),
+        nn: (acc,row) => acc + 1,
+        ['nn.seed']: 5,
+        ss: $$.sum(row => 10)
+    })
+    .log();
+
+return;
+
+    let reduced = dimReduce(
         data,
         'arithmetic, algebra, reading, writing'
     );
 
-    console.log(factorized);
+    console.log(reduced);
 
 }
 
-function factorize (dataset, explicitVars) {
+function dimReduce (dataset, explicitVars) {
     
     let eigenArgs = {valueThreshold: 1e-12, vectorThreshold: 1e-4, testThreshold: 1e-3};
-    let maxFactors = null; // null for no max
+    let maxDims = null; // null for no max
     let minEigenVal = 1; // null for no threshold
     let rotationMaxIterations = 1000;
     let rotationAngleThreshold = 1e-8;
 
-    let wrapLoadings = (loads) => {
-
-        let communalities = loads
-            .apply(cell => cell*cell)
-            .reduce('row', (a,b) => a + b)
-            .setColNames('communality');
-        
-        let specificVars = communalities
-            .apply(cell => 1-cell)
-            .setColNames('specificVar');
-        
-        let factorSumSqs = loads
-            .apply(cell => cell*cell)
-            .reduce('col', (a,b) => a + b)
-            .setRowNames('sumSqs');
-
-        let sumCom = communalities.reduce('all', (a,b) => a + b).getCell(0,0);
-
-        let sums = Array(loads.nCol).fill(null);
-        sums.push(...[
-            communalities.reduce('all', (a,b) => a + b).getCell(0,0),
-            specificVars.reduce('all', (a,b) => a + b).getCell(0,0)
-        ]);
-        sums = new $$.matrix([sums]).setRowNames('sums');
-        
-        let props = factorSumSqs
-            .apply(sumSq => sumSq / sumCom)
-            .setRowNames('propVars');
-
-        let printable = loads
-            .appendCols(communalities)
-            .appendCols(specificVars)
-            .appendRows(sums)
-            .appendRows(factorSumSqs)
-            .appendRows(props);
-
-        let log = (title, roundDigits) => printable.log(
-            null, 
-            title, 
-            r => $$.round(r,roundDigits),
-            50,
-            {
-                headers: true,
-                preferEmptyStrings: true,
-                bordersBefore: [[loads.nRow],[loads.nCol]]
-            }
-        ); 
-
-        return {
-            loadings: loads,
-            communalities,
-            log
-        };
-
-    }
-
-    // Calculate the correlations and get the factors
+    // Calculate the correlations and get the dimensions
 
         let correlations = 
             dataset
@@ -131,7 +78,7 @@ function factorize (dataset, explicitVars) {
   
         let loadings = [] ;
         for (let i = 0; i < eigen.values.length; i++) {
-            if (maxFactors && i > maxFactors) 
+            if (maxDims && i > maxDims) 
                 continue;
             else if (minEigenVal && eigen.values[i] < minEigenVal)
                 continue;
@@ -145,9 +92,9 @@ function factorize (dataset, explicitVars) {
         }
         loadings = new $$.matrix(loadings).transpose();
         loadings.rowNames = correlations.rowNames;
-        loadings.colNames = loadings.colNames.map((cn,ix) => `factor ${ix}`);
+        loadings.colNames = loadings.colNames.map((cn,ix) => `dim${ix}`);
 
-        let unrotated = wrapLoadings(loadings);
+        let unrotated = _wrapLoadings(loadings);
 
     // 'Normalize' the loadings in preparation for rotation
         
@@ -213,14 +160,82 @@ function factorize (dataset, explicitVars) {
         for(let r = 0; r < loadings.nRow; r++) 
             loadings.data[r][c] = loadings.data[r][c] * comRoots.data[r][0];        
 
-        let rotated = wrapLoadings(loadings);
+        let rotated = _wrapLoadings(loadings);
 
     // terminations
 
-        correlations.log(null, 'correlations', row => $$.round(row,4));
-        console.log('eigenValues:', $$.round(eigen.values,4))
-        unrotated.log('loadings', 4);
-        rotated.log('rotated', 4);
+_scoreData(dataset, correlations, rotated.loadings);
+return;
+
+        correlations.log(null, '\r\ncorrelations:', row => $$.round(row,4));
+        console.log('\r\neigenValues:', $$.round(eigen.values,4))
+        unrotated.log('\r\nunrotated:', 4);
+        rotated.log('\r\nrotated:', 4);
           
 }
 
+function _scoreData (data, correlations, loadings) {
+
+    correlations.pseudoInverse().log(null, 'pi', x => $$.round(x,4));
+
+    dataset.reduce({
+        arithmetic: $$.zs
+    })
+
+}
+
+function _wrapLoadings (loads) {
+
+    let communalities = loads
+        .apply(cell => cell*cell)
+        .reduce('row', (a,b) => a + b)
+        .setColNames('communality');
+    
+    let specificVars = communalities
+        .apply(cell => 1-cell)
+        .setColNames('specificVar');
+    
+    let sumSqs = loads
+        .apply(cell => cell*cell)
+        .reduce('col', (a,b) => a + b)
+        .setRowNames('sumSqs');
+
+    let sumCom = communalities.reduce('all', (a,b) => a + b).getCell(0,0);
+
+    let sums = Array(loads.nCol).fill(null);
+    sums.push(...[
+        communalities.reduce('all', (a,b) => a + b).getCell(0,0),
+        specificVars.reduce('all', (a,b) => a + b).getCell(0,0)
+    ]);
+    sums = new $$.matrix([sums]).setRowNames('sums');
+    
+    let props = sumSqs
+        .apply(sumSq => sumSq / sumCom)
+        .setRowNames('propVars');
+
+    let printable = loads
+        .appendCols(communalities)
+        .appendCols(specificVars)
+        .appendRows(sums)
+        .appendRows(sumSqs)
+        .appendRows(props);
+
+    let log = (title, roundDigits) => printable.log(
+        null, 
+        title, 
+        r => $$.round(r,roundDigits),
+        50,
+        {
+            headers: true,
+            preferEmptyStrings: true,
+            bordersBefore: [[loads.nRow],[loads.nCol]]
+        }
+    ); 
+
+    return {
+        loadings: loads,
+        communalities,
+        log
+    };
+
+}

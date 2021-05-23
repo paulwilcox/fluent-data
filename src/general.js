@@ -178,6 +178,37 @@ export let noUndefined = obj => {
 
 }
 
+export let dotsToProps = (obj) => {
+
+    let dottedKeys = Object.keys(obj)
+        .sort()
+        .map(key => key.split('.').map(part => part.trim()))
+        .filter(parts => parts.length > 1);
+
+    for(let dk in dottedKeys) {
+        let dottedKey = dottedKeys[dk];
+        let joinedKey;
+        let prevPart = obj;
+        for(let p in dottedKey) {
+            let part = dottedKey[p];
+            joinedKey = p == 0 ? part : `${joinedKey}.${part}`;
+            if (prevPart[part] === undefined) 
+                try { prevPart[part] = {}; }
+                catch (err) {
+                    err.message = `Problem setting value for '${joinedKey}'.  ${err.message}`;
+                    throw err;
+                }
+            if (p == dottedKey.length - 1) 
+                prevPart[part] = obj[joinedKey];
+            prevPart = prevPart[part];
+        } 
+        delete obj[joinedKey];
+    }
+
+    return obj;
+    
+}
+
 // equality by values
 export let eq = (obj1, obj2) => {
 

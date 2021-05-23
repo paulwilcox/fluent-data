@@ -18,7 +18,7 @@ _.first = rowFunc =>
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
                 return rowFunc(row);
         return null;
-    }
+    };
 
 _.last = rowFunc => 
     data => {

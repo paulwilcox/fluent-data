@@ -11,6 +11,10 @@ export default class grouping {
         this.dataIsNaked = false;
     }
 
+    *[Symbol.iterator]() { 
+        yield* this.data;
+    }
+
     apply (tableLevelFunc) {
 
         if (this.dataIsNaked) {
