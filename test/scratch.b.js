@@ -36,14 +36,25 @@ function test() {
 
 data
     .map(row => ({ name: row.name}))
-    //.window({ n: $$.count(row => row.name)})
-    .reduce({ 
+    .window(
+        { n: $$.count(row => row.name)},
+        row => row.name.startsWith('A') ? 0 : row.name >= 'H' ? 2 : 3,
+        row => row.name,
+        row => !row.name.startsWith('A') 
+    )
+    .scroll(
+        { n2: $$.count(row => row.name)}, 
+        row => row.name >= 'H',
+        row => row.name, 
+        (row,current,compare) => current >= compare
+    )
+    /*.reduce({ 
         s: $$.sum(row => 10),
         n: $$.count(row => row.name),
         nn: (acc,row) => acc + 1,
         ['nn.seed']: 5,
         ss: $$.sum(row => 10)
-    })
+    })*/
     .log();
 
 return;

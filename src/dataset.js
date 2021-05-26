@@ -86,18 +86,42 @@ export default class dataset extends grouping {
 
     }
 
-    // TODO: if func(accum,val,ix) then it's a run,
-    // if func(accum,val) then it's a normal window
-    window (obj, group, sort) {
+    window (obj, group, sort, filter) {
         
         if (group)  this.group(group);
         if (sort)   this.sort(sort);
 
         this.apply(function*(data) {
             let _data = [...data];
-            let aggs = new dataset(_data).reduce(obj).get();
+            let sub = _data;
+            if (filter) 
+                sub = sub.filter(filter);
+            let aggs = new dataset(sub).reduce(obj).get();
             for(let row of _data) 
                 yield Object.assign(row, aggs);
+        });
+
+        if (group)  
+            this.ungroup();
+
+        return this;
+
+    }
+
+    scroll (obj, group, sort, filter) {
+        
+        if (group)  this.group(group);
+        if (sort)   this.sort(sort);
+
+        this.apply(function*(data) {
+            let _data = [...data];
+            for(let currentIx = 0; currentIx < _data.length; currentIx++) {
+                let sub = _data.filter(
+                    (row,compareIx) => filter(_data[currentIx],currentIx,compareIx)
+                );
+                let aggs = new dataset(sub).reduce(obj).get();
+                yield Object.assign(_data[currentIx], aggs);
+            }
         });
 
         if (group)  
