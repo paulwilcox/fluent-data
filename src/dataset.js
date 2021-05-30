@@ -86,10 +86,62 @@ export default class dataset extends grouping {
 
     }
 
+    // TODO: see todo in dataset.md
+    window2 ({
+        group, 
+        sort, 
+        filter,
+        scroll,
+        reduce, 
+    } = {}) {
+        
+        if (group)  this.group(group);
+        if (sort)   this.sort(sort);
+        if (filter) this.group(filter); 
+            // otherwise, you'd have to also 
+            // explicitly group by any filtering 
+
+        this.apply(function*(data) {
+
+            let _data = [...data];
+            let filtered = filter ? _data.filter(filter) : _data;            
+            let aggs = !scroll ? new dataset(filtered).reduce(reduce).get() : {};
+            
+            // group did not pass the filter
+            if (filtered.length == 0) 
+                for(let key of Object.keys(aggs))
+                    aggs[key] = null;
+
+            for(let currentIx = 0; currentIx < _data.length; currentIx++) {
+
+                if (scroll && filtered.length > 0) {
+                    let scrolled = filtered.filter(
+                        (row,compareIx) => scroll(currentIx,compareIx)
+                    );                
+                    aggs = new dataset(scrolled).reduce(reduce).get();
+                }
+
+                yield Object.assign(_data[currentIx], aggs);
+
+            }
+
+        });
+
+        if (group)  this.ungroup();
+        if (filter) this.ungroup();
+
+        return this;
+
+    }
+
+
     window (obj, group, sort, filter) {
         
         if (group)  this.group(group);
         if (sort)   this.sort(sort);
+        if (filter) this.group(filter); 
+            // otherwise, you'd have to also 
+            // explicitly group by any filtering 
 
         this.apply(function*(data) {
             let _data = [...data];
@@ -97,12 +149,16 @@ export default class dataset extends grouping {
             if (filter) 
                 sub = sub.filter(filter);
             let aggs = new dataset(sub).reduce(obj).get();
+            // group did not pass the filter
+            if (sub.length == 0) 
+                for(let key of Object.keys(aggs))
+                    aggs[key] = null;
             for(let row of _data) 
                 yield Object.assign(row, aggs);
         });
 
-        if (group)  
-            this.ungroup();
+        if (group)  this.ungroup();
+        if (filter) this.ungroup();
 
         return this;
 
@@ -112,6 +168,9 @@ export default class dataset extends grouping {
         
         if (group)  this.group(group);
         if (sort)   this.sort(sort);
+        if (filter) this.group(filter); 
+            // otherwise, you'd have to also 
+            // explicitly group by any filtering 
 
         this.apply(function*(data) {
             let _data = [...data];
@@ -120,12 +179,16 @@ export default class dataset extends grouping {
                     (row,compareIx) => filter(_data[currentIx],currentIx,compareIx)
                 );
                 let aggs = new dataset(sub).reduce(obj).get();
+                // group did not pass the filter
+                if (sub.length == 0) 
+                    for(let key of Object.keys(aggs))
+                        aggs[key] = null;
                 yield Object.assign(_data[currentIx], aggs);
             }
         });
 
-        if (group)  
-            this.ungroup();
+        if (group)  this.ungroup();
+        if (filter) this.ungroup();
 
         return this;
 
