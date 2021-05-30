@@ -30,7 +30,7 @@ async function test () {
         .get();
 
     if($$.round(results.speed_cor.pVal, 5) !=  0.01843) throw `
-        results.n does not round to 0.01843
+        results.speed_cor.pval does not round to 0.01843
     `;
 
     results = 
@@ -45,11 +45,39 @@ async function test () {
         .sort(o => o.customer)
         .get();
 
-    let row0 = prop => Math.round(results[0][prop] * 100) / 100;
+    let rprop = (ix,prop) => Math.round(results[ix][prop] * 100) / 100;
 
-    return results.length == 3
-        && row0('rating') == 58.29
-        && row0('speed') == 4.57
-        && row0('speed_cor') == 0.74;
+    if (results.length != 3) throw `results.length != 3`;
+    if (rprop(0,'rating') != 58.29) throw `first row 'rating' != 58.29`;
+    if (rprop(0,'speed') != 4.57) throw `first row 'speed' != 4.57`;
+    if (rprop(0,'speed_cor') != 0.74) throw `first row 'speed_cor' != 0.74`;
+
+    results = $$(data.orders)
+        .window(
+            { 
+                n: $$.count(o => o.customer),
+                groupRating: $$.avg(o => o.rating)
+            },
+            o => [o.customer, o.rating <= 100],
+            o => o.rating,
+            o => o.rating <= 100  
+        )
+        .scroll(
+            { run: $$.count(o => o.customer)}, 
+            o => [o.customer, o.rating <= 100],
+            o => -o.rating, 
+            (row,current,compare) => current >= compare && row.rating <= 100
+        )
+        .sort(o => [o.customer, o.rating])
+        .get();
+
+    if (results.length != 12) throw `results.length != 12`;
+    if (rprop(7,'n') != 4) throw `8th row 'n' != 4`;
+    if (rprop(7,'groupRating' != 44.5)) throw `8th row 'groupRating' != 44.5`;
+    if (rprop(8,'run') != 3) throw `9th row 'run' != 3`;
+    if (!isNaN(rprop(6,'groupRating'))) 
+        throw `7th row 'groupRating' is a number (it should be NAN)`; 
+
+    return true;
 
 }
