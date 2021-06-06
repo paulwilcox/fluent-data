@@ -140,33 +140,38 @@ export default class dataset extends grouping {
 
         for (let key of keys) {
 
+            let isNum = (val) => val || val === 0; 
+
             // Row prop is user function result. 
             // Calculate average.
             let sum = 0;
             let n = 0;
             for (let row of data) { 
                 let val = obj[key](row);
-                if (!val && val !== 0)
-                    continue;
-                row[key] = val;
-                sum += val;
-                n += 1;
+                if (isNum(val)) {
+                    row[key] = val;
+                    sum += val;
+                    n += 1;
+                }
             }
             let avg = sum / n;
 
             // row prop is now deviations
             for (let row of data)
-                row[key] = row[key] - avg;
+                if (isNum(row[key]))
+                    row[key] = row[key] - avg;
 
             // standard deviation
             let ssd = 0;
             for (let row of data) 
-                ssd += Math.pow(row[key],2);
+                if (isNum(row[key]))
+                    ssd += Math.pow(row[key],2);
             let std = Math.pow(ssd/n, 0.5);
-        
+
             // row prop is now z scores
             for (let row of data)
-                row[key] /= std;
+                if (isNum(row[key]))
+                    row[key] /= std;
 
         }
 

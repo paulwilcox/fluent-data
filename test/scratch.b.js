@@ -22,6 +22,7 @@ function test() {
         { name: 'Jessie', ..._math(96, 98), ..._lang(64, 10) },
         { name: 'Chris', ..._math(93, 95), ..._lang(61, 11) },
         { name: 'Alex', ..._math(5, 3), ..._lang(55, 11) },
+        { name: '_', ..._math(5,3), ..._lang(null, 11)},
         { name: 'Drew', ..._math(2, 5), ..._lang(54, 11) },
         { name: 'Jordan', ..._math(46, 48), ..._lang(4, 10) },
         { name: 'Cam', ..._math(43, 45), ..._lang(1, 11) },
