@@ -133,6 +133,48 @@ export default class dataset extends grouping {
 
     }
 
+    standardize(obj) {
+
+        let data = [...this.data];
+        let keys = Object.keys(obj);
+
+        for (let key of keys) {
+
+            // Row prop is user function result. 
+            // Calculate average.
+            let sum = 0;
+            let n = 0;
+            for (let row of data) { 
+                let val = obj[key](row);
+                if (!val && val !== 0)
+                    continue;
+                row[key] = val;
+                sum += val;
+                n += 1;
+            }
+            let avg = sum / n;
+
+            // row prop is now deviations
+            for (let row of data)
+                row[key] = row[key] - avg;
+
+            // standard deviation
+            let ssd = 0;
+            for (let row of data) 
+                ssd += Math.pow(row[key],2);
+            let std = Math.pow(ssd/n, 0.5);
+        
+            // row prop is now z scores
+            for (let row of data)
+                row[key] /= std;
+
+        }
+
+        this.data = data;
+        return this;
+
+    }
+
     distinct (hashKeySelector, sorter) {
 
         hashKeySelector = hashKeySelector || (x => x);

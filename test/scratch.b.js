@@ -11,17 +11,12 @@
         - archive.org/details/ModernFactorAnalysis/page/n323/mode/1up?q=varimax (p304)
 */
 
-const { dataset } = require('../dist/fluent-data.server.js');
-let $$ = require('../dist/fluent-data.server.js')
-test();
-
 function test() {
-
 
     let _math = (ar,al) => ({ arithmetic: ar, algebra: al });
     let _lang = (r,w) => ({ reading: r, writing: w });
 
-    let data = new $$([
+    let data = $$([
         { name: 'Pat', ..._math(65, 63), ..._lang(95, 10) },
         { name: 'Kelly', ..._math(62, 65), ..._lang(94, 10) },
         { name: 'Jessie', ..._math(96, 98), ..._lang(64, 10) },
@@ -34,32 +29,12 @@ function test() {
         { name: 'Hazy', ..._math(25, 75), ..._lang(25, 11) }
     ]);
 
-
-
-    class myDataset extends $$.dataset {
-
-        typeOfs () {
-            function* tableLevelFunc (data) {
-                for(let row of data) {
-                    for(let key of Object.keys(row))
-                        row[key] = typeof row[key];
-                    yield row;
-                } 
-            };
-            this.apply(tableLevelFunc);
-            return this;
-        }
-
-    }
-
-    new myDataset(data)
-        .group(p => ({ name: p.name }))
-        //.typeOfs()
-        .log();
-
+    data.standardize({
+        rz: row => row.reading
+    })
+    .log(null, null, row => $$.round(row, 8));
     
 return;
-
     let reduced = dimReduce(
         data,
         'arithmetic, algebra, reading, writing'
