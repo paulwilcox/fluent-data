@@ -17,6 +17,7 @@ test();
 
 function test() {
 
+
     let _math = (ar,al) => ({ arithmetic: ar, algebra: al });
     let _lang = (r,w) => ({ reading: r, writing: w });
 
@@ -34,29 +35,29 @@ function test() {
     ]);
 
 
-data
-    .map(row => ({ name: row.name}))
-    .window(
-        { n: $$.count(row => row.name)},
-        row => row.name.startsWith('A') ? 0 : row.name >= 'H' ? 2 : 3,
-        row => row.name,
-        row => !row.name.startsWith('A') 
-    )
-    .scroll(
-        { n2: $$.count(row => row.name)}, 
-        row => row.name >= 'H',
-        row => row.name, 
-        (row,current,compare) => current >= compare
-    )
-    /*.reduce({ 
-        s: $$.sum(row => 10),
-        n: $$.count(row => row.name),
-        nn: (acc,row) => acc + 1,
-        ['nn.seed']: 5,
-        ss: $$.sum(row => 10)
-    })*/
-    .log();
 
+    class myDataset extends $$.dataset {
+
+        typeOfs () {
+            function* tableLevelFunc (data) {
+                for(let row of data) {
+                    for(let key of Object.keys(row))
+                        row[key] = typeof row[key];
+                    yield row;
+                } 
+            };
+            this.apply(tableLevelFunc);
+            return this;
+        }
+
+    }
+
+    new myDataset(data)
+        .group(p => ({ name: p.name }))
+        //.typeOfs()
+        .log();
+
+    
 return;
 
     let reduced = dimReduce(

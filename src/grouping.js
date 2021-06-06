@@ -52,7 +52,7 @@ export default class grouping {
                 g.parent = this;
                 g.data = bucket;
                 this.data = null;
-                this.children.push(g); 
+                this.children.push(g);
             }
             return;
         }
@@ -100,6 +100,8 @@ export default class grouping {
         limit = 50
     ) {
 
+        let data = g.isIterable(this.data) ? [...this.data] : this.data;
+
         let stringified;
         caption = 
             this.parent === null && caption ? `${caption}`
@@ -107,9 +109,9 @@ export default class grouping {
             : ``;
 
         if (this.children.length == 0) 
-            stringified = !g.isIterable(this.data)
-                ? caption + JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : g.tableToString([...this.data], caption, mapper, limit, true);
+            stringified = !g.isIterable(data)
+                ? caption + JSON.stringify(data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : g.tableToString(data, caption, mapper, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
@@ -127,6 +129,7 @@ export default class grouping {
             document.querySelector(element).appendChild(div);
         }
 
+        this.data = data;
         return this;
 
     }    

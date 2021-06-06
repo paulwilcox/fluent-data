@@ -86,8 +86,7 @@ export default class dataset extends grouping {
 
     }
 
-    // TODO: see todo in dataset.md
-    window2 ({
+    window ({
         group, 
         sort, 
         filter,
@@ -125,66 +124,6 @@ export default class dataset extends grouping {
 
             }
 
-        });
-
-        if (group)  this.ungroup();
-        if (filter) this.ungroup();
-
-        return this;
-
-    }
-
-
-    window (obj, group, sort, filter) {
-        
-        if (group)  this.group(group);
-        if (sort)   this.sort(sort);
-        if (filter) this.group(filter); 
-            // otherwise, you'd have to also 
-            // explicitly group by any filtering 
-
-        this.apply(function*(data) {
-            let _data = [...data];
-            let sub = _data;
-            if (filter) 
-                sub = sub.filter(filter);
-            let aggs = new dataset(sub).reduce(obj).get();
-            // group did not pass the filter
-            if (sub.length == 0) 
-                for(let key of Object.keys(aggs))
-                    aggs[key] = null;
-            for(let row of _data) 
-                yield Object.assign(row, aggs);
-        });
-
-        if (group)  this.ungroup();
-        if (filter) this.ungroup();
-
-        return this;
-
-    }
-
-    scroll (obj, group, sort, filter) {
-        
-        if (group)  this.group(group);
-        if (sort)   this.sort(sort);
-        if (filter) this.group(filter); 
-            // otherwise, you'd have to also 
-            // explicitly group by any filtering 
-
-        this.apply(function*(data) {
-            let _data = [...data];
-            for(let currentIx = 0; currentIx < _data.length; currentIx++) {
-                let sub = _data.filter(
-                    (row,compareIx) => filter(_data[currentIx],currentIx,compareIx)
-                );
-                let aggs = new dataset(sub).reduce(obj).get();
-                // group did not pass the filter
-                if (sub.length == 0) 
-                    for(let key of Object.keys(aggs))
-                        aggs[key] = null;
-                yield Object.assign(_data[currentIx], aggs);
-            }
         });
 
         if (group)  this.ungroup();

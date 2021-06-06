@@ -53,21 +53,22 @@ async function test () {
     if (rprop(0,'speed_cor') != 0.74) throw `first row 'speed_cor' != 0.74`;
 
     results = $$(data.orders)
-        .window(
-            { 
-                n: $$.count(o => o.customer),
+        .window({
+            group: o => o.customer,
+            sort: o => o.rating,
+            filter: o => o.rating <= 100,  
+            reduce: { 
+                n: (agg,next) => agg += 1,
                 groupRating: $$.avg(o => o.rating)
-            },
-            o => [o.customer, o.rating <= 100],
-            o => o.rating,
-            o => o.rating <= 100  
-        )
-        .scroll(
-            { run: $$.count(o => o.customer)}, 
-            o => [o.customer, o.rating <= 100],
-            o => -o.rating, 
-            (row,current,compare) => current >= compare && row.rating <= 100
-        )
+            }
+        })
+        .window({
+            group: o => o.customer,
+            sort: o => -o.rating,
+            filter: o => o.rating < 100, 
+            scroll: (current,compare) => current >= compare,
+            reduce: { run: $$.count(o => o.customer)}
+        })
         .sort(o => [o.customer, o.rating])
         .get();
 
@@ -75,7 +76,7 @@ async function test () {
     if (rprop(7,'n') != 4) throw `8th row 'n' != 4`;
     if (rprop(7,'groupRating' != 44.5)) throw `8th row 'groupRating' != 44.5`;
     if (rprop(8,'run') != 3) throw `9th row 'run' != 3`;
-    if (!isNaN(rprop(6,'groupRating'))) 
+    if (results[6]['groupRating'] != null) 
         throw `7th row 'groupRating' is a number (it should be NAN)`; 
 
     return true;
