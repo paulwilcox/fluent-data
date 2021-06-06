@@ -10,6 +10,9 @@
 // e.g. round(5.239, 2) is 5.24
 let round = (term, digits) => {
 
+    if (term === null || term === undefined)
+        return term;
+
     let val = Math.round(term * 10 ** digits) / 10 ** digits;
 
     if (!isNaN(val))
@@ -79,6 +82,37 @@ let noUndefined = obj => {
 
 };
 
+let dotsToProps = (obj) => {
+
+    let dottedKeys = Object.keys(obj)
+        .sort()
+        .map(key => key.split('.').map(part => part.trim()))
+        .filter(parts => parts.length > 1);
+
+    for(let dk in dottedKeys) {
+        let dottedKey = dottedKeys[dk];
+        let joinedKey;
+        let prevPart = obj;
+        for(let p in dottedKey) {
+            let part = dottedKey[p];
+            joinedKey = p == 0 ? part : `${joinedKey}.${part}`;
+            if (prevPart[part] === undefined) 
+                try { prevPart[part] = {}; }
+                catch (err) {
+                    err.message = `Problem setting value for '${joinedKey}'.  ${err.message}`;
+                    throw err;
+                }
+            if (p == dottedKey.length - 1) 
+                prevPart[part] = obj[joinedKey];
+            prevPart = prevPart[part];
+        } 
+        delete obj[joinedKey];
+    }
+
+    return obj;
+    
+};
+
 // equality by values
 let eq = (obj1, obj2) => {
 
@@ -114,7 +148,9 @@ function tableToString (
     caption,
     mapper, 
     limit = 50, 
-    headers = true
+    headers = true,
+    preferEmptyString = true, // if false, '<null>' and '<undefined>' can show
+    bordersBefore = null // [[a,b,c],[x,y,z]], borders before resp. row and col ix posits
 ) {
 
     mapper = mapper || (x => x);
@@ -127,8 +163,8 @@ function tableToString (
     }
 
     let safeToString = (val) =>  
-          val === null ? '<null>' 
-        : val === undefined ? '<undefined>'
+          val === null ? (preferEmptyString ? '' : '<null>') 
+        : val === undefined ? (preferEmptyString ? '' : '<undefined>')
         : val.toString();
 
     // Initially, values are multi-line.  Even if just 
@@ -155,6 +191,7 @@ function tableToString (
         for(let i = 0; i < rowProps.length; i++) {
             let prop = rowProps[i];
             let arrayVal = toStringArray(row[prop]);
+
             if (!props.includes(prop)) {
                 props.push(prop);
                 rowVals.push(arrayVal);
@@ -189,32 +226,72 @@ function tableToString (
         for(let i = 0; i < props.length; i++) 
             row[i] = safeToString(row[i]).padEnd(lengths[i]);
 
-    let tl = '\u250c';
-    let tm = '\u252c';
-    let tr = '\u2510';
-    let ml = '\u251c';
-    let mm = '\u253c';
-    let mr = '\u2524';
-    let bl = '\u2514';
-    let bm = '\u2534';
-    let br = '\u2518';
-    let hz = '\u2500';
-    let vt = '\u2502';
+    let chr = (notBb,bb) => bordersBefore ? bb : notBb;
+    let tl = chr('\u250c', '\u2554');
+    let tm = chr('\u252c', '\u2564');
+    let tr = chr('\u2510', '\u2557');
+    let ml = chr('\u251c', '\u2560');
+    let mm = chr('\u253c', '\u256a');
+    let mr = chr('\u2524', '\u2563');
+    let bl = chr('\u2514', '\u255a');
+    let bm = chr('\u2534', '\u2567');
+    let br = chr('\u2518', '\u255d');
+    let hz = chr('\u2500', '\u2550');
+    let vl = chr('\u2502', '\u2551');
+    let vm = chr('\u2502', '\u250a');
+    let vr = chr('\u2502', '\u2551');
     let nl = '\r\n';
     let sp = ' ';
 
     let topBorder = tl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+tm+hz) + hz+tr+nl;
-    let headerRow = vt+sp + props.join(sp+vt+sp) + sp+vt+nl;
-    let headerDivider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
-    let dataRows = vals.map(row => vt+sp + row.join(sp+vt+sp) + sp+vt).join(nl) + nl;
+    let headerRow = vl+sp + props.join(sp+vm+sp) + sp+vr+nl;
+    let divider = ml+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+mm+hz) + hz+mr+nl;
+    let dataRows = vals.map(row => vl+sp + row.join(sp+vm+sp) + sp+vr).join(nl) + nl;
     let botBorder = bl+hz + lengths.map(l => ''.padStart(l,hz+hz+hz)).join(hz+bm+hz) + hz+br;
 
-    return (caption ? (caption+nl) : '') +
+    // add special row borders
+    if (bordersBefore && bordersBefore[0]) {
+        dataRows = dataRows.split(nl);
+        let bbRev = [...bordersBefore[0]];
+        bbRev.reverse();
+        for (let bb of bbRev)
+            dataRows.splice(bb, 0, 
+                divider
+                    .replace(new RegExp(hz,'g'), '\u2550')
+                    .replace(nl,'')
+            );
+        dataRows = dataRows.join(nl);
+    }
+
+    let result = 
         topBorder +
         (headers ? headerRow : '') + 
-        (headers ? headerDivider : '') +
+        (headers ? divider : '') +
         dataRows +
         botBorder;
+
+    // add special column borders
+    if (bordersBefore && bordersBefore[1]) {
+
+        bordersBefore[1] = // convert col posit to char posit
+            [...topBorder]
+            .map((chr,ix) => chr == tm ? ix : null)
+            .filter(ix => ix !== null)
+            .filter((x,ix) => bordersBefore[1].includes(ix));
+
+        for(let bb of bordersBefore[1]) {
+            let replacer = (val,rep) => 
+                result.replace(new RegExp(`(?<=^.{${bb}})${val}`,'gm'), rep);
+            result = replacer(vm,vl);
+            result = replacer(tm, '\u2566');
+            result = replacer(mm, '\u256c');
+            result = replacer(bm, '\u2569');
+        }
+
+    }
+
+    result = (caption ? (caption+nl) : '') + result;
+    return result;
 
 }
 
@@ -580,7 +657,7 @@ class matrix {
         data, 
         selector = arrayRow => arrayRow, // csv of prop names or func returning array of numbers
         rowNames // string of a prop name or func identifiying the property representing the name
-    ) {
+    ) {                
 
         this.colNames = null;
         this.rowNames = null;
@@ -590,7 +667,9 @@ class matrix {
             this.data = [];
             return;
         }
+
         
+    
         // if selector is csv, split and turn it into a property selecctor
         if (isString(selector)) {
             this.colNames = selector.split(',').map(name => name.trim());
@@ -608,8 +687,8 @@ class matrix {
             this.colNames = this.data.length == 0 ? null : this.data[0].map((v,ix) => `c${ix}`);
         
         if (this.rowNames == null)
-            this.rowNames = this.data.map((v,ix) => `r${ix}`);
-                        
+            this.rowNames = this.data.map((v,ix) => `r${ix}`);                        
+
         this.validate();
 
     }
@@ -672,17 +751,14 @@ class matrix {
     }
 
     clone() {
-        let result = [];
-        for(let row of this.data) {
-            let newRow = [];
-            for (let cell of row) 
-                newRow.push(cell);
-            result.push(newRow);
-        }
         let mx = new matrix();
-        mx.data = result;
-        mx.colNames = this.colNames;
-        mx.rowNames = this.rowNames;
+        mx.data = [];
+        for(let row of this.data) 
+            mx.data.push([...row]);
+        if (this.colNames)
+            mx.colNames = [...this.colNames];
+        if (this.rowNames)
+            mx.rowNames = [...this.rowNames];
         return mx;
     }
 
@@ -690,11 +766,12 @@ class matrix {
         let mx = this.clone();
         if (Array.isArray(other)) 
             other = new matrix(other);
-        if (other.nRow != mx.nRow)
-            throw `cannot append columns if row counts do not match`;
+        if (other.nRow > mx.nRow)
+            throw `incoming data has more rows than existing data`;
         for(let r = 0; r < mx.nRow; r++) 
             mx.data[r].push(...other.data[r]);
-        mx.colNames.push(...other.colNames);
+        if (other.colNames)
+            mx.colNames.push(...other.colNames);
         mx.validate();
         return mx;
     }
@@ -703,10 +780,11 @@ class matrix {
         let mx = this.clone();
         if (Array.isArray(other))
             other = new matrix(other);
-        if (other.nCol != mx.nCol)
-            throw `cannot append rows if column counts do not match`;
+        if (other.nCol > mx.nCol)
+            throw `incoming data has more columns than existing data`;
         for (let r = 0; r < other.nRow; r++) {
-            mx.rowNames.push(other.rowNames[r]);
+            if (other.rowNames)
+                mx.rowNames.push(other.rowNames[r]);
             mx.data.push(other.data[r]);
         }
         mx.validate();
@@ -717,7 +795,12 @@ class matrix {
         element = null, 
         caption = null, 
         mapper = x => x, 
-        limit = 50
+        limit = 50, 
+        {
+            headers = true,
+            preferEmptyString = true,
+            bordersBefore = null
+        } = {}
     ) {
 
         let clone = this.clone();
@@ -734,7 +817,10 @@ class matrix {
             printable.push(row);
         }
 
-        let printed = tableToString(printable, caption, mapper, limit);
+        let printed = tableToString(
+            printable, caption, mapper, 
+            limit, headers, preferEmptyString, bordersBefore
+        );
         
         if (!element)
             console.log(printed);
@@ -1035,7 +1121,10 @@ class matrix {
     ) {
         let svd = this.decomposeSVDcomp(...args);
         let inv = svd.D.apply(x => x == 0 ? 1e32 : x == -0 ? -1e32 : 1/x).diagonal();
-        return svd.R.multiply(inv).multiply(svd.L.transpose());
+        let result = svd.R.multiply(inv).multiply(svd.L.transpose());
+        result.colNames = [...this.rowNames];
+        result.rowNames = [...this.colNames];
+        return result;
     }
 
     diagonal(
@@ -2321,6 +2410,10 @@ class grouping {
         this.dataIsNaked = false;
     }
 
+    *[Symbol.iterator]() { 
+        yield* this.data;
+    }
+
     apply (tableLevelFunc) {
 
         if (this.dataIsNaked) {
@@ -2358,7 +2451,7 @@ class grouping {
                 g.parent = this;
                 g.data = bucket;
                 this.data = null;
-                this.children.push(g); 
+                this.children.push(g);
             }
             return;
         }
@@ -2406,6 +2499,8 @@ class grouping {
         limit = 50
     ) {
 
+        let data = isIterable(this.data) ? [...this.data] : this.data;
+
         let stringified;
         caption = 
             this.parent === null && caption ? `${caption}`
@@ -2413,9 +2508,9 @@ class grouping {
             : ``;
 
         if (this.children.length == 0) 
-            stringified = !isIterable(this.data)
-                ? caption + JSON.stringify(this.data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : tableToString([...this.data], caption, mapper, limit, true);
+            stringified = !isIterable(data)
+                ? caption + JSON.stringify(data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
+                : tableToString(data, caption, mapper, limit, true);
 
         else {
             let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
@@ -2433,6 +2528,7 @@ class grouping {
             document.querySelector(element).appendChild(div);
         }
 
+        this.data = data;
         return this;
 
     }    
@@ -2479,10 +2575,6 @@ class dataset extends grouping {
         this.data = data;
     }
 
-    *[Symbol.iterator]() { 
-        yield* this.data;
-    }
-
     map (func) {    
         this.apply(function* (data) {
             for(let row of data)
@@ -2511,19 +2603,118 @@ class dataset extends grouping {
     reduce (obj, ungroup = true) {
 
         let isNaked = Object.keys(obj).length == 0;
+        obj = dotsToProps(obj);
 
         // wrap result in array to bring back to original nesting level
         this.apply(data => {
-            let agg = {};
+
+            // initializations
+            let aggs = {};
+            let _data = [...data];
             if (isNaked)
-                return [obj(data)];
-            for(let [key,reducer] of Object.entries(obj)) 
-                agg[key] = reducer(data);
-            return [agg]; 
+                obj = { naked: obj };
+
+            // perform the aggregations
+            for(let [key,reducer] of Object.entries(obj)) {
+
+                let nparams = parser.parameters(reducer).length;
+                let seed = reducer.seed === undefined ? 0 : reducer.seed;
+
+                // reducer is meant to apply to entire set of data
+                if (nparams == 1)
+                    aggs[key] = reducer(_data);
+
+                // reducer is meant to apply to 'accum' and 'next'
+                else if (nparams == 2) {
+                    let agg = seed;
+                    for (let row of _data)
+                        agg = reducer(agg, row);
+                    aggs[key] = agg;
+                }
+
+            }
+
+            // terminations
+            if (isNaked)
+                aggs = aggs.naked;
+            return [aggs]; 
+
         });
 
         if (ungroup) 
             this.ungroup();
+
+        return this;
+
+    }
+
+    window ({
+        group, 
+        sort, 
+        filter,
+        scroll,
+        reduce, 
+    } = {}) {
+        
+        if (group)  this.group(group);
+        if (sort)   this.sort(sort);
+        if (filter) this.group(filter); 
+            // otherwise, you'd have to also 
+            // explicitly group by any filtering 
+
+        this.apply(function*(data) {
+
+            let _data = [...data];
+            let filtered = filter ? _data.filter(filter) : _data;            
+            let aggs = !scroll ? new dataset(filtered).reduce(reduce).get() : {};
+            
+            // group did not pass the filter
+            if (filtered.length == 0) 
+                for(let key of Object.keys(aggs))
+                    aggs[key] = null;
+
+            for(let currentIx = 0; currentIx < _data.length; currentIx++) {
+
+                if (scroll && filtered.length > 0) {
+                    let scrolled = filtered.filter(
+                        (row,compareIx) => scroll(currentIx,compareIx)
+                    );                
+                    aggs = new dataset(scrolled).reduce(reduce).get();
+                }
+
+                yield Object.assign(_data[currentIx], aggs);
+
+            }
+
+        });
+
+        if (group)  this.ungroup();
+        if (filter) this.ungroup();
+
+        return this;
+
+    }
+
+    standardize(obj) {
+
+        let data = [...data];
+        let aggs = {};
+        let vals = {};
+
+        for (let key of Object.keys(obj)) {
+            vals[key] = [];
+            aggs[key] = 0;
+            for (let row of data) { 
+                let val = obj[key](row);
+                vals[key].push(val);
+                aggs[key] += val;
+            }
+        }
+
+        for (let key of Object.keys(aggs))
+            aggs[key] /= vals[key].length;
+
+        console.log(aggs);
 
         return this;
 

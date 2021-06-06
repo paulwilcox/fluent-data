@@ -133,49 +133,55 @@ export default class dataset extends grouping {
 
     }
 
-    standardize(obj) {
+    standardize(obj, isSample = false) {
 
-        let data = [...this.data];
-        let keys = Object.keys(obj);
+        this.apply(_data => {
+                
+            let data = [..._data];
 
-        for (let key of keys) {
+            for (let key of Object.keys(obj)) {
 
-            let isNum = (val) => val || val === 0; 
+                let isNum = (val) => val || val === 0; 
 
-            // Row prop is user function result. 
-            // Calculate average.
-            let sum = 0;
-            let n = 0;
-            for (let row of data) { 
-                let val = obj[key](row);
-                if (isNum(val)) {
-                    row[key] = val;
-                    sum += val;
-                    n += 1;
+                // Row prop is user function result. 
+                // Calculate average.
+                let sum = 0;
+                let n = 0;
+                for (let row of data) { 
+                    let val = obj[key](row);
+                    if (isNum(val)) {
+                        row[key] = val;
+                        sum += val;
+                        n += 1;
+                    }
                 }
+                let avg = sum / n;
+
+                // row prop is now deviations
+                for (let row of data)
+                    if (isNum(row[key]))
+                        row[key] = row[key] - avg;
+
+                // standard deviation
+                let ssd = 0;
+                for (let row of data) 
+                    if (isNum(row[key]))
+                        ssd += Math.pow(row[key],2);
+                if (isSample)
+                    n--;
+                let std = Math.pow(ssd/n, 0.5);
+
+                // row prop is now z scores
+                for (let row of data)
+                    if (isNum(row[key]))
+                        row[key] /= std;
+
             }
-            let avg = sum / n;
 
-            // row prop is now deviations
-            for (let row of data)
-                if (isNum(row[key]))
-                    row[key] = row[key] - avg;
+            return data;
 
-            // standard deviation
-            let ssd = 0;
-            for (let row of data) 
-                if (isNum(row[key]))
-                    ssd += Math.pow(row[key],2);
-            let std = Math.pow(ssd/n, 0.5);
+        });
 
-            // row prop is now z scores
-            for (let row of data)
-                if (isNum(row[key]))
-                    row[key] /= std;
-
-        }
-
-        this.data = data;
         return this;
 
     }
