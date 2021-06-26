@@ -154,7 +154,7 @@ export default function regress (
     // Terminations
         
         let results = {
-            coefficients: new dataset(coefficients),
+            coefficients,
             model: {
                 rSquared,
                 rSquaredAdj,
@@ -176,15 +176,26 @@ export default function regress (
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);
 
-            results.coefficients.log(element, '\r\ncoefficients:', rounder);
+            console.log('\r\n\r\n' + 
+                'For guidance on how to query regress, ' + 
+                'call "regress.help" on the fluent-data object, ' + 
+                'or see the github wiki for this project'
+            );
+
+            new dataset(results.coefficients).log(element, '\r\ncoefficients:', rounder);
             
-            console.log('\r\nmodel:', rounder(results.model));
+            console.log(
+                '\r\nmodel:', 
+                JSON.stringify(rounder(results.model),null,2).replace(/"/g,'')
+            );
 
             if (results.data)
                 console.log(
-                    '\r\n\r\nNote: Data has been output with dimScores attached.  ' +
+                    '\r\n\r\nNote: Data has been output with estimates attached.  ' +
                     'Query "data" on the return object to get it.  '
                 );
+
+            console.log(results)
 
             if (masterCaption)
                 console.log(`-----------------------------------`);
@@ -200,8 +211,8 @@ regress.help = `
     regress returns an object with the following properties:
     
         - coefficients: A dataset containing properties of the regression coefficients.
-        - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal, 
-          breuchPagan, breuchPaganPval, log.
+        - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal.  
+          If attachData = true, then also breuchPagan and breuchPaganPval.
         - data: if attachData = true, then the original data with dime scores appended
         - log: a method to display the output described above in friendly form
 
