@@ -14,7 +14,7 @@ async function test () {
     let results =
         $$(data)
         .reduce({
-            regress: $$.regress('cases, distance', 'time', {ci: 0.95, maxDigits: 8 }),
+            regress: $$.regress('cases, distance', 'time', {ci: 0.95, maxDigits: 8, attachData: true }),
             std: $$.std(row => row.cases, true)
         })
         .get();
