@@ -669,8 +669,6 @@ class matrix {
             this.data = [];
             return;
         }
-
-        
     
         // if selector is csv, split and turn it into a property selecctor
         if (isString(selector)) {
@@ -678,7 +676,13 @@ class matrix {
             selector = (row) => this.colNames.map(name => row[name]);
         }
 
-        this.data = data.map(selector);
+        try {
+            this.data = data.map(selector);
+        } 
+        catch(e) {
+            console.log(this.data);
+            throw e;
+        }
 
         if (rowNames)
             this.rowNames = isString(rowNames)
@@ -2697,26 +2701,63 @@ class dataset extends grouping {
 
     }
 
-    standardize(obj) {
+    standardize(obj, isSample = false) {
 
-        let data = [...data];
-        let aggs = {};
-        let vals = {};
-
-        for (let key of Object.keys(obj)) {
-            vals[key] = [];
-            aggs[key] = 0;
-            for (let row of data) { 
-                let val = obj[key](row);
-                vals[key].push(val);
-                aggs[key] += val;
-            }
+        // If obj is string, convert it to object of 
+        // functions returning keys.
+        if (isString(obj)) {
+            let _obj = {};
+            for(let key of obj.split(','))
+                _obj[key.trim()] = (row) => row[key.trim()];
+            obj = _obj;
         }
+      
+        this.apply(_data => {
+                
+            let data = [..._data];
 
-        for (let key of Object.keys(aggs))
-            aggs[key] /= vals[key].length;
+            for (let key of Object.keys(obj)) {
 
-        console.log(aggs);
+                let isNum = (val) => val || val === 0; 
+
+                // Row prop is user function result. 
+                // Calculate average.
+                let sum = 0;
+                let n = 0;
+                for (let row of data) { 
+                    let val = obj[key](row);
+                    if (isNum(val)) {
+                        row[key] = val;
+                        sum += val;
+                        n += 1;
+                    }
+                }
+                let avg = sum / n;
+
+                // row prop is now deviations
+                for (let row of data)
+                    if (isNum(row[key]))
+                        row[key] = row[key] - avg;
+
+                // standard deviation
+                let ssd = 0;
+                for (let row of data) 
+                    if (isNum(row[key]))
+                        ssd += Math.pow(row[key],2);
+                if (isSample)
+                    n--;
+                let std = Math.pow(ssd/n, 0.5);
+
+                // row prop is now z scores
+                for (let row of data)
+                    if (isNum(row[key]))
+                        row[key] /= std;
+
+            }
+
+            return data;
+
+        });
 
         return this;
 
@@ -2892,6 +2933,639 @@ dataset.fromJson = function(json) {
 
 };
 
+let first = rowFunc =>
+    data => {
+        for (let row of data)
+            if (rowFunc(row) !== undefined && rowFunc(row) !== null)
+                return rowFunc(row);
+        return null;
+    };
+
+let last = rowFunc => 
+    data => {
+        let last = null;
+        for (let row of data) {
+            let val = rowFunc(row);
+            if (val !== undefined && val !== null)
+                last = val;
+        }
+        return last;
+    };
+
+let sum = (rowFunc, options) => 
+    data => {
+        let agg = 0;
+        for (let row of data) 
+            agg += rowFunc(row);
+        if (options && options.test) 
+            agg = -agg;
+        return agg;
+    };
+
+let count = rowFunc => 
+    data => {
+        let agg = 0;
+        for (let row of data) {
+            let r = rowFunc(row);
+            if (r !== undefined && r !== null)
+                agg += 1;
+        }
+        return agg;
+    };
+
+let avg = rowFunc => 
+    data => {
+        let s = sum(rowFunc)(data);
+        let n = count(rowFunc)(data);
+        return s / n;
+    };
+
+let std = (rowFunc, isSample = false) => 
+    data => {
+        let m = avg(rowFunc)(data);
+        let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
+        let n = count(rowFunc)(data);
+        if (isSample)
+            n--;
+        return Math.pow(ssd/n, 0.5);
+    };
+
+let mad = rowFunc => 
+    data => {
+
+        let avg = avg(rowFunc)(data);
+        let devs = [];
+
+        for (let ix in data)
+            devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
+    
+        return avg(x => x)(devs);    
+
+    };
+
+let cor = (rowFunc, options) => 
+    data => {
+    
+        let xAvg = avg(v => rowFunc(v)[0])(data);
+        let yAvg = avg(v => rowFunc(v)[1])(data);
+        let n = count(v => rowFunc(v))(data);
+
+        let diffs = [];
+        for(let row of data) 
+            diffs.push({ 
+                xDiff: rowFunc(row)[0] - xAvg, 
+                yDiff: rowFunc(row)[1] - yAvg
+            });
+
+        let xyDiff = sum(row => row.xDiff * row.yDiff)(diffs);
+        let xDiffSq = sum(row => row.xDiff ** 2)(diffs);
+        let yDiffSq = sum(row => row.yDiff ** 2)(diffs);
+
+        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5);
+        let df = n - 2;
+        let t =  studentsTfromCor(cor, n);
+        let pVal = studentsTcdf(t, df);
+            
+        if (options === undefined)
+            return cor;
+
+        if (options.tails == 2)
+            pVal *= 2;
+
+        return { cor, pVal, n, df, t };
+        
+    };
+
+/*
+// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
+let regress = (ivSelector, dvSelector, options = {}) => 
+    (data) => regress(data, ivSelector, dvSelector, options)
+
+let dimReduce = (csvSelector, options = {}) => 
+    (data) => dimReduce(data, csvSelector, options);
+*/
+
+let covMatrix = (selector, isSample = false) =>
+    data => {
+
+        // stattrek.com/matrix-algebra/covariance-matrix.aspx
+
+        let asMatrix = new dataset(data).matrix(selector);
+
+        let result = // result is averages
+            matrix.ones(asMatrix.data.length)
+            .multiply(asMatrix)
+            .multiply(1/asMatrix.data.length); 
+
+        result = asMatrix.apply(result, (a,b) => a - b); // result is deviations
+        result = result.transpose().multiply(result); // result is squared deviations        
+        return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
+
+    };
+
+// No need for 'isSample' as with covMatrix, because 
+// the results are the same for a sample vs a population.
+let corMatrix = (selector) =>
+    data => {
+        // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
+        let cov = covMatrix(selector)(data);
+        let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
+        return STDs.inverse().multiply(cov).multiply(STDs.inverse());
+    };
+
+var redu = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  first: first,
+  last: last,
+  sum: sum,
+  count: count,
+  avg: avg,
+  std: std,
+  mad: mad,
+  cor: cor,
+  covMatrix: covMatrix,
+  corMatrix: corMatrix
+});
+
+function dimReduce (
+    explicitVars, 
+    {
+        eigenArgs = {}, // empty object for defaults in initializations
+        maxDims = null, // null for no max
+        minEigenVal = 1, // null for no threshold
+        rotationMaxIterations = 1000,
+        rotationAngleThreshold = 1e-8,
+        attachData = false
+    } = {}
+) { return data => {
+  
+    // Initializations
+
+        eigenArgs.valueThreshold  = eigenArgs.valueThreshold || 1e-12;
+        eigenArgs.vectorThreshold = eigenArgs.vectorThreshold || 1e-4;
+        eigenArgs.testThreshold = eigenArgs.testThreshold || 1e-3;
+
+    // Calculate the correlations and get the dimensions
+
+        let correlations = 
+            new dataset(data)
+            .reduce(corMatrix(explicitVars))
+            .data;
+        
+        let eigen = correlations.eigen(eigenArgs);    
+
+    // Produce the loadings
+  
+        let loadings = [] ;
+        for (let i = 0; i < eigen.values.length; i++) {
+            if (maxDims && i > maxDims) 
+                continue;
+            else if (minEigenVal && eigen.values[i] < minEigenVal)
+                continue;
+
+            let loading = 
+                eigen.vectors.get(null, i)
+                .multiply(Math.pow(eigen.values[i],0.5))
+                .transpose()
+                .data[0]; // it's a vector, just get it
+            loadings.push(loading); 
+        }
+        loadings = new matrix(loadings).transpose();
+        loadings.rowNames = correlations.rowNames;
+        loadings.colNames = loadings.colNames.map((cn,ix) => `dim${ix}`);
+
+        let unrotated = _wrapLoadings(loadings);
+
+    // 'Normalize' the loadings in preparation for rotation
+        
+        let comRoots = unrotated.communalities.apply(cell => Math.pow(cell, 0.5));
+        loadings = loadings.clone();
+
+        for(let c = 0; c < loadings.nCol; c++)
+        for(let r = 0; r < loadings.nRow; r++) 
+            loadings.data[r][c] = loadings.data[r][c] / comRoots.data[r][0];    
+
+    // Rotate 
+        
+        let iterations = 0;
+        let maxAngle = null;
+        let mxSum = (matrix) => matrix.reduce('all', (a,b)=>a+b).data[0][0];
+        let mxCellMult = (mxA, mxB) => mxA.apply(mxB, (a,b) => a*b);
+        let mxSquare = (matrix) => matrix.apply(cell => cell*cell);
+
+        while (
+            iterations++ < rotationMaxIterations 
+            && (maxAngle > rotationAngleThreshold || maxAngle == null)
+        ) {
+        
+            maxAngle = null;
+
+            for(let leftCol = 0; leftCol < loadings.nCol - 1; leftCol++)
+            for(let rightCol = 1; rightCol < loadings.nCol; rightCol++) {
+        
+                let subset = 
+                    loadings.get(null,leftCol)
+                    .appendCols(loadings.get(null,rightCol));
+                        
+                let U = mxSquare(subset.get(null,0)).subtract(mxSquare(subset.get(null,1)));
+                let V = mxCellMult(subset.get(null,0), subset.get(null,1)).multiply(2);
+
+                let num = 2 * (loadings.nRow * mxSum(mxCellMult(U,V)) - mxSum(U) * mxSum(V));
+                let den = loadings.nRow 
+                    * mxSum(mxSquare(U).subtract(mxSquare(V))) 
+                    - (Math.pow(mxSum(U),2) - Math.pow(mxSum(V),2));
+                let angle = 0.25 * Math.atan(num/den);
+                
+                if(angle > maxAngle || maxAngle == null)
+                    maxAngle = angle;
+        
+                let rotator = new matrix([
+                    [Math.cos(angle), -Math.sin(angle)],
+                    [Math.sin(angle), Math.cos(angle)]
+                ]);
+                subset = subset.multiply(rotator);
+
+                for(let r = 0; r < loadings.nRow; r++) {
+                    loadings.data[r][leftCol] = subset.data[r][0];
+                    loadings.data[r][rightCol] = subset.data[r][1];
+                }
+
+            }
+                
+        }
+
+    // undo the normalization 
+
+        for(let c = 0; c < loadings.nCol; c++)
+        for(let r = 0; r < loadings.nRow; r++) 
+            loadings.data[r][c] = loadings.data[r][c] * comRoots.data[r][0];        
+
+        let rotated = _wrapLoadings(loadings);
+
+    // terminations
+
+        let results = {
+            rotated,
+            unrotated,
+            eigenValues: eigen.values,
+            correlations
+        };
+
+        if (attachData)
+            results.data = _scoreTheData(data, explicitVars, correlations, rotated.loadings);
+
+        results.log = (element, masterCaption, roundDigits) => {
+
+            let rounder = roundDigits !== undefined ? (row) => round(row,roundDigits) : undefined;
+            
+            if (masterCaption) 
+                console.log(`-----------------------------------\r\n${masterCaption}`);
+
+            console.log('\r\n\r\n' + 
+                'For guidance on how to query dimResults, ' + 
+                'call "dimResults.help" on the fluent-data object, ' + 
+                'or see the github wiki for this project'
+            );
+
+            rotated.log(element, '\r\nrotated:', rounder);
+            unrotated.log(element, '\r\nunrotated:', rounder);
+            console.log('\r\neigenValues:', rounder ? eigen.values : eigen.values.map(rounder));
+            correlations.log(element, '\r\ncorrelations:', rounder);
+            
+            if (attachData)
+                console.log(
+                    '\r\n\r\nNote: Data has been output with dimScores attached.  ' +
+                    'Query "data" on the return object to get it.  '
+                );
+
+            if (masterCaption)
+                console.log(`-----------------------------------`);
+
+        };
+
+        return results;
+
+}}
+
+dimReduce.help = `
+
+    dimReduce returns an object with the following properties:
+    
+        - rotated: rotated dimension properties { loadings, communalities, sums, sumSqs, 
+          props, log }.  'log' is a printer that outputs these in a single table.
+        - unrotated: unrotated dimension properties (same structure as above).
+        - eigenValues: an array of the full set of dimensions output from the correlation matrix
+        - correlations: a matrix of the correlation matrix 
+        - data: if attachData = true, then the original data with dime scores appended
+        - log: a method to display the output described above in friendly form
+
+    See the github 'built-in reducers' wiki page for this library for more information.  
+
+`;
+
+function _scoreTheData (data, explicitVars, correlations, loadings) {
+
+    let corInv = correlations.pseudoInverse();
+    let zs = new matrix([...new dataset(data).standardize(explicitVars).data], explicitVars);
+
+    let l_by_cor = loadings.transpose().multiply(corInv);
+    
+    for(let r = 0; r < zs.nRow; r++) {
+         let scores = l_by_cor.multiply(zs.get(r).transpose()).transpose().get();
+         for(let dim = 0; dim < scores.nCol; dim++)
+            data[r]['dimScores'] = scores.data[0];
+    }
+
+    return data;
+
+}
+
+function _wrapLoadings (loads) {
+
+    let communalities = loads
+        .apply(cell => cell*cell)
+        .reduce('row', (a,b) => a + b)
+        .setColNames('communality');
+    
+    let specificVars = communalities
+        .apply(cell => 1-cell)
+        .setColNames('specificVar');
+    
+    let sumSqs = loads
+        .apply(cell => cell*cell)
+        .reduce('col', (a,b) => a + b)
+        .setRowNames('sumSqs');
+
+    let sumCom = communalities.reduce('all', (a,b) => a + b).getCell(0,0);
+
+    let sums = Array(loads.nCol).fill(null);
+    sums.push(...[
+        communalities.reduce('all', (a,b) => a + b).getCell(0,0),
+        specificVars.reduce('all', (a,b) => a + b).getCell(0,0)
+    ]);
+    sums = new matrix([sums]).setRowNames('sums');
+    
+    let props = sumSqs
+        .apply(sumSq => sumSq / sumCom)
+        .setRowNames('propVars');
+
+    let printable = loads
+        .appendCols(communalities)
+        .appendCols(specificVars)
+        .appendRows(sums)
+        .appendRows(sumSqs)
+        .appendRows(props);
+
+    let log = (element, title, mapper) => printable.log(
+        element, 
+        title, 
+        mapper,
+        50,
+        {
+            headers: true,
+            preferEmptyStrings: true,
+            bordersBefore: [[loads.nRow],[loads.nCol]]
+        }
+    ); 
+
+    return {
+        loadings: loads,
+        communalities,
+        sums,
+        sumSqs,
+        props,
+        log
+    };
+
+}
+
+function regress (
+    ivSelector, 
+    dvSelector, 
+    {
+        attachData = false,
+        ci = null
+    } = {}
+) { return data => {
+
+    // Initializations
+
+        let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
+        let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
+
+        if (ivKeys.length == 0)
+            throw `ivSelector must return an object with explicit keys defined.`
+        if (dvKeys.length != 1)
+            throw `dvSelector must return an object with exactly one key defined.`
+
+        let ivs = 
+            new matrix(data, row => [1, ...outerIvSelector(row)] )
+            .setColNames(`intercept,${ivKeys.join(',')}`);
+            
+        let dvs = new matrix(data, row => outerDvSelector(row));
+
+        let n = data.length;
+        let transposedIvs = ivs.transpose();
+
+        // I think this translates to variances.
+        let variances = transposedIvs.multiply(ivs).inverse();
+        
+    // Calcaulate the coefficients
+                    
+        let coefficients = 
+            variances
+            .multiply(transposedIvs)
+            .multiply(dvs);
+
+        coefficients = coefficients.data.map((row,ix) => ({ 
+            name: coefficients.rowNames[ix], 
+            value: row[0]
+        }));
+    
+    // Calculate the row estimates and residuals
+
+        for(let row of data)  {
+
+            let actual = outerDvSelector(row);
+            actual = actual.length == 1 ? actual[0] : undefined;
+            
+            let estimate =  
+                outerIvSelector(row)
+                .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
+                .reduce((a,b) => a + b, 0)
+                + coefficients[0].value; // intercept
+            
+            row.estimate = estimate;
+            row.actual = actual;
+            row.residual = actual - estimate;
+
+        }
+
+    // Calculate the coefficient statistics
+
+        // kokminglee.125mb.com/math/linearreg3.html
+
+        let s = Math.pow(
+            (1 / (n - coefficients.length)) 
+            * sum(row => Math.pow(row.estimate - row.actual, 2))(data),
+            0.5
+        );
+
+        let stdErrs = 
+            variances
+            .multiply(Math.pow(s,2))
+            .apply(cell => Math.pow(cell,0.5))
+            .diagonal(true)
+            .data;
+        
+        for(let c in coefficients) {
+            coefficients[c].stdErr = stdErrs[c];
+            coefficients[c].t = coefficients[c].value / stdErrs[c];
+            coefficients[c].df = data.length - coefficients.length;
+            coefficients[c].pVal = studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
+            coefficients[c].ci = (quantile) => [
+                coefficients[c].value + studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
+                coefficients[c].value - studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
+            ]; 
+            if (ci) // If the user passed ci, process the ci function.
+                coefficients[c].ci = coefficients[c].ci(ci);
+        }
+
+    // Calculate the model-level statistics
+
+        // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
+        let mean = avg(row => row.actual)(data);
+        let ssComplex = sum(row => Math.pow(row.estimate - row.actual, 2))(data);
+        let ssSimple = sum(row => Math.pow(row.actual - mean, 2))(data);
+        let paramsComplex = coefficients.length;
+        let paramsSimple = 1;
+
+        let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
+                (ssComplex/(n-paramsComplex));
+
+        let rSquared = 1 - ssComplex / ssSimple; 
+
+        // n - p - 1 = n - coefficients.length becasue p does not include the intercept
+        let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
+
+    // Regress the squared residuals
+
+        // youtube.com/watch?v=wzLADO24CDk
+
+        let breuchPagan;
+        let breuchPaganPval;
+
+        if (attachData) {
+
+            // We'll need to save these because rerunning regress will 
+            // overwrite the properties.  But we need the original values
+            // back in the final output.
+            let clonedProps = data.map(row => ({
+                actual: row.actual, 
+                estimate: row.estimate, 
+                residual: row.residual
+            }));
+
+            let residRegress = regress(
+                ivSelector, 
+                row => [Math.pow(row.residual,2)], 
+                { estimates: false } // block estimtes to avoid infinite recursion.
+            )(data);
+
+            let r2 = residRegress.model.rSquared;
+            let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
+            breuchPagan = r2 * n;
+            breuchPaganPval = chiCdf(breuchPagan, p);
+
+            // Restore the original values.
+            for(let rowIx in data)  {
+                data[rowIx].actual = clonedProps[rowIx].actual;
+                data[rowIx].estimate = clonedProps[rowIx].estimate;
+                data[rowIx].residual = clonedProps[rowIx].residual;
+            }
+                
+
+        }
+
+    // Terminations
+        
+        let results = {
+            coefficients: new dataset(coefficients),
+            model: {
+                rSquared,
+                rSquaredAdj,
+                F,
+                pVal: Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
+            }
+        }; 
+
+        if (attachData)
+            results.data = new dataset(data);
+
+        if (breuchPagan != undefined) 
+            Object.assign(results.model, {breuchPagan, breuchPaganPval});
+
+        results.log = (element, masterCaption, roundDigits) => {
+
+            let rounder = (x) => !roundDigits ? x : round(x, roundDigits);
+
+            if (masterCaption) 
+                console.log(`-----------------------------------\r\n${masterCaption}`);
+
+            results.coefficients.log(element, '\r\ncoefficients:', rounder);
+            
+            console.log('\r\nmodel:', rounder(results.model));
+
+            if (results.data)
+                console.log(
+                    '\r\n\r\nNote: Data has been output with dimScores attached.  ' +
+                    'Query "data" on the return object to get it.  '
+                );
+
+            if (masterCaption)
+                console.log(`-----------------------------------`);
+
+        };
+
+        return results;
+
+}}
+
+regress.help = `
+
+    regress returns an object with the following properties:
+    
+        - coefficients: A dataset containing properties of the regression coefficients.
+        - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal, 
+          breuchPagan, breuchPaganPval, log.
+        - data: if attachData = true, then the original data with dime scores appended
+        - log: a method to display the output described above in friendly form
+
+    See the github 'built-in reducers' wiki page for this library for more information.  
+
+`;
+
+// Output a selector of row properties that returns an array
+// and a set of labels (keys) that pertain to the array
+function processSelector(selector) {
+    
+    if (isString(selector)) {
+        let keys = selector.split(',').map(key => key.trim());
+        return [
+            keys,
+            (row) => keys.map(key => row[key])
+        ];
+    }
+
+    let keys = Object.keys(selector({}));
+
+    return [
+        keys, 
+        (row) => keys.map(key => selector(row)[key])
+    ];
+
+}
+
 function _(obj) { 
     if (!isIterable(obj))
         throw 'Object instantiating fluent_data must be iterable';
@@ -2902,6 +3576,11 @@ _.dataset = dataset;
 _.matrix = matrix;
 _.round = round;
 
+Object.assign(_, redu);
+_.regress = regress;
+_.dimReduce = dimReduce;
+
+/*
 _.first = rowFunc =>
     data => {
         for (let row of data)
@@ -2919,7 +3598,7 @@ _.last = rowFunc =>
                 last = val;
         }
         return last;
-    };
+    }
 
 _.sum = (rowFunc, options) => 
     data => {
@@ -2935,7 +3614,7 @@ _.count = rowFunc =>
     data => {
         let agg = 0;
         for (let row of data) {
-            let r = rowFunc(row);
+            let r = rowFunc(row)
             if (r !== undefined && r !== null)
                 agg += 1;
         }
@@ -2990,10 +3669,10 @@ _.cor = (rowFunc, options) =>
         let xDiffSq = _.sum(row => row.xDiff ** 2)(diffs);
         let yDiffSq = _.sum(row => row.yDiff ** 2)(diffs);
 
-        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5);
+        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5)
         let df = n - 2;
-        let t =  studentsTfromCor(cor, n);
-        let pVal = studentsTcdf(t, df);
+        let t =  g.studentsTfromCor(cor, n);
+        let pVal = g.studentsTcdf(t, df);
             
         if (options === undefined)
             return cor;
@@ -3006,202 +3685,11 @@ _.cor = (rowFunc, options) =>
     };
 
 // Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
-_.regress = (ivSelector, dvSelector, options) => 
-    data => {
+_.regress = (ivSelector, dvSelector, options = {}) => 
+    (data) => regress(data, ivSelector, dvSelector, options)
 
-        // Initializations
-
-            options = Object.assign(
-                { estimates: true }, 
-                options
-            );
-
-            // Output a selector of row properties that returns an array
-            // and a set of labels (keys) that pertain to the array
-            let processSelector = (selector) => {
-                
-                if (isString(selector)) {
-                    let keys = selector.split(',').map(key => key.trim());
-                    return [
-                        keys,
-                        (row) => keys.map(key => row[key])
-                    ];
-                }
-
-                let keys = Object.keys(selector({}));
-                return [
-                    keys, 
-                    (row) => keys.map(key => selector(row)[key])
-                ];
-
-            };
-
-            let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
-            let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
-
-            if (ivKeys.length == 0)
-                throw `ivSelector must return an object with explicit keys defined.`
-            if (dvKeys.length != 1)
-                throw `dvSelector must return an object with exactly one key defined.`
-
-            let ivs = 
-                new matrix(data, row => [1, ...outerIvSelector(row)] )
-                .setColNames(`intercept,${ivKeys.join(',')}`);
-                
-            let dvs = new matrix(data, row => outerDvSelector(row));
-
-            let n = data.length;
-            let transposedIvs = ivs.transpose();
-
-            // I think this translates to variances.
-            let variances = transposedIvs.multiply(ivs).inverse();
-            
-        // Calcaulate the coefficients
-                        
-            let coefficients = 
-                variances
-                .multiply(transposedIvs)
-                .multiply(dvs);
-
-            coefficients = coefficients.data.map((row,ix) => ({ 
-                name: coefficients.rowNames[ix], 
-                value: row[0]
-            }));
-        
-        // Calculate the row estimates and residuals
-
-            for(let row of data)  {
-
-                let actual = outerDvSelector(row);
-                actual = actual.length == 1 ? actual[0] : undefined;
-                
-                let estimate =  
-                    outerIvSelector(row)
-                    .map((iv,ivIx) => iv * coefficients[ivIx + 1].value)
-                    .reduce((a,b) => a + b, 0)
-                    + coefficients[0].value; // intercept
-                
-                row.estimate = estimate;
-                row.actual = actual;
-                row.residual = actual - estimate;
-
-            }
-
-        // Calculate the coefficient statistics
-
-            // kokminglee.125mb.com/math/linearreg3.html
-
-            let s = Math.pow(
-                (1 / (n - coefficients.length)) 
-                * _.sum(row => Math.pow(row.estimate - row.actual, 2))(data),
-                0.5
-            );
-
-            let stdErrs = 
-                variances
-                .multiply(Math.pow(s,2))
-                .apply(cell => Math.pow(cell,0.5))
-                .diagonal(true)
-                .data;
-            
-            for(let c in coefficients) {
-                coefficients[c].stdErr = stdErrs[c];
-                coefficients[c].t = coefficients[c].value / stdErrs[c];
-                coefficients[c].df = data.length - coefficients.length;
-                coefficients[c].pVal = studentsTcdf(coefficients[c].t, coefficients[c].df) * 2;
-                coefficients[c].ci = (quantile) => [
-                    coefficients[c].value + studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr,
-                    coefficients[c].value - studentsTquantile((1 - quantile)/2, coefficients[c].df) * coefficients[c].stdErr
-                ]; 
-                if (options && options.ci) // If the user passed ci, process the ci function.
-                    coefficients[c].ci = coefficients[c].ci(options.ci);
-            }
-
-        // Calculate the model-level statistics
-
-            // en.wikipedia.org/wiki/F-test (Regression Problems | p1 and p2 include the intercept)
-            let mean = _.avg(row => row.actual)(data);
-            let ssComplex = _.sum(row => Math.pow(row.estimate - row.actual, 2))(data);
-            let ssSimple = _.sum(row => Math.pow(row.actual - mean, 2))(data);
-            let paramsComplex = coefficients.length;
-            let paramsSimple = 1;
-
-            let F = ((ssSimple - ssComplex) / (paramsComplex - paramsSimple)) / 
-                    (ssComplex/(n-paramsComplex));
-
-            let rSquared = 1 - ssComplex / ssSimple; 
-
-            // n - p - 1 = n - coefficients.length becasue p does not include the intercept
-            let rSquaredAdj = 1 - (1 - rSquared) * (n - 1) / (n - coefficients.length); 
-
-        // Regress the squared residuals
-
-            // youtube.com/watch?v=wzLADO24CDk
-
-            let breuchPagan;
-            let breuchPaganPval;
-
-            if (options.estimates) {
-
-                // We'll need to save these because rerunning regress will 
-                // overwrite the properties.  But we need the original values
-                // back in the final output.
-                let clonedProps = data.map(row => ({
-                    actual: row.actual, 
-                    estimate: row.estimate, 
-                    residual: row.residual
-                }));
-
-                let residRegress = _.regress(
-                    ivSelector, 
-                    row => [Math.pow(row.residual,2)], 
-                    { estimates: false } // block estimtes to avoid infinite recursion.
-                )(data);
-
-                let r2 = residRegress.model.rSquared;
-                let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
-                breuchPagan = r2 * n;
-                breuchPaganPval = chiCdf(breuchPagan, p);
-
-                // Restore the original values.
-                for(let rowIx in data)  {
-                    data[rowIx].actual = clonedProps[rowIx].actual;
-                    data[rowIx].estimate = clonedProps[rowIx].estimate;
-                    data[rowIx].residual = clonedProps[rowIx].residual;
-                }
-                    
-
-            }
-
-        // Terminations
-            
-            let results = {
-                data: new dataset(data),
-                coefficients,
-                model: {
-                    rSquared,
-                    rSquaredAdj,
-                    F,
-                    pVal: Fcdf(F, paramsComplex - paramsSimple, n - paramsComplex)
-                }
-            }; 
-
-            if (breuchPagan != undefined) 
-                Object.assign(results.model, {breuchPagan, breuchPaganPval});
-
-            if (options.maxDigits) {
-                results.coefficients = round(results.coefficients, options.maxDigits);
-                results.model = round(results.model, options.maxDigits);
-                for(let row of results.data) {
-                    row.actual = round(row.actual, options.maxDigits);
-                    row.estimate = round(row.estimate, options.maxDigits);
-                    row.residual = round(row.residual, options.maxDigits);
-                }
-            }
-
-            return results;
-
-    };
+_.dimReduce = (csvSelector, options = {}) => 
+    (data) => dimReduce(data, csvSelector, options);
 
 _.covMatrix = (selector, isSample = false) =>
     data => {
@@ -3219,7 +3707,7 @@ _.covMatrix = (selector, isSample = false) =>
         result = result.transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
 
-    };
+    }
 
 // No need for 'isSample' as with covMatrix, because 
 // the results are the same for a sample vs a population.
@@ -3229,7 +3717,7 @@ _.corMatrix = (selector) =>
         let cov = _.covMatrix(selector)(data);
         let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
         return STDs.inverse().multiply(cov).multiply(STDs.inverse());
-    };
+    }
 
 // CorMatrix gave the same results whether sample or population.  I wasn't familiar
 // with that fact.  I had a very hard time googling this fact.  People said pop vs 
@@ -3249,6 +3737,8 @@ _.corMatrix2 = (selector, isSample = true) =>
         let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
         let SS = STDs.multiply(STDs.transpose());
         return cov.apply(SS, (x,y) => x / y);
-    };
+    }    
+
+*/
 
 module.exports = _;

@@ -135,6 +135,15 @@ export default class dataset extends grouping {
 
     standardize(obj, isSample = false) {
 
+        // If obj is string, convert it to object of 
+        // functions returning keys.
+        if (g.isString(obj)) {
+            let _obj = {};
+            for(let key of obj.split(','))
+                _obj[key.trim()] = (row) => row[key.trim()];
+            obj = _obj;
+        }
+      
         this.apply(_data => {
                 
             let data = [..._data];

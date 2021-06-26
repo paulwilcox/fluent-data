@@ -16,8 +16,6 @@ export default class matrix {
             this.data = [];
             return;
         }
-
-        
     
         // if selector is csv, split and turn it into a property selecctor
         if (g.isString(selector)) {
@@ -25,7 +23,13 @@ export default class matrix {
             selector = (row) => this.colNames.map(name => row[name]);
         }
 
-        this.data = data.map(selector)
+        try {
+            this.data = data.map(selector);
+        } 
+        catch(e) {
+            console.log(this.data);
+            throw e;
+        }
 
         if (rowNames)
             this.rowNames = g.isString(rowNames)

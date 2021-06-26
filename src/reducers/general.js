@@ -1,26 +1,8 @@
-import dataset from './dataset.js';
-import matrix from './matrix.js';
-import dimReduce from './reducers/dimReduce.js';
-import regress from './reducers/regress.js';
-import * as redu from './reducers/general.js';
-import * as g from './general.js';
+import dataset from '../dataset.js';
+import matrix from '../matrix.js';
+import * as g from '../general.js';
 
-export default function _(obj) { 
-    if (!g.isIterable(obj))
-        throw 'Object instantiating fluent_data must be iterable';
-    return obj instanceof dataset ? obj : new dataset(obj);
-}
-
-_.dataset = dataset;
-_.matrix = matrix;
-_.round = g.round;
-
-Object.assign(_, redu);
-_.regress = regress;
-_.dimReduce = dimReduce;
-
-/*
-_.first = rowFunc =>
+export let first = rowFunc =>
     data => {
         for (let row of data)
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
@@ -28,7 +10,7 @@ _.first = rowFunc =>
         return null;
     };
 
-_.last = rowFunc => 
+export let last = rowFunc => 
     data => {
         let last = null;
         for (let row of data) {
@@ -39,7 +21,7 @@ _.last = rowFunc =>
         return last;
     }
 
-_.sum = (rowFunc, options) => 
+export let sum = (rowFunc, options) => 
     data => {
         let agg = 0;
         for (let row of data) 
@@ -49,7 +31,7 @@ _.sum = (rowFunc, options) =>
         return agg;
     };
 
-_.count = rowFunc => 
+export let count = rowFunc => 
     data => {
         let agg = 0;
         for (let row of data) {
@@ -60,42 +42,42 @@ _.count = rowFunc =>
         return agg;
     };
 
-_.avg = rowFunc => 
+export let avg = rowFunc => 
     data => {
-        let s = _.sum(rowFunc)(data);
-        let n = _.count(rowFunc)(data);
+        let s = sum(rowFunc)(data);
+        let n = count(rowFunc)(data);
         return s / n;
     };
 
-_.std = (rowFunc, isSample = false) => 
+export let std = (rowFunc, isSample = false) => 
     data => {
-        let m = _.avg(rowFunc)(data);
+        let m = avg(rowFunc)(data);
         let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
-        let n = _.count(rowFunc)(data);
+        let n = count(rowFunc)(data);
         if (isSample)
             n--;
         return Math.pow(ssd/n, 0.5);
     };
 
-_.mad = rowFunc => 
+export let mad = rowFunc => 
     data => {
 
-        let avg = _.avg(rowFunc)(data);
+        let avg = avg(rowFunc)(data);
         let devs = [];
 
         for (let ix in data)
             devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
     
-        return _.avg(x => x)(devs);    
+        return avg(x => x)(devs);    
 
     };
 
-_.cor = (rowFunc, options) => 
+export let cor = (rowFunc, options) => 
     data => {
     
-        let xAvg = _.avg(v => rowFunc(v)[0])(data);
-        let yAvg = _.avg(v => rowFunc(v)[1])(data);
-        let n = _.count(v => rowFunc(v))(data);
+        let xAvg = avg(v => rowFunc(v)[0])(data);
+        let yAvg = avg(v => rowFunc(v)[1])(data);
+        let n = count(v => rowFunc(v))(data);
 
         let diffs = [];
         for(let row of data) 
@@ -104,9 +86,9 @@ _.cor = (rowFunc, options) =>
                 yDiff: rowFunc(row)[1] - yAvg
             });
 
-        let xyDiff = _.sum(row => row.xDiff * row.yDiff)(diffs);
-        let xDiffSq = _.sum(row => row.xDiff ** 2)(diffs);
-        let yDiffSq = _.sum(row => row.yDiff ** 2)(diffs);
+        let xyDiff = sum(row => row.xDiff * row.yDiff)(diffs);
+        let xDiffSq = sum(row => row.xDiff ** 2)(diffs);
+        let yDiffSq = sum(row => row.yDiff ** 2)(diffs);
 
         let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5)
         let df = n - 2;
@@ -123,19 +105,21 @@ _.cor = (rowFunc, options) =>
         
     };
 
+/*
 // Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
-_.regress = (ivSelector, dvSelector, options = {}) => 
+let regress = (ivSelector, dvSelector, options = {}) => 
     (data) => regress(data, ivSelector, dvSelector, options)
 
-_.dimReduce = (csvSelector, options = {}) => 
+let dimReduce = (csvSelector, options = {}) => 
     (data) => dimReduce(data, csvSelector, options);
+*/
 
-_.covMatrix = (selector, isSample = false) =>
+export let covMatrix = (selector, isSample = false) =>
     data => {
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
-        let asMatrix = _(data).matrix(selector);
+        let asMatrix = new dataset(data).matrix(selector);
 
         let result = // result is averages
             matrix.ones(asMatrix.data.length)
@@ -150,10 +134,10 @@ _.covMatrix = (selector, isSample = false) =>
 
 // No need for 'isSample' as with covMatrix, because 
 // the results are the same for a sample vs a population.
-_.corMatrix = (selector) =>
+export let corMatrix = (selector) =>
     data => {
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
-        let cov = _.covMatrix(selector)(data);
+        let cov = covMatrix(selector)(data);
         let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
         return STDs.inverse().multiply(cov).multiply(STDs.inverse());
     }
@@ -170,12 +154,10 @@ _.corMatrix = (selector) =>
 // I could explicitly see following certain formulas I found for r vs rho, just to see
 // if I would get the same matricies back again.  I did.  In the future I'll consider
 // proving it (I imagine the size terms cancel out), but for now I'm moving on.     
-_.corMatrix2 = (selector, isSample = true) =>
+let corMatrix2 = (selector, isSample = true) =>
     data => {
-        let cov = _.covMatrix(selector, isSample)(data);
+        let cov = covMatrix(selector, isSample)(data);
         let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
         let SS = STDs.multiply(STDs.transpose());
         return cov.apply(SS, (x,y) => x / y);
     }    
-
-*/
