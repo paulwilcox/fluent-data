@@ -195,8 +195,6 @@ export default function regress (
                     'Query "data" on the return object to get it.  '
                 );
 
-            console.log(results)
-
             if (masterCaption)
                 console.log(`-----------------------------------`);
 
@@ -213,7 +211,7 @@ regress.help = `
         - coefficients: A dataset containing properties of the regression coefficients.
         - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal.  
           If attachData = true, then also breuchPagan and breuchPaganPval.
-        - data: if attachData = true, then the original data with dime scores appended
+        - data: if attachData = true, then the original data with estimates appended
         - log: a method to display the output described above in friendly form
 
     See the github 'built-in reducers' wiki page for this library for more information.  

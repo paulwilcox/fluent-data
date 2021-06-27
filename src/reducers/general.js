@@ -2,16 +2,17 @@ import dataset from '../dataset.js';
 import matrix from '../matrix.js';
 import * as g from '../general.js';
 
-export let first = rowFunc =>
-    data => {
+export function first(rowFunc) { 
+    return data => {
         for (let row of data)
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
                 return rowFunc(row);
         return null;
-    };
+    }
+};
 
-export let last = rowFunc => 
-    data => {
+export function last (rowFunc) {
+    return data => {
         let last = null;
         for (let row of data) {
             let val = rowFunc(row);
@@ -20,19 +21,20 @@ export let last = rowFunc =>
         }
         return last;
     }
+}
 
-export let sum = (rowFunc, options) => 
-    data => {
+export function sum(rowFunc) { 
+    return data => {
         let agg = 0;
         for (let row of data) 
             agg += rowFunc(row);
-        if (options && options.test) 
-            agg = -agg;
         return agg;
-    };
+    }
+}
 
-export let count = rowFunc => 
-    data => {
+export function count(rowFunc) { 
+    return data => {
+
         let agg = 0;
         for (let row of data) {
             let r = rowFunc(row)
@@ -40,40 +42,45 @@ export let count = rowFunc =>
                 agg += 1;
         }
         return agg;
-    };
+    }
+}
 
-export let avg = rowFunc => 
-    data => {
+export function avg(rowFunc) { 
+    return data => {
+
         let s = sum(rowFunc)(data);
         let n = count(rowFunc)(data);
         return s / n;
-    };
+    }
+}
 
-export let std = (rowFunc, isSample = false) => 
-    data => {
+export function std(rowFunc, isSample = false) { 
+    return data => {
         let m = avg(rowFunc)(data);
         let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
         let n = count(rowFunc)(data);
         if (isSample)
             n--;
         return Math.pow(ssd/n, 0.5);
-    };
+    }
+}
 
-export let mad = rowFunc => 
-    data => {
+export function mad(rowFunc) { 
+    return data => {
 
-        let avg = avg(rowFunc)(data);
+        let avg = this.avg(rowFunc)(data);
         let devs = [];
 
         for (let ix in data)
             devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
     
-        return avg(x => x)(devs);    
+        return this.avg(x => x)(devs);    
 
-    };
+    }
+}
 
-export let cor = (rowFunc, options) => 
-    data => {
+export function cor(rowFunc, options) {
+    return data => {
     
         let xAvg = avg(v => rowFunc(v)[0])(data);
         let yAvg = avg(v => rowFunc(v)[1])(data);
@@ -103,19 +110,11 @@ export let cor = (rowFunc, options) =>
 
         return { cor, pVal, n, df, t };
         
-    };
+    }
+}
 
-/*
-// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
-let regress = (ivSelector, dvSelector, options = {}) => 
-    (data) => regress(data, ivSelector, dvSelector, options)
-
-let dimReduce = (csvSelector, options = {}) => 
-    (data) => dimReduce(data, csvSelector, options);
-*/
-
-export let covMatrix = (selector, isSample = false) =>
-    data => {
+export function  covMatrix (selector, isSample = false) {
+    return data => {
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
@@ -131,16 +130,18 @@ export let covMatrix = (selector, isSample = false) =>
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
 
     }
+}
 
 // No need for 'isSample' as with covMatrix, because 
 // the results are the same for a sample vs a population.
-export let corMatrix = (selector) =>
-    data => {
+export function corMatrix(selector) {
+    return data => {
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
         let cov = covMatrix(selector)(data);
         let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
         return STDs.inverse().multiply(cov).multiply(STDs.inverse());
     }
+}
 
 // CorMatrix gave the same results whether sample or population.  I wasn't familiar
 // with that fact.  I had a very hard time googling this fact.  People said pop vs 
@@ -154,10 +155,11 @@ export let corMatrix = (selector) =>
 // I could explicitly see following certain formulas I found for r vs rho, just to see
 // if I would get the same matricies back again.  I did.  In the future I'll consider
 // proving it (I imagine the size terms cancel out), but for now I'm moving on.     
-let corMatrix2 = (selector, isSample = true) =>
-    data => {
+function corMatrix2 (selector, isSample = true) {
+    return data => {
         let cov = covMatrix(selector, isSample)(data);
         let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
         let SS = STDs.multiply(STDs.transpose());
         return cov.apply(SS, (x,y) => x / y);
     }    
+}
