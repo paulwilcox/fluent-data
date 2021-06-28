@@ -221,7 +221,7 @@ regress.help = `
 // Output a selector of row properties that returns an array
 // and a set of labels (keys) that pertain to the array
 function processSelector(selector) {
-    
+ 
     if (g.isString(selector)) {
         let keys = selector.split(',').map(key => key.trim());
         return [
@@ -229,12 +229,5 @@ function processSelector(selector) {
             (row) => keys.map(key => row[key])
         ];
     }
-
-    let keys = Object.keys(selector({}));
-
-    return [
-        keys, 
-        (row) => keys.map(key => selector(row)[key])
-    ];
 
 }
