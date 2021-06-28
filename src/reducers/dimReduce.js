@@ -132,7 +132,7 @@ export default function dimReduce (
 
         results.log = (element, masterCaption, roundDigits) => {
 
-            let rounder = roundDigits !== undefined ? (row) => g.round(row,roundDigits) : undefined;
+            let rounder = roundDigits !== undefined ? (row) => g.round(row,roundDigits) : x => x;
             
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);
@@ -172,7 +172,7 @@ dimReduce.help = `
         - unrotated: unrotated dimension properties (same structure as above).
         - eigenValues: an array of the full set of dimensions output from the correlation matrix
         - correlations: a matrix of the correlation matrix 
-        - data: if attachData = true, then the original data with dime scores appended
+        - data: if attachData = true, then the original data with dim scores appended
         - log: a method to display the output described above in friendly form
 
     See the github 'built-in reducers' wiki page for this library for more information.  
@@ -189,10 +189,10 @@ function _scoreTheData (data, explicitVars, correlations, loadings) {
     for(let r = 0; r < zs.nRow; r++) {
          let scores = l_by_cor.multiply(zs.get(r).transpose()).transpose().get();
          for(let dim = 0; dim < scores.nCol; dim++)
-            data[r]['dimScores'] = scores.data[0];
+            data[r][`dim${dim}`] = scores.data[0][dim];
     }
 
-    return data;
+    return new dataset(data);
 
 }
 
