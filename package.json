@@ -1,7 +1,7 @@
 {
   "name": "fluent-data",
   "version": "4.0.0",
-  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, mergings, reducings (aggregations), and similar operations on datast style objects.  Do matrix operations.  Friendly fluent/chain syntax.",
+  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, aggregations, and similar operations on datast style objects.  Do matrix operations.  Friendly fluent/chain syntax.",
   "main": "./dist/fluent-data.server.js",
   "files": [
     "dist"
@@ -16,31 +16,19 @@
     "url": "https://github.com/paulwilcox/fluent-data"
   },
   "keywords": [
-    "dataset",
-    "array",
-    "iterable",
+    "dataset", "array",
     "map",
     "filter",
-    "merge",
-    "join",
-    "left-join",
-    "joinLeft",
-    "fold",
-    "reduce",
-    "aggregate",
-    "order",
-    "sort",
-    "group",
-    "ungroup",
-    "correlation",
-    "regression",
-    "multiple-regression",
-    "p-value",
+    "merge", "join", "left-join", "left join",
+    "fold", "reduce", "aggregate",
+    "order", "sort",
+    "group", "ungroup",
+    "statistics", "p-value",
+    "correlation", "regression", "multiple-regression", 
+    "factoranalysis", "factor-analysis", "factor analysis",
     "matrix",
     "transform",
-    "eigen",
-    "eigenvalue",
-    "eigenvector"
+    "eigen", "eigenvalue", "eigenvector"
   ],
   "author": "Paul Wilcox",
   "license": "ISC",
@@ -50,6 +38,6 @@
     "puppeteer": "^10.1.0",
     "rollup": "^2.52.7",
     "rollup-plugin-license": "^2.5.0",
-    "sampledb": "0.0.9"
+    "sampledb": "0.0.11"
   }
 }
