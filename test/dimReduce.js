@@ -62,4 +62,6 @@ function test () {
     if (results.rd.model.pVal > 0.5)
         throw `the dimReduced regression is no longer significant`;
 
+    return true;
+
 }

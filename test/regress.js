@@ -18,7 +18,7 @@ async function test () {
             std: $$.std(row => row.cases, true)
         })
         .get();
-        
+                
     let getCoef = (name) => results.regress.coefficients.find(c => c.name == name);
     let intercept = getCoef('intercept');
     let cases = getCoef('cases');

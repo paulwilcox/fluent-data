@@ -132,9 +132,11 @@ export default function regress (
 
             let residRegress = regress(
                 ivSelector, 
-                row => [Math.pow(row.residual,2)], 
+                'resSq', 
                 { estimates: false } // block estimtes to avoid infinite recursion.
-            )(data);
+            )(
+                data.map(row => ({...row, resSq: Math.pow(row.residual,2)}))
+            );
 
             let r2 = residRegress.model.rSquared;
             let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
@@ -221,13 +223,11 @@ regress.help = `
 // Output a selector of row properties that returns an array
 // and a set of labels (keys) that pertain to the array
 function processSelector(selector) {
- 
-    if (g.isString(selector)) {
-        let keys = selector.split(',').map(key => key.trim());
-        return [
-            keys,
-            (row) => keys.map(key => row[key])
-        ];
-    }
+
+    let keys = selector.split(',').map(key => key.trim());
+    return [
+        keys,
+        (row) => keys.map(key => row[key])
+    ];
 
 }
