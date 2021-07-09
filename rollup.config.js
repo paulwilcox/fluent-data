@@ -15,7 +15,8 @@ export default [{
     input: 'src/fluent-data.js',
     output: {
         file: 'dist/fluent-data.server.js',
-        format: 'cjs'
+        format: 'cjs',
+        exports: 'default'
     },
     plugins: licensePlugin
 }, {
