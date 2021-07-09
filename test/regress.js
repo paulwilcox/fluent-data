@@ -1,5 +1,4 @@
 
-// Test values come from R output as a crosscheck
 async function test () {
 
     let data = [
@@ -14,16 +13,41 @@ async function test () {
     let results =
         $$(data)
         .reduce({
-            regress: $$.regress('cases, distance', 'time', {ci: 0.95, maxDigits: 8, attachData: true }),
+            regress: $$.regress(
+                'cases, distance', 
+                'time', 
+                {ci: 0.95, maxDigits: 8, attachData: true }
+            ),
             std: $$.std(row => row.cases, true)
         })
         .get();
-                
-    let getCoef = (name) => results.regress.coefficients.find(c => c.name == name);
+
+    try { checker(results.regress); }
+    catch (e) { console.log('Error at "$$.regress"'); throw e; }
+    
+    results = 
+        $$(data)
+        .regress(
+            'cases, distance', 
+            'time', 
+            {ci: 0.95, maxDigits: 8, attachData: true }
+        );
+
+    try { checker(results); }
+    catch (e) { console.log('Error at "dataset.regress"'); throw e; }
+ 
+    return true;
+
+}
+
+// Test values come from R output as a crosscheck
+async function checker (results) {
+
+    let getCoef = (name) => results.coefficients.find(c => c.name == name);
     let intercept = getCoef('intercept');
     let cases = getCoef('cases');
     let distance = getCoef('distance');
-    let model = results.regress.model;
+    let model = results.model;
 
     let test = (desc, val, expected, round) => {
         if ($$.round(val, round) != expected)
@@ -41,9 +65,6 @@ async function test () {
     test(`Pvalue for coefficient 'cases'`, cases.pVal, 0.0711, 4);
     test(`Lower confidence interval for 'cases'`, cases.ci[0], -0.19098427, 8);
     test(`Upper confidence interval for 'cases'`, cases.ci[1], 2.58401687, 8);
-
-    return true;
-
 
 }
 

@@ -28,20 +28,25 @@ function test () {
         { name: 'Hazy', ..._math(25, 75), ..._lang(25, 11) }
     ]);
 
-    let reduced = grades.reduce(
+    // Just quick check to see if it works this way;
+    /*let dummy = grades.reduce(
         $$.dimReduce('arithmetic, algebra, reading, writing', { attachData: true }),
     )
-    .data;
+    .data;*/
 
-    let results = reduced.data
-        .reduce({ 
+    let reduced = grades.dimReduce(
+        'arithmetic, algebra, reading, writing', 
+        { attachData: true }
+    );
 
-           rr: $$.regress('arithmetic, algebra, reading', 'writing', { ci: 0.95 }),
+    let results = reduced.data.reduce({ 
 
-           // just dim0, because dim1 already incorporates writing
-           rd: $$.regress('dim0, reading', 'writing', { ci: 0.95 })
+        rr: $$.regress('arithmetic, algebra, reading', 'writing', { ci: 0.95 }),
 
-        })
+        // just dim0, because dim1 already incorporates writing
+        rd: $$.regress('dim0, reading', 'writing', { ci: 0.95 })
+
+    })
     .get();
 
     if(reduced.rotated.loadings.nCol != 2) 

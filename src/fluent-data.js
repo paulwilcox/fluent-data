@@ -14,3 +14,11 @@ _.matrix = matrix;
 _.round = g.round;
 
 Object.assign(_, redu);
+
+dataset.prototype.dimReduce = function (...args) {
+    return redu.dimReduce(...args)(this.data);
+}
+
+dataset.prototype.regress = function (...args) {
+    return redu.regress(...args)(this.data);
+}
