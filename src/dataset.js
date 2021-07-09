@@ -315,6 +315,14 @@ export default class dataset extends grouping {
     //   update
     //   scd
 
+    dimReduce(...args) {
+        this.data = dimReduce(...args)(this.data).data;
+    }
+
+    regress(...args) {
+        this.data = regress(...args)(this.data).data;
+    }
+
     matrix(        
         selector, // csv of prop names or func returning array of numbers
         rowNames // string of a prop name or func identifiying the property representing the name
@@ -364,3 +372,4 @@ dataset.fromJson = function(json) {
         : groupify(json);
 
 }
+

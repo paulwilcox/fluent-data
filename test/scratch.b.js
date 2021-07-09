@@ -33,18 +33,18 @@ function test() {
         { name: 'Hazy', ..._math(25, 75), ..._lang(25, 11) }
     ]);
 
+/*
     grades.reduce(
         $$.regress('arithmetic, reading', 'writing', { ci: 0.95 })
     )
     .get()
     .log(null, 'Regression Objects:', 4);
 
-return;
-
-    grades.reduce(
-        $$.dimReduce('arithmetic, algebra, reading, writing'),
-    )
-    .get()
-    .log(null, 'Factor Analyzed Objects:', 4);
+*/
+/*
+    grades
+        .dimReduce('arithmetic, algebra, reading, writing')
+        .log(null, 'Factor Analyzed Objects:', 4);
+*/
 
 }

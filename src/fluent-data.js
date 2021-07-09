@@ -1,8 +1,6 @@
 import dataset from './dataset.js';
 import matrix from './matrix.js';
-import dimReduce from './reducers/dimReduce.js';
-import regress from './reducers/regress.js';
-import * as redu from './reducers/general.js';
+import * as redu from './reducers.js';
 import * as g from './general.js';
 
 export default function _(obj) { 
@@ -16,5 +14,3 @@ _.matrix = matrix;
 _.round = g.round;
 
 Object.assign(_, redu);
-_.regress = regress;
-_.dimReduce = dimReduce;
