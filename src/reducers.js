@@ -291,9 +291,9 @@ export function dimReduce (
         if (attachData)
             results.data = _dimReduce_scoreTheData(data, explicitVars, correlations, rotated.loadings);
 
-        results.log = (element, masterCaption, roundDigits) => {
+        results.log = (element, masterCaption, roundMultiple) => {
 
-            let rounder = roundDigits !== undefined ? (row) => g.round(row,roundDigits) : x => x;
+            let rounder = roundMultiple !== undefined ? (row) => g.round(row,roundMultiple) : x => x;
             
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);
@@ -584,9 +584,9 @@ export function regress (
         if (breuchPagan != undefined) 
             Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
-        results.log = (element, masterCaption, roundDigits) => {
+        results.log = (element, masterCaption, roundMultiple) => {
 
-            let rounder = (x) => !roundDigits ? x : g.round(x, roundDigits);
+            let rounder = (x) => !roundMultiple ? x : g.round(x, roundMultiple);
 
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);

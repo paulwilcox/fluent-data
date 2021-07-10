@@ -12,7 +12,7 @@ async function test () {
             ratingz: o => o.rating,
             speed: o => o.speed
         }, true) // setting to true to compare with r output
-        .get(o => $$.round(o,8));
+        .get(o => $$.round(o,1e-8));
 
     if(results[0][0].ratingz != -0.66382412)
         throw 'first row of customer = 1 does not have ratingz = -0.66382412';

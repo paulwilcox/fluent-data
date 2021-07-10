@@ -1,5 +1,35 @@
+// e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
+export let round = (term, multiple) => {
+
+    if (term === null || term === undefined)
+        return term;
+
+    if (typeof(term) === 'object') {
+        for(let key of Object.keys(term)) {
+            let type = typeof(term[key]);
+            term[key] = (type === 'number' || type == 'object') 
+                ? round(term[key], multiple)
+                : term[key];
+        }
+        return term;
+    }
+
+    // Binary and floating point arithmetic sometimes makes it so that the
+    // result comes out as a long decimal with an extreme fraction at the
+    // end.  Obviously that's annoying as this is a rounding function.
+    // This seeks to cut that off by getting the number of digits of the 
+    // multiple parameter and rounding to that.
+    let multStr = multiple.toExponential();
+    let [multNonE, multE] = multStr.split('e');
+    let multDec = (multNonE.split('.')[1] || '').length - parseInt(multE);
+
+    term = Math.round(term / multiple) * multiple;
+    return roundToDigits(term, multDec);
+
+}
+
 // e.g. round(5.239, 2) is 5.24
-export let round = (term, digits) => {
+export let roundToDigits = (term, digits) => {
 
     if (term === null || term === undefined)
         return term;
@@ -14,29 +44,11 @@ export let round = (term, digits) => {
     for(let key of Object.keys(term)) {
         let type = typeof(term[key]);
         term[key] = (type === 'number' || type == 'object') 
-            ? round(term[key], digits)
+            ? roundToDigits(term[key], digits)
             : term[key];
     }
 
     return term;
-
-}
-
-// e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
-export let roundToMultiple = (term, multiple) => {
-
-    let result = Math.round(term / multiple) * multiple;
-
-    // Binary and floating point arithmetic sometimes makes it so that the
-    // result comes out as a long decimal with an extreme fraction at the
-    // end.  Obviously that's annoying as this is a rounding function.
-    // This seeks to cut that off by getting the number of digits of the 
-    // multiple parameter and rounding to that.
-    let multStr = multiple.toExponential();
-    let [multNonE, multE] = multStr.split('e');
-    let multDec = (multNonE.split('.')[1] || '').length - parseInt(multE);
-
-    return round(result, multDec);
 
 }
 

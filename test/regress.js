@@ -54,17 +54,17 @@ async function checker (results) {
             throw `${desc} was ${val}, ${expected} expected.`;
     }
 
-    test(`F`, model.F, 4.668, 3);
-    test(`rSquared`, model.rSquared, 0.7568, 4);
-    test(`rSquaredAdj`, model.rSquaredAdj, 0.5947, 4);
-    test(`Breuch Pagan`, model.breuchPagan, 5.4282, 4);
-    test(`Breuch Pagan pval`, model.breuchPaganPval, 0.06626, 5);
-    test(`Coefficient 'intercept' value`, intercept.value, 8.5655813, 7);
-    test(`Coefficient 'cases' value`, cases.value, 1.1965163, 7);
-    test(`Coefficient 'distance' value`, distance.value, -0.0002018, 7);
-    test(`Pvalue for coefficient 'cases'`, cases.pVal, 0.0711, 4);
-    test(`Lower confidence interval for 'cases'`, cases.ci[0], -0.19098427, 8);
-    test(`Upper confidence interval for 'cases'`, cases.ci[1], 2.58401687, 8);
+    test(`F`, model.F, 4.668, 1e-3);
+    test(`rSquared`, model.rSquared, 0.7568, 1e-4);
+    test(`rSquaredAdj`, model.rSquaredAdj, 0.5947, 1e-4);
+    test(`Breuch Pagan`, model.breuchPagan, 5.4282, 1e-4);
+    test(`Breuch Pagan pval`, model.breuchPaganPval, 0.06626, 1e-5);
+    test(`Coefficient 'intercept' value`, intercept.value, 8.5655813, 1e-7);
+    test(`Coefficient 'cases' value`, cases.value, 1.1965163, 1e-7);
+    test(`Coefficient 'distance' value`, distance.value, -0.0002018, 1e-7);
+    test(`Pvalue for coefficient 'cases'`, cases.pVal, 0.0711, 1e-4);
+    test(`Lower confidence interval for 'cases'`, cases.ci[0], -0.19098427, 1e-8);
+    test(`Upper confidence interval for 'cases'`, cases.ci[1], 2.58401687, 1e-8);
 
 }
 

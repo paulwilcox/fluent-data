@@ -17,7 +17,7 @@ async function test () {
 
         let result;
         let expected;
-        let sumAllCells = (matrix) => matrix.reduce('all', (a,b) => a + b).round(8).getCell(0,0);
+        let sumAllCells = (matrix) => matrix.reduce('all', (a,b) => a + b).round(1e-8).getCell(0,0);
 
     // add
 
@@ -113,7 +113,7 @@ async function test () {
     // pseudoInverse
 
         result = mx.pseudoInverse()
-            .multiply(mx).round(8)
+            .multiply(mx).round(1e-8)
             .equals($$.matrix.identity(3));
 
         if (!result) 
@@ -122,26 +122,26 @@ async function test () {
     // reduce
 
         result = mx.reduce('row', (a,b) => a + b); 
-        if(!result.round(8).transpose().equals(new $$.matrix([[4.23, 0.55, -0.08]])))
+        if(!result.round(1e-8).transpose().equals(new $$.matrix([[4.23, 0.55, -0.08]])))
             throw `mx.reduce('row', (a,b) => a + b) did not result in the expected matrix.`;
 
         result = mx.reduce('col', (a,b) => a + b); 
-        if(!result.round(8).equals(new $$.matrix([[-1.45, 5.23, 0.92]])))
+        if(!result.round(1e-8).equals(new $$.matrix([[-1.45, 5.23, 0.92]])))
             throw `mx.reduce('col', (a,b) => a + b) did not result in the expected matrix.`;
     
         result = mx.reduce('all', (a,b) => a + b);
-        if(result.round(8).getCell(0,0) != 4.7)
+        if(result.round(1e-8).getCell(0,0) != 4.7)
             throw `mx.reduce('all', (a,b) => a + b) did not have the expected property.`;
 
         result = mx.reduce('all', (a,b) => a + b, 100); 
-        if(result.round(8).getCell(0,0) != 104.7)
+        if(result.round(1e-8).getCell(0,0) != 104.7)
             throw `mx.reduce('all', (a,b) => a + b, 100) did not result in the expected matrix.`;
 
     // round
 
-        result = mx.round(0);
+        result = mx.round(1);
         if (sumAllCells(result) != 5)
-            throw `mx.round(0) does not have the expected property`;
+            throw `mx.round(1) does not have the expected property`;
 
     // solve
 
@@ -178,7 +178,7 @@ async function test () {
 
     // determinant
 
-        if($$.round(mx.determinant(), 4) != -211.9333)
+        if($$.round(mx.determinant(), 1e-4) != -211.9333)
             throw `Matrix determinant is not the expected value.`;
 
     // equals
@@ -259,13 +259,13 @@ async function test () {
 
     // norm
 
-        if ($$.round(mx.norm(),5) != 17.64885)
+        if ($$.round(mx.norm(),1e-5) != 17.64885)
             throw `euclidian/frobesnius norm not the expected value`;
         
-        if ($$.round(mx.norm(1),3) != 17.23)
+        if ($$.round(mx.norm(1),1e-3) != 17.23)
             throw `one-norm not the expected value`;
 
-        if ($$.round(mx.norm('i'),2) != 18.23)
+        if ($$.round(mx.norm('i'),1e-2) != 18.23)
             throw `infinity-norm not the expected value`;
 
     // identity

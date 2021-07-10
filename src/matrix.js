@@ -505,11 +505,11 @@ export default class matrix {
 
     }
 
-    round(digits) {
+    round(multiple) {
         let mx = this.clone();
         for(let row of mx.data) 
             for(let c in row) {
-                row[c] = parseFloat(row[c].toFixed(digits));
+                row[c] = g.round(row[c], multiple);
                 if(row[c] == -0)
                     row[c] = 0;
             }
@@ -794,7 +794,7 @@ export default class matrix {
        
             let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
             let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
-            let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
+            let lowerIsZeroes = !lowerRectangle.round(1e-10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
                 return;
@@ -809,9 +809,9 @@ export default class matrix {
             A: this, 
             R, 
             Q, 
-            test: (roundDigits = 8) => 
-                this.round(roundDigits).equals(
-                    Q.multiply(R).round(roundDigits)
+            test: (multiple = 1e-8) => 
+                this.round(multiple).equals(
+                    Q.multiply(R).round(multiple)
                 )
         };
 
@@ -881,8 +881,8 @@ export default class matrix {
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
-            showObjects: (round) => {
-                let logMx = (mx, name) => mx.log(null, name, row => g.round(row, 8));
+            showObjects: () => {
+                let logMx = (mx, name) => mx.log(null, name, row => g.round(row, 1e-8));
                 console.log('unconverged');
                 console.log('iterations:', iterations); 
                 logMx(this, 'A'); 
@@ -944,7 +944,7 @@ export default class matrix {
 
                 let [str, precision] = params.valueThreshold.toExponential().split('e');
                 let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
-                values = values.map(v => g.roundToMultiple(v, demoted));
+                values = values.map(v => g.round(v, demoted));
 
         // caluclate vectors
 
@@ -1231,7 +1231,7 @@ export default class matrix {
                 if (mult.length == 1)
                     continue;
                 values[v] = mult.reduce((a,b) => a + b, 0) / mult.length; // average
-                values[v] = g.roundToMultiple(values[v], mergeThreshold);
+                values[v] = g.round(values[v], mergeThreshold);
             }            
 
         return values;

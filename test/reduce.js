@@ -29,7 +29,7 @@ async function test () {
         })
         .get();
 
-    if($$.round(results.speed_cor.pVal, 5) !=  0.01843) throw `
+    if($$.round(results.speed_cor.pVal, 1e-5) !=  0.01843) throw `
         results.speed_cor.pval does not round to 0.01843
     `;
 

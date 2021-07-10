@@ -29,10 +29,10 @@ async function test () {
         [0.870, 0.383, 1.000]        
     ]);
 
-    if(!result.covMatrix.round(2).equals(expectedCov))
+    if(!result.covMatrix.round(1e-2).equals(expectedCov))
         throw 'covMatrix does not match expected value in at least one cell.';
 
-    if(!result.corMatrix.round(3).equals(expectedCor))
+    if(!result.corMatrix.round(1e-3).equals(expectedCor))
         throw 'corMatrix does not match expected value in at least one cell.';
 
     return true;
