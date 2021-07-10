@@ -15,36 +15,31 @@
 
 */
 
+import * as g from '../src/general.js';
+
 function test() {
 
-    let _math = (ar,al) => ({ arithmetic: ar, algebra: al });
-    let _lang = (r,w) => ({ reading: r, writing: w });
-
-    let grades = $$([
-        { name: 'Pat', ..._math(65, 63), ..._lang(95, 10) },
-        { name: 'Kelly', ..._math(62, 65), ..._lang(94, 10) },
-        { name: 'Jessie', ..._math(96, 98), ..._lang(64, 10) },
-        { name: 'Chris', ..._math(93, 95), ..._lang(61, 11) },
-        { name: 'Alex', ..._math(5, 3), ..._lang(55, 11) },
-        { name: 'Drew', ..._math(2, 5), ..._lang(54, 11) },
-        { name: 'Jordan', ..._math(46, 48), ..._lang(4, 10) },
-        { name: 'Cam', ..._math(43, 45), ..._lang(1, 11) },
-        { name: 'Noisy', ..._math(75, 25), ..._lang(75, 10) },
-        { name: 'Hazy', ..._math(25, 75), ..._lang(25, 11) }
+    let purchases = $$([
+        { customerId: 'b', books: 4, time: 16.68, price: 560, rating: 73 },
+        { customerId: 'a', books: 1, time: 11.50, price:  80, rating: 95 },
+        { customerId: 'a', books: 1, time: 12.03, price: 150, rating: 92 },
+        { customerId: 'b', books: 2, time: 14.88, price: 220, rating: 88 },
+        { customerId: 'a', books: 3, time: 13.75, price: 340, rating: 90 },
+        { customerId: 'b', books: 4, time: 18.11, price: 330, rating: 66 },
+        { customerId: 'a', books: 5, time: 21.09, price: 401, rating: 54 },
+        { customerId: 'b', books: 5, time: 23.77, price: 589, rating: 31 }
     ]);
 
-/*
-    grades.reduce(
-        $$.regress('arithmetic, reading', 'writing', { ci: 0.95 })
-    )
-    .get()
-    .log(null, 'Regression Objects:', 4);
+    
+    let str = g.tableToString(purchases.get(), null, row => g.round(row, 1e-8));
+    console.log(str);
 
-*/
-/*
-    grades
-        .dimReduce('arithmetic, algebra, reading, writing')
-        .log(null, 'Factor Analyzed Objects:', 4);
-*/
+    purchases
+        .reduce({
+            corMatrix: $$.corMatrix('books, price, time'),
+        })
+        .get()
+        .corMatrix
+        .log(null, null, 1e-8);
 
 }

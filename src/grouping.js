@@ -101,8 +101,11 @@ export default class grouping {
     ) {
 
         let data = g.isIterable(this.data) ? [...this.data] : this.data;
-
         let stringified;
+        
+        // if param 3 is a number, the use it as a round multiple
+        let _mapper = !isNaN(mapper) ? row => g.round(row, mapper) : mapper;
+
         caption = 
             this.parent === null && caption ? `${caption}`
             : this.parent !== null ? `key: ${JSON.stringify(this.key)}`
@@ -111,10 +114,10 @@ export default class grouping {
         if (this.children.length == 0) 
             stringified = !g.isIterable(data)
                 ? caption + JSON.stringify(data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : g.tableToString(data, caption, mapper, limit, true);
+                : g.tableToString(data, caption, _mapper, limit, true);
 
         else {
-            let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
+            let stringifieds = this.children.map(child => child.log(element, caption, _mapper, limit)); 
             stringified = g.tableToString(stringifieds, caption, x => x, limit, false);
         }
 

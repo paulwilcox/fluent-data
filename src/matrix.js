@@ -159,6 +159,9 @@ export default class matrix {
         let clone = this.clone();
         let printable = [];
         
+        // if param 3 is a number, the use it as a round multiple
+        let _mapper = !isNaN(mapper) ? row => g.round(row, mapper) : mapper;        
+
         for (let r in clone.data) {
             let row = {};
             let rowName = clone.rowNames ? (clone.rowNames[r] || `r${r}`) : `r${r}`;
@@ -171,7 +174,7 @@ export default class matrix {
         }
 
         let printed = g.tableToString(
-            printable, caption, mapper, 
+            printable, caption, _mapper, 
             limit, headers, preferEmptyString, bordersBefore
         );
         
