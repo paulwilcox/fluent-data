@@ -12,6 +12,20 @@ export default function _(obj) {
 _.dataset = dataset;
 _.matrix = matrix;
 _.round = g.round;
+_.roundToDigits = g.roundToDigits;
+_.random = g.random;
+
+let undocumented = `
+    tableToString,
+    gamma, gammaLogged, incGamma, incGammaLower,
+    beta, incBeta, invIncBeta,
+    chiCdf,
+    Fcdf, Fquantile,
+    studentsTcdf, studentsTfromCor, studentsTquantile
+`;
+
+for (let ud of undocumented.split(',').map(term => term.trim()))
+    _[ud] = g[ud];
 
 Object.assign(_, redu);
 
