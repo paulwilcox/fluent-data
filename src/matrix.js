@@ -1083,15 +1083,17 @@ export default class matrix {
             }
             
             if (iterations == maxIterations) {
-                matrix.logMany({
+                let msg = `Eigenvalues did not converge within ${maxIterations} iterations.`;
+                console.log(msg, 'Failing objects follow.');
+                console.log({
                     iterations, 
                     stopThreshold, 
                     values, 
                     diag, 
                     prev,
                     test: diag.map((d,i) => Math.abs(d - prev[i]))
-                }, 'failing objects', 8);
-                throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
+                });
+                throw msg;
             }
     
             prev = diag;
@@ -1179,9 +1181,10 @@ export default class matrix {
                     );
                 }
                 catch (e) {
-                    matrix.logMany({
-                        val: [eigenvalue],
-                        vect: new matrix([vector]).transpose(),
+                    console.log('Failing objects follow.')
+                    console.log({
+                        val: eigenvalue,
+                        vect: new matrix([vector]).transpose()
                     });
                     throw e;
                 }
