@@ -1,7 +1,7 @@
 {
   "name": "fluent-data",
   "version": "4.0.0",
-  "description": "Do dataset joins, mergings, filters, mappings, orderings, groupings, aggregations, and similar operations on datast style objects.  Do matrix operations.  Friendly fluent/chain syntax.",
+  "description": "Work with tables and matricies in fluent fashion within javascript.",
   "main": "./dist/fluent-data.server.js",
   "files": [
     "dist"
@@ -30,12 +30,17 @@
     "order",
     "sort",
     "group",
+    "group-by",
+    "group by",
     "ungroup",
     "statistics",
     "p-value",
     "correlation",
     "regression",
     "multiple-regression",
+    "multiple regression",
+    "multivariate-regression",
+    "multivariate regression",
     "factoranalysis",
     "factor-analysis",
     "factor analysis",

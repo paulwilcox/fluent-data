@@ -9,8 +9,38 @@
 
 'use strict';
 
+// e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
+let round = (term, multiple) => {
+
+    if (term === null || term === undefined)
+        return term;
+
+    if (typeof(term) === 'object') {
+        for(let key of Object.keys(term)) {
+            let type = typeof(term[key]);
+            term[key] = (type === 'number' || type == 'object') 
+                ? round(term[key], multiple)
+                : term[key];
+        }
+        return term;
+    }
+
+    // Binary and floating point arithmetic sometimes makes it so that the
+    // result comes out as a long decimal with an extreme fraction at the
+    // end.  Obviously that's annoying as this is a rounding function.
+    // This seeks to cut that off by getting the number of digits of the 
+    // multiple parameter and rounding to that.
+    let multStr = multiple.toExponential();
+    let [multNonE, multE] = multStr.split('e');
+    let multDec = (multNonE.split('.')[1] || '').length - parseInt(multE);
+
+    term = Math.round(term / multiple) * multiple;
+    return roundToDigits(term, multDec);
+
+};
+
 // e.g. round(5.239, 2) is 5.24
-let round = (term, digits) => {
+let roundToDigits = (term, digits) => {
 
     if (term === null || term === undefined)
         return term;
@@ -25,29 +55,11 @@ let round = (term, digits) => {
     for(let key of Object.keys(term)) {
         let type = typeof(term[key]);
         term[key] = (type === 'number' || type == 'object') 
-            ? round(term[key], digits)
+            ? roundToDigits(term[key], digits)
             : term[key];
     }
 
     return term;
-
-};
-
-// e.g. roundToMultiple(5.239, 0.25) is 5.25 becasue that is the closest 0.25th 
-let roundToMultiple = (term, multiple) => {
-
-    let result = Math.round(term / multiple) * multiple;
-
-    // Binary and floating point arithmetic sometimes makes it so that the
-    // result comes out as a long decimal with an extreme fraction at the
-    // end.  Obviously that's annoying as this is a rounding function.
-    // This seeks to cut that off by getting the number of digits of the 
-    // multiple parameter and rounding to that.
-    let multStr = multiple.toExponential();
-    let [multNonE, multE] = multStr.split('e');
-    let multDec = (multNonE.split('.')[1] || '').length - parseInt(multE);
-
-    return round(result, multDec);
 
 };
 
@@ -62,6 +74,67 @@ let random = (min, max, integers = false) => {
         : Math.random() * (max - min) + min;
 };
 
+let isSubsetOf = (sub, sup) =>  
+    setEquals (
+        new Set(
+            [...sub]
+            .filter(x => [...sup].indexOf(x) >= 0) // intersection
+        ), 
+        sub
+    );
+
+let asSet = obj => {
+
+    let s = 
+        obj instanceof Set ? obj
+        : isString(obj) ? new Set(obj)
+        : Array.isArray(obj) ? new Set(obj)
+        : undefined;
+
+    if (!s) 
+        throw "Could not convert object to set";
+    
+    return s;
+
+};
+
+// Max Leizerovich: stackoverflow.com/questions/31128855
+let setEquals = (a, b) =>
+    a.size === b.size 
+    && [...a].every(value => b.has(value));
+
+let isPromise = obj => 
+    Promise.resolve(obj) == obj;
+
+// this is obsolete but I don't have the
+// heart to get rid of it right now.
+let stringifyObject = obj => {
+
+    if (obj === undefined) 
+        return '';
+
+    let isObject = variable => 
+           variable 
+        && typeof variable === 'object' 
+        && variable.constructor === Object;
+
+    if (!isObject(obj))
+        return obj.toString();
+
+    let stringified = '[';
+
+    let keys = Object.keys(obj).sort();
+
+    for (let key of keys) {
+        let val = obj[key];
+        let valToStringify = isObject(val) ? stringifyObject(val) : val;
+        stringified += `[${key},${valToStringify}]`;
+    }
+
+    return stringified + ']';
+
+};
+
 let isString = input =>
     typeof input === 'string' 
     || input instanceof String;
@@ -73,6 +146,50 @@ let isFunction = input =>
 let isIterable = (input, includeStrings = false) => 
     !includeStrings && isString(includeStrings) ? false
     : Symbol.iterator in Object(input);
+
+// array.flat not out in all browsers/node
+let flattenArray = array => {
+    let result = [];
+    for(let element of array) 
+        if (Array.isArray(element))
+            for(let nestedElement of element)
+                result.push(nestedElement);
+        else 
+            result.push(element);
+    return result;
+};
+
+// thanks shlang (8382469) at stackoverflow.com/questions/61164230
+function peekable(iterator) {
+
+    if (Array.isArray(iterator))
+        iterator = (function*(i) { yield* i; })(iterator);
+
+    let peeked = iterator.next();
+    let prev = { value: undefined, done: false, beforeStart: true };
+  
+    let wrapped = (function* (initial) {
+      while (!peeked.done) {
+        let current = peeked.value;
+        prev = peeked;
+        peeked = iterator.next();
+        yield current;
+      }
+      return peeked.value;
+    })();
+  
+    wrapped.peek = () => peeked;
+    wrapped.prev = () => prev;
+    return wrapped;
+    
+}
+
+let noUndefinedForFunc = mapper =>
+
+    (...args) => {
+        let result = mapper(...args);
+        return noUndefined(result);
+    };
 
 let noUndefined = obj => {
     
@@ -144,6 +261,21 @@ let eq = (obj1, obj2) => {
     return true;
 
 };
+
+// Convert an unpromised object with promises as
+// values to a promised object with regular values
+let PromiseAllObjectEntries = obj => 
+    Promise.all(
+        Object.entries(obj)
+        .map(entry => Promise.all(entry))
+    )
+    .then(entries => {
+        // use Object.fromEntries(entries) when node.js permits it
+        let obj = {};
+        for(let entry of entries) 
+            obj[entry[0]] = entry[1];
+        return obj;
+    });
 
 function tableToString (
     data, 
@@ -379,6 +511,21 @@ function Fcdf (F, numDf, denDf) {
     return 1 - incBeta(x, numDf/2, denDf/2);
 }
 
+// Get Fisher's F critical value from probability
+// TODO: Make sure direction of quantile is same as student's t
+function Fquantile(quantile, df1, df2) {
+    return g.getInverse(
+        (input) => g.Fcdf(input, df1, df2),
+        1 - quantile,
+        1e-12, // precision to desired output
+        1000,
+        0,
+        5,
+        0,
+        null
+    );
+}
+
 function chiCdf (chi, df) {
     let regGamma = (a,b) => incGammaLower(a, b) / gamma(a);
     let result = regGamma(df/2, chi/2);
@@ -416,6 +563,10 @@ function gammaLogged (z) {
         + (z + 0.5) * Math.log(z + 7.5)
         + -(z + 7.5);
 
+}
+
+function incGamma(a, z) {
+    return gamma(a) - incGammaLower(a, z);
 }
 
 function incGammaLower (a, z) {
@@ -564,6 +715,68 @@ function invIncBeta (
 
 }
 
+// I think 'func' must be continuously increasing or continuously decreasing 
+// for this to work.  But this means that this is good for finding
+// inverses of cumulative distributions, which continuously increase (or 
+// decrease if looking for upper area under curve). 
+function getInverse (
+    func,
+    desiredOutput,
+    precision, // precision to desired output
+    maxIterations,
+    minInputStart,
+    maxInputStart,
+    minInputPossible,
+    maxInputPossible
+) {
+    
+    let bound = (val) => 
+          val < minInputPossible ? minInputPossible 
+        : val > maxInputPossible ? maxInputPossible
+        : val;
+
+    let minInput = minInputStart;
+    let maxInput = maxInputStart;
+
+    for (let i = 0; i <= maxIterations; i++) {
+
+        if (i == maxIterations)
+            throw   `Inverse with precision of ${precision} could not be found ` + 
+                    `within ${maxIterations} iterations.  Increase the max iterations ` +
+                    `allowed.  And be sure that your function is continuously increasing ` +
+                    `or decreasing (or else infinite recursion is possible), or else be ` +
+                    `sure that your input starts guarantee a solution.`;
+
+        let midInput = (minInput + maxInput) / 2;
+        let inputSpread = maxInput - minInput;
+
+        let minOutput = func(minInput);
+        let midOutput = func(midInput); 
+        let maxOutput = func(maxInput);
+
+        let isAscending = maxOutput > minOutput;
+        let conditioner = (condition) => isAscending ? condition : !condition; 
+
+        if (desiredOutput == minOutput) return minInput;
+        if (desiredOutput == maxOutput) return maxInput;
+        if (Math.abs(desiredOutput - midOutput) < precision) return midInput;
+
+        if (midOutput == minOutput || midOutput == maxOutput)
+            midOutput = (minOutput + maxOutput) / 2; // sometimes precision is so close mid becomes equal to mid or max.
+
+        if (conditioner(desiredOutput < minOutput)) 
+            minInput = bound(minInput - 2*inputSpread);
+        else if (conditioner(desiredOutput > maxOutput)) 
+            maxInput = bound(maxInput + 2*inputSpread);
+        else if (conditioner(desiredOutput < midOutput)) 
+            maxInput = midInput;
+        else if (conditioner(desiredOutput > midOutput)) 
+            minInput = midInput;
+
+    } 
+
+}
+
 function pochLogged (q, n) {
     if (n == 0)
         return 1;
@@ -574,6 +787,43 @@ function pochLogged (q, n) {
         prod = 1e-10;
     return prod;
 }
+
+var g$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  round: round,
+  roundToDigits: roundToDigits,
+  random: random,
+  isSubsetOf: isSubsetOf,
+  asSet: asSet,
+  setEquals: setEquals,
+  isPromise: isPromise,
+  stringifyObject: stringifyObject,
+  isString: isString,
+  isFunction: isFunction,
+  isIterable: isIterable,
+  flattenArray: flattenArray,
+  peekable: peekable,
+  noUndefinedForFunc: noUndefinedForFunc,
+  noUndefined: noUndefined,
+  dotsToProps: dotsToProps,
+  eq: eq,
+  PromiseAllObjectEntries: PromiseAllObjectEntries,
+  tableToString: tableToString,
+  studentsTfromCor: studentsTfromCor,
+  studentsTcdf: studentsTcdf,
+  studentsTquantile: studentsTquantile,
+  Fcdf: Fcdf,
+  Fquantile: Fquantile,
+  chiCdf: chiCdf,
+  gamma: gamma,
+  gammaLogged: gammaLogged,
+  incGamma: incGamma,
+  incGammaLower: incGammaLower,
+  beta: beta,
+  incBeta: incBeta,
+  invIncBeta: invIncBeta,
+  getInverse: getInverse
+});
 
 function* quickSort (
     unsorted, 
@@ -812,6 +1062,9 @@ class matrix {
         let clone = this.clone();
         let printable = [];
         
+        // if param 3 is a number, the use it as a round multiple
+        let _mapper = !isNaN(mapper) ? row => round(row, mapper) : mapper;        
+
         for (let r in clone.data) {
             let row = {};
             let rowName = clone.rowNames ? (clone.rowNames[r] || `r${r}`) : `r${r}`;
@@ -824,7 +1077,7 @@ class matrix {
         }
 
         let printed = tableToString(
-            printable, caption, mapper, 
+            printable, caption, _mapper, 
             limit, headers, preferEmptyString, bordersBefore
         );
         
@@ -1158,11 +1411,11 @@ class matrix {
 
     }
 
-    round(digits) {
+    round(multiple) {
         let mx = this.clone();
         for(let row of mx.data) 
             for(let c in row) {
-                row[c] = parseFloat(row[c].toFixed(digits));
+                row[c] = round(row[c], multiple);
                 if(row[c] == -0)
                     row[c] = 0;
             }
@@ -1447,7 +1700,7 @@ class matrix {
        
             let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
             let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
-            let lowerIsZeroes = !lowerRectangle.round(10).data.some(row => row.some(cell => cell != 0));
+            let lowerIsZeroes = !lowerRectangle.round(1e-10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
                 return;
@@ -1462,9 +1715,9 @@ class matrix {
             A: this, 
             R, 
             Q, 
-            test: (roundDigits = 8) => 
-                this.round(roundDigits).equals(
-                    Q.multiply(R).round(roundDigits)
+            test: (multiple = 1e-8) => 
+                this.round(multiple).equals(
+                    Q.multiply(R).round(multiple)
                 )
         };
 
@@ -1534,8 +1787,8 @@ class matrix {
         console.log('SVD failed to converge.  Unconverged data follows.');
         throw { 
             message: 'SVD failed to converge.  Unconverged data follows.', 
-            showObjects: (round$1) => {
-                let logMx = (mx, name) => mx.log(null, name, row => round(row, 8));
+            showObjects: () => {
+                let logMx = (mx, name) => mx.log(null, name, row => round(row, 1e-8));
                 console.log('unconverged');
                 console.log('iterations:', iterations); 
                 logMx(this, 'A'); 
@@ -1597,7 +1850,7 @@ class matrix {
 
                 let [str, precision] = params.valueThreshold.toExponential().split('e');
                 let demoted = parseFloat(str + 'e' + (parseInt(precision) + 1).toString());
-                values = values.map(v => roundToMultiple(v, demoted));
+                values = values.map(v => round(v, demoted));
 
         // caluclate vectors
 
@@ -1733,15 +1986,17 @@ class matrix {
             }
             
             if (iterations == maxIterations) {
-                matrix.logMany({
+                let msg = `Eigenvalues did not converge within ${maxIterations} iterations.`;
+                console.log(msg, 'Failing objects follow.');
+                console.log({
                     iterations, 
                     stopThreshold, 
                     values, 
                     diag, 
                     prev,
                     test: diag.map((d,i) => Math.abs(d - prev[i]))
-                }, 'failing objects', 8);
-                throw `Eigenvalues did not converge within ${maxIterations} iterations.`;
+                });
+                throw msg;
             }
     
             prev = diag;
@@ -1829,9 +2084,10 @@ class matrix {
                     );
                 }
                 catch (e) {
-                    matrix.logMany({
-                        val: [eigenvalue],
-                        vect: new matrix([vector]).transpose(),
+                    console.log('Failing objects follow.');
+                    console.log({
+                        val: eigenvalue,
+                        vect: new matrix([vector]).transpose()
                     });
                     throw e;
                 }
@@ -1884,7 +2140,7 @@ class matrix {
                 if (mult.length == 1)
                     continue;
                 values[v] = mult.reduce((a,b) => a + b, 0) / mult.length; // average
-                values[v] = roundToMultiple(values[v], mergeThreshold);
+                values[v] = round(values[v], mergeThreshold);
             }            
 
         return values;
@@ -2506,8 +2762,11 @@ class grouping {
     ) {
 
         let data = isIterable(this.data) ? [...this.data] : this.data;
-
         let stringified;
+        
+        // if param 3 is a number, the use it as a round multiple
+        let _mapper = !isNaN(mapper) ? row => round(row, mapper) : mapper;
+
         caption = 
             this.parent === null && caption ? `${caption}`
             : this.parent !== null ? `key: ${JSON.stringify(this.key)}`
@@ -2516,10 +2775,10 @@ class grouping {
         if (this.children.length == 0) 
             stringified = !isIterable(data)
                 ? caption + JSON.stringify(data,null,2).replace(/"([^"]+)":/g, '$1:') // stackoverflow.com/q/11233498
-                : tableToString(data, caption, mapper, limit, true);
+                : tableToString(data, caption, _mapper, limit, true);
 
         else {
-            let stringifieds = this.children.map(child => child.log(element, caption, mapper, limit)); 
+            let stringifieds = this.children.map(child => child.log(element, caption, _mapper, limit)); 
             stringified = tableToString(stringifieds, caption, x => x, limit, false);
         }
 
@@ -2565,6 +2824,7 @@ grouping.groupify = (arrayified, _parent) => {
 
     for(let row of arrayified) 
         if (Array.isArray(row)) {
+            grp.children == grp.children || [];
             grp.children.push(grouping.groupify(row, grp));
         }
         else 
@@ -2933,16 +3193,16 @@ dataset.fromJson = function(json) {
 
 };
 
-let first = rowFunc =>
-    data => {
+function first(rowFunc) { 
+    return data => {
         for (let row of data)
             if (rowFunc(row) !== undefined && rowFunc(row) !== null)
                 return rowFunc(row);
         return null;
-    };
-
-let last = rowFunc => 
-    data => {
+    }
+}
+function last (rowFunc) {
+    return data => {
         let last = null;
         for (let row of data) {
             let val = rowFunc(row);
@@ -2950,20 +3210,21 @@ let last = rowFunc =>
                 last = val;
         }
         return last;
-    };
+    }
+}
 
-let sum = (rowFunc, options) => 
-    data => {
+function sum(rowFunc) { 
+    return data => {
         let agg = 0;
         for (let row of data) 
             agg += rowFunc(row);
-        if (options && options.test) 
-            agg = -agg;
         return agg;
-    };
+    }
+}
 
-let count = rowFunc => 
-    data => {
+function count(rowFunc) { 
+    return data => {
+
         let agg = 0;
         for (let row of data) {
             let r = rowFunc(row);
@@ -2971,40 +3232,45 @@ let count = rowFunc =>
                 agg += 1;
         }
         return agg;
-    };
+    }
+}
 
-let avg = rowFunc => 
-    data => {
+function avg(rowFunc) { 
+    return data => {
+
         let s = sum(rowFunc)(data);
         let n = count(rowFunc)(data);
         return s / n;
-    };
+    }
+}
 
-let std = (rowFunc, isSample = false) => 
-    data => {
+function std(rowFunc, isSample = false) { 
+    return data => {
         let m = avg(rowFunc)(data);
         let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
         let n = count(rowFunc)(data);
         if (isSample)
             n--;
         return Math.pow(ssd/n, 0.5);
-    };
+    }
+}
 
-let mad = rowFunc => 
-    data => {
+function mad(rowFunc) { 
+    return data => {
 
-        let avg = avg(rowFunc)(data);
+        let avg = this.avg(rowFunc)(data);
         let devs = [];
 
         for (let ix in data)
             devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
     
-        return avg(x => x)(devs);    
+        return this.avg(x => x)(devs);    
 
-    };
+    }
+}
 
-let cor = (rowFunc, options) => 
-    data => {
+function cor(rowFunc, options) {
+    return data => {
     
         let xAvg = avg(v => rowFunc(v)[0])(data);
         let yAvg = avg(v => rowFunc(v)[1])(data);
@@ -3034,19 +3300,11 @@ let cor = (rowFunc, options) =>
 
         return { cor, pVal, n, df, t };
         
-    };
+    }
+}
 
-/*
-// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
-let regress = (ivSelector, dvSelector, options = {}) => 
-    (data) => regress(data, ivSelector, dvSelector, options)
-
-let dimReduce = (csvSelector, options = {}) => 
-    (data) => dimReduce(data, csvSelector, options);
-*/
-
-let covMatrix = (selector, isSample = false) =>
-    data => {
+function  covMatrix (selector, isSample = false) {
+    return data => {
 
         // stattrek.com/matrix-algebra/covariance-matrix.aspx
 
@@ -3061,31 +3319,19 @@ let covMatrix = (selector, isSample = false) =>
         result = result.transpose().multiply(result); // result is squared deviations        
         return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
 
-    };
+    }
+}
 
 // No need for 'isSample' as with covMatrix, because 
 // the results are the same for a sample vs a population.
-let corMatrix = (selector) =>
-    data => {
+function corMatrix(selector) {
+    return data => {
         // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
         let cov = covMatrix(selector)(data);
         let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
         return STDs.inverse().multiply(cov).multiply(STDs.inverse());
-    };
-
-var redu = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  first: first,
-  last: last,
-  sum: sum,
-  count: count,
-  avg: avg,
-  std: std,
-  mad: mad,
-  cor: cor,
-  covMatrix: covMatrix,
-  corMatrix: corMatrix
-});
+    }
+}
 
 function dimReduce (
     explicitVars, 
@@ -3134,7 +3380,7 @@ function dimReduce (
         loadings.rowNames = correlations.rowNames;
         loadings.colNames = loadings.colNames.map((cn,ix) => `dim${ix}`);
 
-        let unrotated = _wrapLoadings(loadings);
+        let unrotated = _dimReduce_wrapLoadings(loadings);
 
     // 'Normalize' the loadings in preparation for rotation
         
@@ -3200,7 +3446,7 @@ function dimReduce (
         for(let r = 0; r < loadings.nRow; r++) 
             loadings.data[r][c] = loadings.data[r][c] * comRoots.data[r][0];        
 
-        let rotated = _wrapLoadings(loadings);
+        let rotated = _dimReduce_wrapLoadings(loadings);
 
     // terminations
 
@@ -3212,11 +3458,11 @@ function dimReduce (
         };
 
         if (attachData)
-            results.data = _scoreTheData(data, explicitVars, correlations, rotated.loadings);
+            results.data = _dimReduce_scoreTheData(data, explicitVars, correlations, rotated.loadings);
 
-        results.log = (element, masterCaption, roundDigits) => {
+        results.log = (element, masterCaption, roundMultiple) => {
 
-            let rounder = roundDigits !== undefined ? (row) => round(row,roundDigits) : undefined;
+            let rounder = roundMultiple !== undefined ? (row) => round(row,roundMultiple) : x => x;
             
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);
@@ -3256,14 +3502,14 @@ dimReduce.help = `
         - unrotated: unrotated dimension properties (same structure as above).
         - eigenValues: an array of the full set of dimensions output from the correlation matrix
         - correlations: a matrix of the correlation matrix 
-        - data: if attachData = true, then the original data with dime scores appended
+        - data: if attachData = true, then the original data with dim scores appended
         - log: a method to display the output described above in friendly form
 
     See the github 'built-in reducers' wiki page for this library for more information.  
 
 `;
 
-function _scoreTheData (data, explicitVars, correlations, loadings) {
+function _dimReduce_scoreTheData (data, explicitVars, correlations, loadings) {
 
     let corInv = correlations.pseudoInverse();
     let zs = new matrix([...new dataset(data).standardize(explicitVars).data], explicitVars);
@@ -3273,14 +3519,14 @@ function _scoreTheData (data, explicitVars, correlations, loadings) {
     for(let r = 0; r < zs.nRow; r++) {
          let scores = l_by_cor.multiply(zs.get(r).transpose()).transpose().get();
          for(let dim = 0; dim < scores.nCol; dim++)
-            data[r]['dimScores'] = scores.data[0];
+            data[r][`dim${dim}`] = scores.data[0][dim];
     }
 
-    return data;
+    return new dataset(data);
 
 }
 
-function _wrapLoadings (loads) {
+function _dimReduce_wrapLoadings (loads) {
 
     let communalities = loads
         .apply(cell => cell*cell)
@@ -3350,8 +3596,8 @@ function regress (
 
     // Initializations
 
-        let [ ivKeys, outerIvSelector ] = processSelector(ivSelector);
-        let [ dvKeys, outerDvSelector ] = processSelector(dvSelector);
+        let [ ivKeys, outerIvSelector ] = _regress_processSelector(ivSelector);
+        let [ dvKeys, outerDvSelector ] = _regress_processSelector(dvSelector);
 
         if (ivKeys.length == 0)
             throw `ivSelector must return an object with explicit keys defined.`
@@ -3468,9 +3714,11 @@ function regress (
 
             let residRegress = regress(
                 ivSelector, 
-                row => [Math.pow(row.residual,2)], 
+                'resSq', 
                 { estimates: false } // block estimtes to avoid infinite recursion.
-            )(data);
+            )(
+                data.map(row => ({...row, resSq: Math.pow(row.residual,2)}))
+            );
 
             let r2 = residRegress.model.rSquared;
             let p = residRegress.coefficients.length - 1; // seems intercept doesn't count here.
@@ -3490,7 +3738,7 @@ function regress (
     // Terminations
         
         let results = {
-            coefficients: new dataset(coefficients),
+            coefficients,
             model: {
                 rSquared,
                 rSquaredAdj,
@@ -3505,20 +3753,29 @@ function regress (
         if (breuchPagan != undefined) 
             Object.assign(results.model, {breuchPagan, breuchPaganPval});
 
-        results.log = (element, masterCaption, roundDigits) => {
+        results.log = (element, masterCaption, roundMultiple) => {
 
-            let rounder = (x) => !roundDigits ? x : round(x, roundDigits);
+            let rounder = (x) => !roundMultiple ? x : round(x, roundMultiple);
 
             if (masterCaption) 
                 console.log(`-----------------------------------\r\n${masterCaption}`);
 
-            results.coefficients.log(element, '\r\ncoefficients:', rounder);
+            console.log('\r\n\r\n' + 
+                'For guidance on how to query regress, ' + 
+                'call "regress.help" on the fluent-data object, ' + 
+                'or see the github wiki for this project'
+            );
+
+            new dataset(results.coefficients).log(element, '\r\ncoefficients:', rounder);
             
-            console.log('\r\nmodel:', rounder(results.model));
+            console.log(
+                '\r\nmodel:', 
+                JSON.stringify(rounder(results.model),null,2).replace(/"/g,'')
+            );
 
             if (results.data)
                 console.log(
-                    '\r\n\r\nNote: Data has been output with dimScores attached.  ' +
+                    '\r\n\r\nNote: Data has been output with estimates attached.  ' +
                     'Query "data" on the return object to get it.  '
                 );
 
@@ -3536,9 +3793,9 @@ regress.help = `
     regress returns an object with the following properties:
     
         - coefficients: A dataset containing properties of the regression coefficients.
-        - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal, 
-          breuchPagan, breuchPaganPval, log.
-        - data: if attachData = true, then the original data with dime scores appended
+        - model: an object with the following properties: rSquared, rSquaredAdj, F, pVal.  
+          If attachData = true, then also breuchPagan and breuchPaganPval.
+        - data: if attachData = true, then the original data with estimates appended
         - log: a method to display the output described above in friendly form
 
     See the github 'built-in reducers' wiki page for this library for more information.  
@@ -3547,24 +3804,31 @@ regress.help = `
 
 // Output a selector of row properties that returns an array
 // and a set of labels (keys) that pertain to the array
-function processSelector(selector) {
-    
-    if (isString(selector)) {
-        let keys = selector.split(',').map(key => key.trim());
-        return [
-            keys,
-            (row) => keys.map(key => row[key])
-        ];
-    }
+function _regress_processSelector(selector) {
 
-    let keys = Object.keys(selector({}));
-
+    let keys = selector.split(',').map(key => key.trim());
     return [
-        keys, 
-        (row) => keys.map(key => selector(row)[key])
+        keys,
+        (row) => keys.map(key => row[key])
     ];
 
 }
+
+var redu = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  first: first,
+  last: last,
+  sum: sum,
+  count: count,
+  avg: avg,
+  std: std,
+  mad: mad,
+  cor: cor,
+  covMatrix: covMatrix,
+  corMatrix: corMatrix,
+  dimReduce: dimReduce,
+  regress: regress
+});
 
 function _(obj) { 
     if (!isIterable(obj))
@@ -3575,170 +3839,29 @@ function _(obj) {
 _.dataset = dataset;
 _.matrix = matrix;
 _.round = round;
+_.roundToDigits = roundToDigits;
+_.random = random;
+
+let undocumented = `
+    tableToString,
+    gamma, gammaLogged, incGamma, incGammaLower,
+    beta, incBeta, invIncBeta,
+    chiCdf,
+    Fcdf, Fquantile,
+    studentsTcdf, studentsTfromCor, studentsTquantile
+`;
+
+for (let ud of undocumented.split(',').map(term => term.trim()))
+    _[ud] = g$1[ud];
 
 Object.assign(_, redu);
-_.regress = regress;
-_.dimReduce = dimReduce;
 
-/*
-_.first = rowFunc =>
-    data => {
-        for (let row of data)
-            if (rowFunc(row) !== undefined && rowFunc(row) !== null)
-                return rowFunc(row);
-        return null;
-    };
+dataset.prototype.dimReduce = function (...args) {
+    return dimReduce(...args)(this.data);
+};
 
-_.last = rowFunc => 
-    data => {
-        let last = null;
-        for (let row of data) {
-            let val = rowFunc(row);
-            if (val !== undefined && val !== null)
-                last = val;
-        }
-        return last;
-    }
-
-_.sum = (rowFunc, options) => 
-    data => {
-        let agg = 0;
-        for (let row of data) 
-            agg += rowFunc(row);
-        if (options && options.test) 
-            agg = -agg;
-        return agg;
-    };
-
-_.count = rowFunc => 
-    data => {
-        let agg = 0;
-        for (let row of data) {
-            let r = rowFunc(row)
-            if (r !== undefined && r !== null)
-                agg += 1;
-        }
-        return agg;
-    };
-
-_.avg = rowFunc => 
-    data => {
-        let s = _.sum(rowFunc)(data);
-        let n = _.count(rowFunc)(data);
-        return s / n;
-    };
-
-_.std = (rowFunc, isSample = false) => 
-    data => {
-        let m = _.avg(rowFunc)(data);
-        let ssd = data.reduce((agg,row) => agg + Math.pow(rowFunc(row) - m,2), 0);
-        let n = _.count(rowFunc)(data);
-        if (isSample)
-            n--;
-        return Math.pow(ssd/n, 0.5);
-    };
-
-_.mad = rowFunc => 
-    data => {
-
-        let avg = _.avg(rowFunc)(data);
-        let devs = [];
-
-        for (let ix in data)
-            devs[ix] = Math.abs(rowFunc(data[ix]) - avg);
-    
-        return _.avg(x => x)(devs);    
-
-    };
-
-_.cor = (rowFunc, options) => 
-    data => {
-    
-        let xAvg = _.avg(v => rowFunc(v)[0])(data);
-        let yAvg = _.avg(v => rowFunc(v)[1])(data);
-        let n = _.count(v => rowFunc(v))(data);
-
-        let diffs = [];
-        for(let row of data) 
-            diffs.push({ 
-                xDiff: rowFunc(row)[0] - xAvg, 
-                yDiff: rowFunc(row)[1] - yAvg
-            });
-
-        let xyDiff = _.sum(row => row.xDiff * row.yDiff)(diffs);
-        let xDiffSq = _.sum(row => row.xDiff ** 2)(diffs);
-        let yDiffSq = _.sum(row => row.yDiff ** 2)(diffs);
-
-        let cor = xyDiff / (xDiffSq ** 0.5 * yDiffSq ** 0.5)
-        let df = n - 2;
-        let t =  g.studentsTfromCor(cor, n);
-        let pVal = g.studentsTcdf(t, df);
-            
-        if (options === undefined)
-            return cor;
-
-        if (options.tails == 2)
-            pVal *= 2;
-
-        return { cor, pVal, n, df, t };
-        
-    };
-
-// Rows with 'estimate', 'actual', and 'residual' fields will have them overwritten.
-_.regress = (ivSelector, dvSelector, options = {}) => 
-    (data) => regress(data, ivSelector, dvSelector, options)
-
-_.dimReduce = (csvSelector, options = {}) => 
-    (data) => dimReduce(data, csvSelector, options);
-
-_.covMatrix = (selector, isSample = false) =>
-    data => {
-
-        // stattrek.com/matrix-algebra/covariance-matrix.aspx
-
-        let asMatrix = _(data).matrix(selector);
-
-        let result = // result is averages
-            matrix.ones(asMatrix.data.length)
-            .multiply(asMatrix)
-            .multiply(1/asMatrix.data.length); 
-
-        result = asMatrix.apply(result, (a,b) => a - b); // result is deviations
-        result = result.transpose().multiply(result); // result is squared deviations        
-        return result.multiply(1/(asMatrix.data.length - (isSample ? 1 : 0)));
-
-    }
-
-// No need for 'isSample' as with covMatrix, because 
-// the results are the same for a sample vs a population.
-_.corMatrix = (selector) =>
-    data => {
-        // math.stackexchange.com/questions/186959/correlation-matrix-from-covariance-matrix/300775
-        let cov = _.covMatrix(selector)(data);
-        let STDs = cov.diagonal().apply(x => Math.pow(x,0.5));
-        return STDs.inverse().multiply(cov).multiply(STDs.inverse());
-    }
-
-// CorMatrix gave the same results whether sample or population.  I wasn't familiar
-// with that fact.  I had a very hard time googling this fact.  People said pop vs 
-// sample were different (r vs rho, using s vs sigma).  But nobody was saying that 
-// it would output the same whether you do n or n-1 (s vs sigma).  I saw that R didn't
-// offer a pop vs sample 'cor' option.  I saw that Python's np.corrcoef 'bias' parameter
-// was deprecated.  Their manual said this was because it didn't produce different
-// resuts in the current and even in previous versions.  So at least they were having
-// the same issue.  So, indications of equivalence everywhere, but nobody mentioned it 
-// explicitly.  So I built this function just to calculate it more explicity in a way
-// I could explicitly see following certain formulas I found for r vs rho, just to see
-// if I would get the same matricies back again.  I did.  In the future I'll consider
-// proving it (I imagine the size terms cancel out), but for now I'm moving on.     
-_.corMatrix2 = (selector, isSample = true) =>
-    data => {
-        let cov = _.covMatrix(selector, isSample)(data);
-        let STDs = cov.diagonal(true).apply(x => Math.pow(x,0.5));
-        let SS = STDs.multiply(STDs.transpose());
-        return cov.apply(SS, (x,y) => x / y);
-    }    
-
-*/
+dataset.prototype.regress = function (...args) {
+    return regress(...args)(this.data);
+};
 
 module.exports = _;

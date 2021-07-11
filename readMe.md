@@ -1,8 +1,8 @@
-
 ## Summary 
 
 This library allows you to work with data structured as a table or as a matrix and provides 
-you with many of the methods you would expect when working with such things.
+you with many of the methods you would expect when working with such things.  It also provides
+various convenience and statistical functions.
 
 A `dataset` represents a collection of object-rows.  Among other capacities, here you have the
 ability to map, filter, sort, group, reduce, and join.  These methods can seem similar to 
@@ -17,6 +17,7 @@ decompositions, pseudoinvering, and production of eigen values and vectors.
 
 Click on the links below to see more information in each area:
 
+- [fluent-data](https://github.com/paulwilcox/fluent-data/wiki/Fluent-Data) the default export from the library 
 - [dataset](https://github.com/paulwilcox/fluent-data/wiki/Dataset) methods and examples
 - [matrix](https://github.com/paulwilcox/fluent-data/wiki/Matrix) methods and examples
 - [changelog](https://github.com/paulwilcox/fluent-data/wiki/changelog)
@@ -86,7 +87,7 @@ The following example converts the to dataset and uses many of the methods avail
         })
         .sort(p => [p.customer, -p.rating]) 
         .log(null, 'purchases:', 
-            p => $$.round({ ...p, orders: undefined}, 3)
+            p => $$.round({ ...p, orders: undefined}, 1e-3)
         );
 
     // use 'get' as opposed to 'log' to assign to a variable
@@ -144,11 +145,11 @@ Then it analyzes the eigen properties of the transformer matrix.
     
     community
         .transform(transformer)
-        .log(null, 'Equilateralized Community:', row => $$.round(row,8));
+        .log(null, 'Equilateralized Community:', 1e-8);
     
     console.log('\nTransformer Eigenvalues:', eigen.values);
         
-    eigen.vectors.log(null, '\nTransformer Eigenvectors:', row => $$.round(row,8)); 
+    eigen.vectors.log(null, '\nTransformer Eigenvectors:', 1e-8); 
 
 [--]: # ()
 
@@ -180,39 +181,8 @@ Then it analyzes the eigen properties of the transformer matrix.
 
 [--]: # ()
 
-<!--
-
-`fluent-data` syntax is similar to LINQ in C#.  C# developers frustrated with the lack of a LINQ functionality in javascript may be encouraged by fluent-data.  Some of the syntax can even be friendlier and more powerful in comparison.   
 
 
-## Contrasts
-
-<details>
-<summary>Comparison to LINQ in C#</summary>:
-
-`group()` is similar to C#'s `IEnumerable.GroupBy`, but has significant differences.  
-The following code is how you would do something similar with LINQ.  Notice the need
-for a `ThenBy()` because of the lack of any easy way to compare arrays for equality
-in c#.  Also notice the need for a nesting of LINQ functions to produce the filtering
-in each group.  Fluent-data doses this automatically, with any level of groupings.
-
-    purchases
-        .Select(p => new {
-            p.customerId,
-            p.books,
-            p.time,
-            p.price,
-            p.rating,
-            flag: p.rating < 60 ? 'bad' : p.rating < 90 ? 'okay' : 'good'
-        })    
-        .GroupBy(p => p.CustomerId)
-        .ThenBy(p => p.flag)
-        .Select(grp => grp.Where(p => p.rating > 50))
-        .ToArray();
-
-</details>
-
--->
 
 
 
