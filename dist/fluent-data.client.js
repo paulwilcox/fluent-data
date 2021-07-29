@@ -956,7 +956,7 @@ class matrix {
         return {
             [Symbol.iterator]: function* () {
                 for(let r = 0; r < _this.nRow; r++) 
-                    yield _this.get(r,null);
+                    yield _this.filter(r,null);
             }
         }
     }
@@ -966,7 +966,7 @@ class matrix {
         return {
             [Symbol.iterator]: function* () {
                 for(let c = 0; c < _this.nCol; c++) 
-                    yield _this.get(null,c);
+                    yield _this.filter(null,c);
             }
         }
     }
@@ -1332,7 +1332,7 @@ class matrix {
         mx = transformer.multiply(mx);
 
         // remove the extra dimension created for the affined transform
-        mx = mx.get(-(mx.nRow - 1));
+        mx = mx.filter(-(mx.nRow - 1));
 
         // restore the original point orientation
         if (pointsAreRows)
@@ -1673,11 +1673,11 @@ class matrix {
             if (level >= this.data.length - 1)
                 return;
     
-            let Rsub = R.clone().get(ix => ix >= level, ix => ix >= level);
+            let Rsub = R.clone().filter(ix => ix >= level, ix => ix >= level);
             if (Rsub.data[0].length == 0) 
                 throw `QR decomposition did not converge in time to produce an upper triangular R.`;
-            let col0 = Rsub.clone().get(null, 0);
-            let e = matrix.identity(Rsub.data.length).get(null, 0);
+            let col0 = Rsub.clone().filter(null, 0);
+            let e = matrix.identity(Rsub.data.length).filter(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
             let vvt = v.clone().multiply(v.clone().transpose());
 
@@ -1696,8 +1696,8 @@ class matrix {
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
-            let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
-            let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
+            let upperSquare = R.clone().filter(ix => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().filter(ix => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.round(1e-10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
@@ -1752,7 +1752,7 @@ class matrix {
         }; 
     
         let test = () => {
-            D = D.get(id => id < r, id => id < r);
+            D = D.filter(id => id < r, id => id < r);
                 return L.multiply(D).multiply(R.transpose()).equals(this, errorThreshold) 
             && L.transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
             && R.transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
@@ -1765,10 +1765,10 @@ class matrix {
             L = this
                 .multiply(R.transpose())
                 .decomposeQR().Q
-                .get(null, ix => ix >= 0 && ix <= r - 1);
+                .filter(null, ix => ix >= 0 && ix <= r - 1);
 
             let qr = this.transpose().multiply(L).decomposeQR();
-            R = qr.Q.get(null, ix => ix >= 0 && ix <= r - 1).transpose();
+            R = qr.Q.filter(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.transpose();
 
             if (iterations % 10 == 0) {
@@ -1937,7 +1937,7 @@ class matrix {
 
         let columnsAsArrays = [];
         for(let sorted of sortedValues) {
-            let vector = vectors.get(null, sorted.ix);
+            let vector = vectors.filter(null, sorted.ix);
             let norm = vector.norm('euclidian');
             vector = vector.multiply(1/norm);  // set to length 1
             let columnAsArray = vector.transpose().data[0];
@@ -2145,43 +2145,6 @@ class matrix {
 
     }
 
-    _eigen_Hessenderize (A) {
-
-        for (let level = 0; level < A.data.length - 2; level++) {
-
-            let L1L0 = A.data[level+1][level];
-
-            let alpha = // sum of squares of A[level+i:n, level]
-                A.clone() 
-                .get((row,ix) => ix > level, level)
-                .apply(x => Math.pow(x,2))
-                .transpose()
-                .data[0]
-                .reduce((a,b) => a+b);
-            alpha = Math.pow(alpha,0.5);
-            alpha = -Math.sign(L1L0) * alpha; 
-
-            let r = Math.pow(alpha,2) - L1L0 * alpha;
-            r = Math.pow(r / 2, 0.5);
-
-            let v = new matrix([...Array(A.data.length).keys()].map(ix => [
-                ix <= level ? 0
-                : ix == (level + 1) ? (L1L0 - alpha) / (2*r) 
-                : A.data[ix][level] / (2*r)
-            ]));
-            let vv = v.clone().multiply(v.clone().transpose());
-
-            let P = matrix.identity(v.data.length)
-                .subtract(vv.multiply(2));
-
-            A = P.clone().multiply(A.multiply(P));
-
-        }
-
-        return A;
-
-    }
-
     _eigen_test(origMatrix, values, vectors, errorThreshold) {
 
         if(values instanceof matrix) 
@@ -2191,7 +2154,7 @@ class matrix {
             vectors = new matrix(vectors);
 
         for (let i = 0; i < vectors.data[0].length; i++) {
-            let getVect = () => vectors.get(null, i);
+            let getVect = () => vectors.filter(null, i);
             let AV = origMatrix.multiply(getVect());
             let VV = getVect().multiply(values[i]);
             if (!AV.equals(VV, errorThreshold, true))
@@ -2202,7 +2165,7 @@ class matrix {
 
     }
 
-    get(rows, cols) {
+    filter(rows, cols) {
 
         let mx = this.clone();
         let allRows = [...Array(mx.data.length).keys()];
@@ -3368,7 +3331,7 @@ function dimReduce (
                 continue;
 
             let loading = 
-                eigen.vectors.get(null, i)
+                eigen.vectors.filter(null, i)
                 .multiply(Math.pow(eigen.values[i],0.5))
                 .transpose()
                 .data[0]; // it's a vector, just get it
@@ -3408,11 +3371,11 @@ function dimReduce (
             for(let rightCol = 1; rightCol < loadings.nCol; rightCol++) {
         
                 let subset = 
-                    loadings.get(null,leftCol)
-                    .appendCols(loadings.get(null,rightCol));
+                    loadings.filter(null,leftCol)
+                    .appendCols(loadings.filter(null,rightCol));
                         
-                let U = mxSquare(subset.get(null,0)).subtract(mxSquare(subset.get(null,1)));
-                let V = mxCellMult(subset.get(null,0), subset.get(null,1)).multiply(2);
+                let U = mxSquare(subset.filter(null,0)).subtract(mxSquare(subset.filter(null,1)));
+                let V = mxCellMult(subset.filter(null,0), subset.filter(null,1)).multiply(2);
 
                 let num = 2 * (loadings.nRow * mxSum(mxCellMult(U,V)) - mxSum(U) * mxSum(V));
                 let den = loadings.nRow 
@@ -3515,7 +3478,7 @@ function _dimReduce_scoreTheData (data, explicitVars, correlations, loadings) {
     let l_by_cor = loadings.transpose().multiply(corInv);
     
     for(let r = 0; r < zs.nRow; r++) {
-         let scores = l_by_cor.multiply(zs.get(r).transpose()).transpose().get();
+         let scores = l_by_cor.multiply(zs.filter(r).transpose()).transpose();
          for(let dim = 0; dim < scores.nCol; dim++)
             data[r][`dim${dim}`] = scores.data[0][dim];
     }

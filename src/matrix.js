@@ -55,7 +55,7 @@ export default class matrix {
         return {
             [Symbol.iterator]: function* () {
                 for(let r = 0; r < _this.nRow; r++) 
-                    yield _this.get(r,null);
+                    yield _this.filter(r,null);
             }
         }
     }
@@ -65,7 +65,7 @@ export default class matrix {
         return {
             [Symbol.iterator]: function* () {
                 for(let c = 0; c < _this.nCol; c++) 
-                    yield _this.get(null,c);
+                    yield _this.filter(null,c);
             }
         }
     }
@@ -431,7 +431,7 @@ export default class matrix {
         mx = transformer.multiply(mx);
 
         // remove the extra dimension created for the affined transform
-        mx = mx.get(-(mx.nRow - 1));
+        mx = mx.filter(-(mx.nRow - 1));
 
         // restore the original point orientation
         if (pointsAreRows)
@@ -772,11 +772,11 @@ export default class matrix {
             if (level >= this.data.length - 1)
                 return;
     
-            let Rsub = R.clone().get(ix => ix >= level, ix => ix >= level);
+            let Rsub = R.clone().filter(ix => ix >= level, ix => ix >= level);
             if (Rsub.data[0].length == 0) 
                 throw `QR decomposition did not converge in time to produce an upper triangular R.`;
-            let col0 = Rsub.clone().get(null, 0);
-            let e = matrix.identity(Rsub.data.length).get(null, 0);
+            let col0 = Rsub.clone().filter(null, 0);
+            let e = matrix.identity(Rsub.data.length).filter(null, 0);
             let v = col0.clone().subtract(e.clone().multiply((Math.sign(col0.data[0]) || 1) * col0.norm())); 
             let vvt = v.clone().multiply(v.clone().transpose());
 
@@ -795,8 +795,8 @@ export default class matrix {
             R = H.clone().multiply(R);
             Q = Q == null ? H : Q.multiply(H);
        
-            let upperSquare = R.clone().get(ix => ix < R.data[0].length, null);
-            let lowerRectangle = R.clone().get(ix => ix >= R.data[0].length, null);
+            let upperSquare = R.clone().filter(ix => ix < R.data[0].length, null);
+            let lowerRectangle = R.clone().filter(ix => ix >= R.data[0].length, null);
             let lowerIsZeroes = !lowerRectangle.round(1e-10).data.some(row => row.some(cell => cell != 0));
     
             if (upperSquare.isUpperTriangular(1e-10) && lowerIsZeroes)
@@ -851,7 +851,7 @@ export default class matrix {
         } 
     
         let test = () => {
-            D = D.get(id => id < r, id => id < r);
+            D = D.filter(id => id < r, id => id < r);
                 return L.multiply(D).multiply(R.transpose()).equals(this, errorThreshold) 
             && L.transpose().multiply(L).equals(matrix.identity(L.data[0].length), errorThreshold)
             && R.transpose().multiply(R).equals(matrix.identity(R.data[0].length), errorThreshold)
@@ -864,10 +864,10 @@ export default class matrix {
             L = this
                 .multiply(R.transpose())
                 .decomposeQR().Q
-                .get(null, ix => ix >= 0 && ix <= r - 1);
+                .filter(null, ix => ix >= 0 && ix <= r - 1);
 
             let qr = this.transpose().multiply(L).decomposeQR();
-            R = qr.Q.get(null, ix => ix >= 0 && ix <= r - 1).transpose();
+            R = qr.Q.filter(null, ix => ix >= 0 && ix <= r - 1).transpose();
             D = qr.R.transpose();
 
             if (iterations % 10 == 0) {
@@ -1036,7 +1036,7 @@ export default class matrix {
 
         let columnsAsArrays = [];
         for(let sorted of sortedValues) {
-            let vector = vectors.get(null, sorted.ix);
+            let vector = vectors.filter(null, sorted.ix);
             let norm = vector.norm('euclidian');
             vector = vector.multiply(1/norm);  // set to length 1
             let columnAsArray = vector.transpose().data[0];
@@ -1244,43 +1244,6 @@ export default class matrix {
 
     }
 
-    _eigen_Hessenderize (A) {
-
-        for (let level = 0; level < A.data.length - 2; level++) {
-
-            let L1L0 = A.data[level+1][level];
-
-            let alpha = // sum of squares of A[level+i:n, level]
-                A.clone() 
-                .get((row,ix) => ix > level, level)
-                .apply(x => Math.pow(x,2))
-                .transpose()
-                .data[0]
-                .reduce((a,b) => a+b);
-            alpha = Math.pow(alpha,0.5);
-            alpha = -Math.sign(L1L0) * alpha; 
-
-            let r = Math.pow(alpha,2) - L1L0 * alpha;
-            r = Math.pow(r / 2, 0.5);
-
-            let v = new matrix([...Array(A.data.length).keys()].map(ix => [
-                ix <= level ? 0
-                : ix == (level + 1) ? (L1L0 - alpha) / (2*r) 
-                : A.data[ix][level] / (2*r)
-            ]));
-            let vv = v.clone().multiply(v.clone().transpose());
-
-            let P = matrix.identity(v.data.length)
-                .subtract(vv.multiply(2));
-
-            A = P.clone().multiply(A.multiply(P));
-
-        }
-
-        return A;
-
-    }
-
     _eigen_test(origMatrix, values, vectors, errorThreshold) {
 
         if(values instanceof matrix) 
@@ -1290,7 +1253,7 @@ export default class matrix {
             vectors = new matrix(vectors);
 
         for (let i = 0; i < vectors.data[0].length; i++) {
-            let getVect = () => vectors.get(null, i);
+            let getVect = () => vectors.filter(null, i);
             let AV = origMatrix.multiply(getVect());
             let VV = getVect().multiply(values[i]);
             if (!AV.equals(VV, errorThreshold, true))
@@ -1301,7 +1264,7 @@ export default class matrix {
 
     }
 
-    get(rows, cols) {
+    filter(rows, cols) {
 
         let mx = this.clone();
         let allRows = [...Array(mx.data.length).keys()];

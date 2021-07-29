@@ -201,7 +201,7 @@ export function dimReduce (
                 continue;
 
             let loading = 
-                eigen.vectors.get(null, i)
+                eigen.vectors.filter(null, i)
                 .multiply(Math.pow(eigen.values[i],0.5))
                 .transpose()
                 .data[0]; // it's a vector, just get it
@@ -241,11 +241,11 @@ export function dimReduce (
             for(let rightCol = 1; rightCol < loadings.nCol; rightCol++) {
         
                 let subset = 
-                    loadings.get(null,leftCol)
-                    .appendCols(loadings.get(null,rightCol));
+                    loadings.filter(null,leftCol)
+                    .appendCols(loadings.filter(null,rightCol));
                         
-                let U = mxSquare(subset.get(null,0)).subtract(mxSquare(subset.get(null,1)));
-                let V = mxCellMult(subset.get(null,0), subset.get(null,1)).multiply(2);
+                let U = mxSquare(subset.filter(null,0)).subtract(mxSquare(subset.filter(null,1)));
+                let V = mxCellMult(subset.filter(null,0), subset.filter(null,1)).multiply(2);
 
                 let num = 2 * (loadings.nRow * mxSum(mxCellMult(U,V)) - mxSum(U) * mxSum(V));
                 let den = loadings.nRow 
@@ -348,7 +348,7 @@ function _dimReduce_scoreTheData (data, explicitVars, correlations, loadings) {
     let l_by_cor = loadings.transpose().multiply(corInv);
     
     for(let r = 0; r < zs.nRow; r++) {
-         let scores = l_by_cor.multiply(zs.get(r).transpose()).transpose().get();
+         let scores = l_by_cor.multiply(zs.filter(r).transpose()).transpose();
          for(let dim = 0; dim < scores.nCol; dim++)
             data[r][`dim${dim}`] = scores.data[0][dim];
     }
