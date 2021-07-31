@@ -1,3 +1,5 @@
+See the Video Series [Here](https://www.youtube.com/channel/UCPh0UkaZ596dUbO-XLT-2QA)
+
 ## Summary 
 
 This library allows you to work with data structured as a table or as a matrix and provides 
