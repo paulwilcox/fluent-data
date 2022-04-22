@@ -1,6 +1,6 @@
 {
   "name": "fluent-data",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "Work with tables and matricies in fluent fashion within javascript.",
   "main": "./dist/fluent-data.server.js",
   "files": [
