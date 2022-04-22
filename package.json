@@ -53,7 +53,7 @@
   "author": "Paul Wilcox",
   "license": "ISC",
   "devDependencies": {
-    "rollup-plugin-license": "^2.5.0",
+    "rollup-plugin-license": "^2.7.0",
     "sampledb": "0.0.11"
   }
 }
